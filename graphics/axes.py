@@ -16,7 +16,7 @@ SHOW_FIG = True
 
 class AxesLironUpper:
     def __init__(self,
-                 nrows: int = 1, ncols: int = 1,
+                 shape: tuple = (1, 1),
                  sharex: (bool, str) = False, sharey: (bool, str) = False,
                  projection: str = None,
                  fig: Figure = None, axs: Axes = None,
@@ -26,7 +26,7 @@ class AxesLironUpper:
 
         Parameters
         ----------
-        nrows, ncols :      int
+        shape :             tuple (int, int)
                             number of rows, columns (in case of subplots). Default is (1,1)
         sharex, sharey :    bool or {'none', 'all', 'row', 'col'}
                             Link x, y axes (zoom together)
@@ -66,6 +66,7 @@ class AxesLironUpper:
                 subplot_kw = dict()
             subplot_kw = {'projection': projection} | subplot_kw
 
+            nrows, ncols = shape
             self.fig, self.axs = plt.subplots(nrows=nrows, ncols=ncols,
                                               sharex=sharex, sharey=sharey,
                                               squeeze=False,
@@ -154,7 +155,9 @@ class AxesLironUpper:
     def ax_limits(self, limits: list):
         @self._vectorize(cls=self, limits=limits)
         def _ax_limits(ax: Axes, limits: list):
+            limits = np.array(limits, dtype=object)
             limits = np.atleast_1d(limits)  # In case limits=None or limits is just 1 list (only xlim)
+
             ax.set_xlim(limits[0])
             if len(limits) >= 2:
                 ax.set_ylim(limits[1])
