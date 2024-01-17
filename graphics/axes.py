@@ -88,7 +88,7 @@ class AxesLironUpper:
                 if params_list is None or len(params_list) != m * n:
                     params_list = np.repeat(vec_params, m * n)
 
-                out = np.empty((m, n))
+                out = np.empty((m, n), dtype=object)
 
                 for i in range(m):
                     for j in range(n):
