@@ -64,6 +64,9 @@ def update_kwargs(**kwargs):
     """
 
     for key in kwargs.keys():
+        if kwargs[key] is None:
+            kwargs[key] = dict()
+
         kwargs[key] = KWARGS[key.upper()] | kwargs[key]
 
     return kwargs
