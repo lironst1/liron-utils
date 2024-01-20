@@ -15,6 +15,8 @@ conda config --add create_default_packages Cython
 conda config --add create_default_packages ffmpeg
 conda config --add create_default_packages keras
 conda config --add create_default_packages matplotlib
+conda config --add create_default_packages notebook
+conda config --add create_default_packages opencv
 conda config --add create_default_packages ipython
 conda config --add create_default_packages pandas
 conda config --add create_default_packages plotly
@@ -34,7 +36,6 @@ pip install audioread
 pip install latex
 pip install librosa
 pip install manim
-pip install opencv-python
 pip install pdflatex
 pip install pytube
 pip install pystoi
