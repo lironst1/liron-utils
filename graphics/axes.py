@@ -60,6 +60,7 @@ class AxesLironUpper:
 
         self.fig = fig
         self.axs = np.atleast_2d(axs)
+        self.func_animation = None
 
         if fig is None and axs is None:
             if subplot_kw is None:
@@ -209,7 +210,6 @@ class AxesLironUpper:
         Save figure as file
 
         Args:
-            fig:                    Figure to be saved
             file_name:              File name
             **savefig_kw:           kwargs for function fig.savefig
 
@@ -217,20 +217,15 @@ class AxesLironUpper:
 
         """
 
-        if file_name is None or os.path.dirname(file_name) == '':
-            dir_name = os.path.join(MAIN_FILE_DIR, "figs")
+        file_name = _get_savefig_file_name(file_name)
+
+        format = os.path.splitext(file_name)[-1]
+
+        if format == ".gif":
+            assert hasattr(self, "func_animation"), "Call plot_animation first."
+            self.func_animation.save(file_name, **savefig_kw)
         else:
-            dir_name = os.path.dirname(file_name)
-
-        if not os.path.exists(dir_name):
-            os.mkdir(dir_name)
-
-        if file_name is None:
-            file_name = os.path.join(dir_name, f"fig {get_time_str()}")
-        elif os.path.dirname(file_name) == '':
-            file_name = os.path.join(dir_name, file_name)
-
-        self.fig.savefig(file_name, **savefig_kw)
+            self.fig.savefig(file_name, **savefig_kw)
 
     def show_fig(self):
         self.fig.show()
@@ -370,3 +365,20 @@ def set_props(ax: Axes = None,
                                      save_fig_kw=save_fig_kw,
                                      show_fig=show_fig,
                                      **set_props_kw)
+
+
+def _get_savefig_file_name(file_name: str):
+    if file_name is None or os.path.dirname(file_name) == '':
+        dir_name = os.path.join(MAIN_FILE_DIR, "figs")
+    else:
+        dir_name = os.path.dirname(file_name)
+
+    if not os.path.exists(dir_name):
+        os.mkdir(dir_name)
+
+    if file_name is None:
+        file_name = os.path.join(dir_name, f"fig {get_time_str()}")
+    elif os.path.dirname(file_name) == '':
+        file_name = os.path.join(dir_name, file_name)
+
+    return file_name

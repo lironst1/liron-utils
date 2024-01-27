@@ -375,16 +375,16 @@ class AxesLiron(AxesLironUpper):
 
 		return _plot_contour(*args, **kwargs)
 
-	def plot_gif(self,
-	             images, im_instance: AxesImage = None,
-	             *args, **kwargs):
+	def plot_animation(self,
+	                   images, im_instance: AxesImage = None,
+	                   *args, **kwargs):
 
 		@self._vectorize(cls=self, images=images, im_instance=im_instance)
-		def _plot_gif(ax: Axes,
-		              images, im_instance: AxesImage = None,
-		              *args, **kwargs):
+		def _plot_animation(ax: Axes,
+		                    images, im_instance: AxesImage = None,
+		                    *args, **kwargs):
 			"""
-			Plot gif
+			Plot animation
 
 			Examples:
 				>>> import numpy as np
@@ -393,8 +393,8 @@ class AxesLiron(AxesLironUpper):
 				>>> nimages = 10
 				>>> images = np.random.random((nimages))
 				>>> Ax = gr.AxesLiron()
-				>>> func_animation = Ax.plot_gif(images)
-				>>> func_animation.save("test.gif")
+				>>> Ax.plot_animation(images)
+				>>> Ax.save_fig("test.gif")
 
 			Parameters
 			----------
@@ -411,7 +411,7 @@ class AxesLiron(AxesLironUpper):
 
 			Returns
 			-------
-			func_animation :    matplotlib.animation.FuncAnimation
+
 			"""
 
 			if type(images[0]) is AxesImage:
@@ -430,10 +430,8 @@ class AxesLiron(AxesLironUpper):
 					im.set_data(images[i])
 					return im
 
-			func_animation = matplotlib.animation.FuncAnimation(fig=ax.figure,
-			                                                    func=update_image, frames=images.shape[0],
-			                                                    *args, **kwargs)
+			self.func_animation = matplotlib.animation.FuncAnimation(fig=ax.figure,
+			                                                         func=update_image, frames=images.shape[0],
+			                                                         *args, **kwargs)
 
-			return func_animation
-
-		return _plot_gif(*args, **kwargs)
+		return _plot_animation(*args, **kwargs)
