@@ -2,6 +2,7 @@ import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
@@ -198,6 +199,17 @@ class AxesLironUpper:
 
         _ax_legend()
 
+    def ax_colorbar(self, mappable: matplotlib.cm.ScalarMappable):
+        @self._vectorize(cls=self, mappable=mappable)
+        def _ax_colorbar(ax, mappable):
+            if len(ax.images) == 0:
+                return
+            if mappable is True:
+                mappable = ax.images[0]
+            ax.figure.colorbar(mappable)
+
+        _ax_colorbar()
+
     def ax_face_color(self, face_color):
         @self._vectorize(cls=self, face_color=face_color)
         def _ax_face_color(ax, face_color):
@@ -269,6 +281,9 @@ class AxesLironUpper:
 
         # Legend
         self.ax_legend(set_props_kw["legend"], set_props_kw["legend_loc"])
+
+        # Colorbar
+        caller(self.ax_colorbar, set_props_kw["colorbar"])
 
         # Axis Lines
         if set_props_kw["axis_lines"]:
