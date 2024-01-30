@@ -376,12 +376,14 @@ class AxesLiron(AxesLironUpper):
 		return _plot_contour(*args, **kwargs)
 
 	def plot_animation(self,
-	                   images, im_instance: AxesImage = None,
+	                   images, titles=None,
+	                   im_instance: AxesImage = None,
 	                   *args, **kwargs):
 
-		@self._vectorize(cls=self, images=images, im_instance=im_instance)
+		@self._vectorize(cls=self, images=images, titles=titles, im_instance=im_instance)
 		def _plot_animation(ax: Axes,
-		                    images, im_instance: AxesImage = None,
+		                    images, titles=None,
+		                    im_instance: AxesImage = None,
 		                    *args, **kwargs):
 			"""
 			Plot animation
@@ -404,6 +406,9 @@ class AxesLiron(AxesLironUpper):
 								- a 3D array of size [#images, x, y]
 								- a list of 2D arrays of size [x, y]
 								- a list of image handles. In this case, im_instance is ignored
+			titles :            list or function handle, optional
+									- List of changing titles
+									- function handle whose input argument is iterable and outputs the title
 			im_instance   :     AxesImage
 								an image handle to use in case user wants some pre-defined properties
 			args :              sent to matplotlib.animation.FuncAnimation
@@ -414,11 +419,18 @@ class AxesLiron(AxesLironUpper):
 
 			"""
 
+			if titles is not None:
+				kwargs |= {"blit": False}
+
+				if callable(titles):
+					titles = [titles(i) for i in range(len(images))]
+
 			if type(images[0]) is AxesImage:
 				def update_image(i):
 					im = images[i]
+					if titles is not None:
+						ax.set_title(titles[i])
 					return im
-
 			else:
 				images = np.asarray(images)
 
@@ -428,6 +440,8 @@ class AxesLiron(AxesLironUpper):
 
 				def update_image(i):
 					im.set_data(images[i])
+					if titles is not None:
+						ax.set_title(titles[i])
 					return im
 
 			self.func_animation = matplotlib.animation.FuncAnimation(fig=ax.figure,
