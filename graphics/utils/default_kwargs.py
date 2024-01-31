@@ -17,7 +17,7 @@ KWARGS = {
 		"grid":       None,  # list(bool)
 		"legend":     None,  # list(str)
 		"legend_loc": "best",  # list(str)
-		"colorbar": True,  # list(bool/mappable)
+		"colorbar": True,  # list(bool/str/mappable)
 		"axis_lines": True,  # list(bool)
 		"face_color": None,  # list(color)
 	},

@@ -116,7 +116,7 @@ class AxesLironUpper:
 
             """
 
-            if hasattr(ax, 'zaxis'):  # Don't draw axis lines for 3D plots
+            if hasattr(ax, 'zaxis') or hasattr(ax, "axis_lines_drawn"):  # Don't draw axis lines for 3D plots
                 return
 
             axis_lines_kw = update_kwargs(axis_lines_kw=axis_lines_kw)["axis_lines_kw"]
@@ -201,12 +201,14 @@ class AxesLironUpper:
 
     def ax_colorbar(self, mappable: matplotlib.cm.ScalarMappable):
         @self._vectorize(cls=self, mappable=mappable)
-        def _ax_colorbar(ax, mappable):
-            if len(ax.images) == 0:
+        def _ax_colorbar(ax, mappable: matplotlib.cm.ScalarMappable):
+            if mappable is False or len(ax.images) == 0 or hasattr(ax, "colorbar_drawn"):  # if no image is plotted
                 return
-            if mappable is True:
+            elif mappable is True:
                 mappable = ax.images[0]
-            ax.figure.colorbar(mappable)
+
+            ax.figure.colorbar(mappable=mappable, ax=ax)
+            ax.colorbar_drawn = True
 
         _ax_colorbar()
 
