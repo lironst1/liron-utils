@@ -236,7 +236,7 @@ class AxesLironUpper:
         format = os.path.splitext(file_name)[-1]
 
         if format == ".gif":
-            assert hasattr(self, "func_animation"), "Call plot_animation first."
+            assert hasattr(self, "func_animation"), "Call plot_animation() before saving gif."
             self.func_animation.save(file_name, **savefig_kw)
         else:
             self.fig.savefig(file_name, **savefig_kw)
@@ -297,8 +297,9 @@ class AxesLironUpper:
         # -------------------------------------------------------
 
         # Save Figure
-        if save_file_name is not False:
+        if save_file_name is not False:  # if user wants to save fig
             if save_file_name is True:
+                # True sets default file name, otherwise provide a string
                 save_file_name = None
             if save_fig_kw is None:
                 save_fig_kw = dict()
@@ -385,6 +386,20 @@ def set_props(ax: Axes = None,
 
 
 def _get_savefig_file_name(file_name: str):
+    """
+
+    Parameters
+    ----------
+    file_name :     str
+                    If <file_name> doesn't contain a directory name, the default saving directory
+                    will be "<CUR_DIR>/figs", where <CUR_DIR> is the current directory of the directory
+                    of the Python file being called.
+
+    Returns
+    -------
+        Full path of file to be saved.
+    """
+
     if file_name is None or os.path.dirname(file_name) == '':
         dir_name = os.path.join(MAIN_FILE_DIR, "figs")
     else:
