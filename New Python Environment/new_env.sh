@@ -37,6 +37,7 @@ pip install latex
 pip install librosa
 pip install manim
 pip install pdflatex
+pip install python-docx
 pip install pytube
 pip install pystoi
 pip install qiskit
