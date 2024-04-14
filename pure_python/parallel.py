@@ -10,18 +10,27 @@ def parallel_map(func, iter, num_cpus=NUM_CPUS, *args, **kwargs):
 	Run function func in parallel.
 	See qutip.parallel.parallel_map for reference.
 
-	Args:
-		func ():            The function to evaluate in parallel.
-							First argument should be the changing value of each iteration.
-		iter ():            First input argument for 'func'
-		num_cpus ():        sent to 'func'
-		*args ():
-		**kwargs ():
+	Examples
+	--------
+	>>> def func(iter, x, y):
+	>>>     return (x + y) ** iter
+	>>> x = 1
+	>>> y = 2
+	>>> parallel_map(func, range(10), x=x, y=y)
 
-	Returns:
-		list of 'func' outputs, organized in the order of 'iter'.
+	Parameters
+	----------
+	func :          The function to evaluate in parallel.
+					The First argument should be the changing value of each iteration.
+	iter :          First input argument for 'func'
+	num_cpus :      number of CPUs to use for parallel computation.
+	args :
+	kwargs :
+
+	Returns
+	-------
+	list of 'func' outputs, organized in the order of 'iter'.
 	"""
-
 	if sys.platform == 'darwin':
 		Pool = multiprocessing.get_context('fork').Pool
 	else:
