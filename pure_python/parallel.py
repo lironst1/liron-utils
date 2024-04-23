@@ -1,76 +1,84 @@
+import warnings
 import sys
-import multiprocessing
+import functools
+import multiprocessing as mp
 from tqdm import tqdm
 
-NUM_CPUS = multiprocessing.cpu_count()
+NUM_CPUS = mp.cpu_count()
+NUM_PROCESSES_TO_USE = NUM_CPUS // 2
 
 
-def parallel_map(func, iter, num_cpus=NUM_CPUS, *args, **kwargs):
+def initializer(args):
+	SHARED = dict(args)
+
+
+def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
 	"""
-	Run function func in parallel.
+	Run function 'func' in parallel.
 	See qutip.parallel.parallel_map for reference.
+
+	Notes
+	-----
+	- 'func' must be a global function.
+	- parallel_map uses 'spawn' [1,2] by default in Windows, which starts a Python child process from scratch.
+	  This means that everything not under an 'if __name__==__main__' block will be executed multiple times.
+	- In UNIX we use 'fork'.
+
+	References
+	----------
+	[1] https://stackoverflow.com/questions/64095876/multiprocessing-fork-vs-spawn/66113051#66113051
+	[2] https://stackoverflow.com/questions/72935231/statements-before-multiprocessing-main-executed-multiple-times-python
+	[3] https://superfastpython.com/multiprocessing-pool-issue-tasks
 
 	Examples
 	--------
 	>>> def func(iter, x, y):
-	>>>     return (x + y) ** iter
-	>>> x = 1
-	>>> y = 2
-	>>> parallel_map(func, range(10), x=x, y=y)
+	>>> 	time.sleep(1)
+	>>> 	return (x + y) ** iter
+	>>>
+	>>> if __name__ == '__main__':
+	>>> 	x = 1
+	>>> 	y = 2
+	>>> 	t0 = time.time()
+	>>> 	out = parallel_map(func, range(100), 8, x=x, y=y)
+	>>> 	print(out[:5])
+	>>> 	print(f"time: {time.time() - t0}sec")
 
 	Parameters
 	----------
-	func :          The function to evaluate in parallel.
-					The First argument should be the changing value of each iteration.
-	iter :          First input argument for 'func'
-	num_cpus :      number of CPUs to use for parallel computation.
-	args :
-	kwargs :
+	func :          The function to evaluate in parallel. The first argument is the changing value of each iteration
+	iterable :      First input argument for 'func'
+	num_processes : number of processes to use
+	args :          passed to func
+	kwargs :        passed to func
 
 	Returns
 	-------
-	list of 'func' outputs, organized in the order of 'iter'.
+	list of 'func' outputs, organized by the order of 'iter'.
 	"""
-	if sys.platform == 'darwin':
-		Pool = multiprocessing.get_context('fork').Pool
-	else:
-		Pool = multiprocessing.Pool
+	if sys.platform == 'darwin':  # in UNIX 'fork' can be used (faster but more dangerous)
+		Pool = mp.get_context('fork').Pool
+	else:  # In Windows only 'spwan' is available
+		Pool = mp.Pool
 
-	if num_cpus > NUM_CPUS:
-		print(f"Requested number of CPUs {num_cpus} is larger than physical number {NUM_CPUS}.\n"
-		      f"Reduce 'num_cpus' for better performance.")
+	if num_processes > NUM_CPUS:
+		warnings.warn(f"Requested number of processes {num_processes} is larger than number of CPUs {NUM_CPUS}.\n"
+		              f"For better performance, consider reducing 'num_processes'.", category=UserWarning)
 
-	pool = Pool(processes=num_cpus)
+	with Pool(processes=num_processes) as pool:
+		func_partial = functools.partial(func, **kwargs)
 
-	t = tqdm(range(len(iter)))
+		out_async = [pool.apply_async(func=func_partial, args=(i,)) for i in iterable]
 
-	def progress_bar(n):
-		progress_bar.n += 1
-		t.update(progress_bar.n)
+		out = []
+		for out_async_i in tqdm(out_async, total=len(iterable)):
+			try:
+				out += [out_async_i.get()]
 
-	progress_bar.n = 0
+			except KeyboardInterrupt as e:
+				raise e
 
-	try:
-		out_async = [pool.apply_async(func=func,
-		                              args=(i,) + args,
-		                              kwds=kwargs,
-		                              callback=progress_bar)
-		             for i in iter]
+			except Exception as e:
+				warnings.warn(str(e))
 
-		while not all([ar.ready() for ar in out_async]):
-			for out in out_async:
-				out.wait(timeout=0.1)
-
-	except KeyboardInterrupt as e:
-		raise e
-
-	finally:
-		pool.terminate()
-		pool.join()
-
-	return [out.get() for out in out_async]
-
-# =============================================================
-# from joblib import Parallel, delayed
-# p = Parallel(n_jobs=NUM_CPUS)
-# tmp = p(delayed(func)(idx) for idx in tqdm(iterable))
+	return out

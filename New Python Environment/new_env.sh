@@ -4,8 +4,9 @@ conda config
 conda config --set pip_interop_enabled True
 conda config --set add_pip_as_python_dependency True
 
-conda config --add channels anaconda
-conda config --add channels conda-forge
+##don't enable more than one channel as this can cause dependency issues
+#conda config --add channels anaconda
+#conda config --add channels conda-forge
 
 conda config --add create_default_packages pip
 conda config --add create_default_packages numpy
