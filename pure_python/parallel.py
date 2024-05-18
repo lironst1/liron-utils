@@ -8,10 +8,6 @@ NUM_CPUS = mp.cpu_count()
 NUM_PROCESSES_TO_USE = NUM_CPUS // 2
 
 
-def initializer(args):
-	SHARED = dict(args)
-
-
 def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
 	"""
 	Run function 'func' in parallel.
@@ -40,7 +36,7 @@ def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
 	>>> 	x = 1
 	>>> 	y = 2
 	>>> 	t0 = time.time()
-	>>> 	out = parallel_map(func, range(100), 8, x=x, y=y)
+	>>> 	out = parallel_map(func=func, iterable=range(100), num_processes=8, x=x, y=y)
 	>>> 	print(out[:5])
 	>>> 	print(f"time: {time.time() - t0}sec")
 

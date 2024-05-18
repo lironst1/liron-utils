@@ -241,6 +241,8 @@ class AxesLironUpper:
         else:
             self.fig.savefig(file_name, **savefig_kw)
 
+        return file_name
+
     def show_fig(self):
         self.fig.show()
 
@@ -297,6 +299,7 @@ class AxesLironUpper:
         # -------------------------------------------------------
 
         # Save Figure
+        file_name = None
         if save_file_name is not False:  # if user wants to save fig
             if save_file_name is True:
                 # True sets default file name, otherwise provide a string
@@ -304,11 +307,14 @@ class AxesLironUpper:
             if save_fig_kw is None:
                 save_fig_kw = dict()
 
-            self.save_fig(file_name=save_file_name, **save_fig_kw)
+            file_name = self.save_fig(file_name=save_file_name, **save_fig_kw)
 
         # Show Figure
         if show_fig:
             self.show_fig()
+
+        return file_name
+
 
 
 def new_figure(nrows=1, ncols=1,
