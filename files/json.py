@@ -1,23 +1,17 @@
-import os
+import pandas as pd
 import json
 
 
-def _add_json_ext(file):
-	if len(os.path.splitext(file)[-1]) == 0:
-		file += '.json'
-	return file
-
-
 def load_json(file):
-	file = _add_json_ext(file)
-
+	# TODO replace with pd.read_json
 	with open(file) as f:
 		d = json.load(f)
 	return d
 
 
-def write_json(d, file):
-	file = _add_json_ext(file)
-
-	with open(file, 'w', encoding='utf-8') as f:
-		json.dump(d, f, ensure_ascii=False, indent=4)
+def write_json(d, file, *args, **kwargs):
+	kwargs = {"indent": 4} | kwargs
+	# dump = json.dumps(d, *args, **kwargs)
+	# with open(file, 'w') as f:
+	# 	json.dump(dump, f)
+	pd.Series(d).to_json(file, *args, **kwargs)

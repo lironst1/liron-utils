@@ -4,8 +4,8 @@ from .. import uncertainties_math as un
 load_csv = pd.read_csv
 
 
-def load_csv_to_dict(filename, *args, **kwargs) -> dict:
-	table = pd.read_csv(filename, *args, **kwargs)
+def load_csv_to_dict(file, *args, **kwargs) -> dict:
+	table = pd.read_csv(file, *args, **kwargs)
 
 	d = dict()
 	for column in table.columns:
@@ -14,8 +14,8 @@ def load_csv_to_dict(filename, *args, **kwargs) -> dict:
 	return d
 
 
-def load_csv_to_dict_with_uncertainties(filename, dev_str_identifier=" dev", *args, **kwargs) -> dict:
-	d = load_csv_to_dict(filename, *args, **kwargs)
+def load_csv_to_dict_with_uncertainties(file, dev_str_identifier=" dev", *args, **kwargs) -> dict:
+	d = load_csv_to_dict(file, *args, **kwargs)
 	d_uncertainties = dict()
 
 	for key in d.keys():

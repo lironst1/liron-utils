@@ -1,6 +1,6 @@
 from .files import *
 from .json import *
-from .pandas import *
+from .csv import *
 
 import os
 import IPython
