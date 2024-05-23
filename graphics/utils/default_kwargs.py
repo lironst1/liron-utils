@@ -20,6 +20,8 @@ KWARGS = {
 		"colorbar": True,  # list(bool/str/mappable)
 		"axis_lines": True,  # list(bool)
 		"face_color": None,  # list(color)
+		"show_fig": True,  # bool
+		"open_dir": False,  # bool
 	},
 
 	"AXIS_LINES_KW":   {

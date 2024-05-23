@@ -420,7 +420,7 @@ class AxesLiron(AxesLironUpper):
 			"""
 
 			if titles is not None:
-				kwargs |= {"blit": False}
+				kwargs = {"blit": False} | kwargs
 
 				if callable(titles):
 					titles = [titles(i) for i in range(len(images))]

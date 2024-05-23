@@ -5,22 +5,22 @@ load_csv = pd.read_csv
 
 
 def load_csv_to_dict(filename, *args, **kwargs) -> dict:
-    table = pd.read_csv(filename, *args, **kwargs)
+	table = pd.read_csv(filename, *args, **kwargs)
 
-    d = dict()
-    for column in table.columns:
-        d[column] = table[column].to_numpy()
+	d = dict()
+	for column in table.columns:
+		d[column] = table[column].to_numpy()
 
-    return d
+	return d
 
 
 def load_csv_to_dict_with_uncertainties(filename, dev_str_identifier=" dev", *args, **kwargs) -> dict:
-    d = load_csv_to_dict(filename, *args, **kwargs)
-    d_uncertainties = dict()
+	d = load_csv_to_dict(filename, *args, **kwargs)
+	d_uncertainties = dict()
 
-    for key in d.keys():
-        if key.endswith(dev_str_identifier):
-            key_wo_dev = key.split(dev_str_identifier)[0]
-            d_uncertainties[key_wo_dev] = un.unumpy.uarray(d[key_wo_dev], d[key])
+	for key in d.keys():
+		if key.endswith(dev_str_identifier):
+			key_wo_dev = key.split(dev_str_identifier)[0]
+			d_uncertainties[key_wo_dev] = un.unumpy.uarray(d[key_wo_dev], d[key])
 
-    return d_uncertainties
+	return d_uncertainties

@@ -8,85 +8,81 @@ from tkinter import messagebox, filedialog
 # Defining CreateWidgets() function
 # to create necessary tkinter widgets
 def Widgets():
-
 	head_label = Label(root, text="YouTube Video Downloader Using Tkinter",
-					padx=15,
-					pady=15,
-					font="SegoeUI 14",
-					bg="palegreen1",
-					fg="red")
+			padx=15,
+			pady=15,
+			font="SegoeUI 14",
+			bg="palegreen1",
+			fg="red")
 	head_label.grid(row=1,
-					column=1,
-					pady=10,
-					padx=5,
-					columnspan=3)
+			column=1,
+			pady=10,
+			padx=5,
+			columnspan=3)
 
 	link_label = Label(root,
-					text="YouTube link :",
-					bg="salmon",
-					pady=5,
-					padx=5)
+			text="YouTube link :",
+			bg="salmon",
+			pady=5,
+			padx=5)
 	link_label.grid(row=2,
-					column=0,
-					pady=5,
-					padx=5)
+			column=0,
+			pady=5,
+			padx=5)
 
 	root.linkText = Entry(root,
-						width=35,
-						textvariable=video_Link,
-						font="Arial 14")
+			width=35,
+			textvariable=video_Link,
+			font="Arial 14")
 	root.linkText.grid(row=2,
-					column=1,
-					pady=5,
-					padx=5,
-					columnspan=2)
-
+			column=1,
+			pady=5,
+			padx=5,
+			columnspan=2)
 
 	destination_label = Label(root,
-							text="Destination :",
-							bg="salmon",
-							pady=5,
-							padx=9)
+			text="Destination :",
+			bg="salmon",
+			pady=5,
+			padx=9)
 	destination_label.grid(row=3,
-						column=0,
-						pady=5,
-						padx=5)
-
+			column=0,
+			pady=5,
+			padx=5)
 
 	root.destinationText = Entry(root,
-								width=27,
-								textvariable=download_Path,
-								font="Arial 14")
+			width=27,
+			textvariable=download_Path,
+			font="Arial 14")
 	root.destinationText.grid(row=3,
-							column=1,
-							pady=5,
-							padx=5)
-
+			column=1,
+			pady=5,
+			padx=5)
 
 	browse_B = Button(root,
-					text="Browse",
-					command=Browse,
-					width=10,
-					bg="bisque",
-					relief=GROOVE)
+			text="Browse",
+			command=Browse,
+			width=10,
+			bg="bisque",
+			relief=GROOVE)
 	browse_B.grid(row=3,
-				column=2,
-				pady=1,
-				padx=1)
+			column=2,
+			pady=1,
+			padx=1)
 
 	Download_B = Button(root,
-						text="Download Video",
-						command=Download,
-						width=20,
-						bg="thistle1",
-						pady=10,
-						padx=15,
-						relief=GROOVE,
-						font="Georgia, 13")
+			text="Download Video",
+			command=Download,
+			width=20,
+			bg="thistle1",
+			pady=10,
+			padx=15,
+			relief=GROOVE,
+			font="Georgia, 13")
 	Download_B.grid(row=4,
-					column=1,
-					pady=20,
-					padx=20)
+			column=1,
+			pady=20,
+			padx=20)
 
 
 # Defining Browse() to select a
@@ -99,17 +95,17 @@ def Browse():
 	# user-input destination directory and
 	# storing it in downloadDirectory
 	download_Directory = filedialog.askdirectory(
-		initialdir="YOUR DIRECTORY PATH", title="Save Video")
+			initialdir="YOUR DIRECTORY PATH", title="Save Video")
 
 	# Displaying the directory in the directory
 	# textbox
 	download_Path.set(download_Directory)
 
+
 # Defining Download() to download the video
 
 
 def Download():
-
 	# getting user-input Youtube Link
 	Youtube_link = video_Link.get()
 
@@ -131,8 +127,8 @@ def Download():
 
 	# Displaying the message
 	messagebox.showinfo("SUCCESSFULLY",
-						"DOWNLOADED AND SAVED IN\n"
-						+ download_Folder)
+			"DOWNLOADED AND SAVED IN\n"
+			+ download_Folder)
 
 
 # Creating object of tk class
