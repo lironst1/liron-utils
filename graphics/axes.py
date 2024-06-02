@@ -21,17 +21,20 @@ class AxesLironUpper:
 			fig: Figure = None, axs: Axes = None,
 			subplot_kw: dict = None, gridspec_kw: dict = None, **figure_kw):
 		"""
-		Create new figure with (possibly) subplots
+		Create a new figure with (possibly) subplots
 
 		Parameters
 		----------
 		shape :             tuple (int, int)
 							number of rows, columns (in case of subplots). Default is (1,1)
 		sharex, sharey :    bool or {'none', 'all', 'row', 'col'}
-							Link x, y axes (zoom together)
-		projection :        str, optional
-							one of ['3d', 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear'].
-							Default is 'rectilinear'
+							Share the x or y `~matplotlib.axis` with sharex and/or sharey.
+				            The axis will have the same limits, ticks, and scale as the axis
+				            of the shared axes.
+		projection :        {None, 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear', str}, optional
+							The projection type of the subplot (`~.axes.Axes`). *str* is the
+				            name of a custom projection, see `~matplotlib.projections`. The
+				            default None results in a 'rectilinear' projection.
 		fig :               Figure, optional
 							Usually None, or send own figure
 		axs :               Axes, optional
@@ -100,9 +103,9 @@ class AxesLironUpper:
 
 		return vectorize_decorator
 
-	def draw_axis_lines(self):
+	def draw_xy_lines(self, **axis_lines_kw):
 		@self._vectorize(cls=self)
-		def _draw_axis_lines(ax: Axes, **axis_lines_kw):
+		def _draw_xy_lines(ax: Axes, **axis_lines_kw):
 			"""
 			Draw x-y axes lines to look bolder than the rest of the grid lines
 
@@ -128,10 +131,101 @@ class AxesLironUpper:
 			ax.set_xlim(*xlim, auto=True)
 			ax.set_ylim(*ylim, auto=True)
 
-		_draw_axis_lines()
+		_draw_xy_lines()
 
 	def sup_title(self, title: str):
 		self.fig.suptitle(title)
+
+	def ax_axis(self, axis: bool):
+		@self._vectorize(cls=self, axis=axis)
+		def _ax_axis(ax: Axes, axis: (bool, str)):
+			"""
+
+			Parameters
+			----------
+			ax :
+			axis :  ================ ===========================================================
+		            Value            Description
+		            ================ ===========================================================
+		            'off' or `False` Hide all axis decorations, i.e. axis labels, spines,
+		                             tick marks, tick labels, and grid lines.
+		                             This is the same as `~.Axes.set_axis_off()`.
+		            'on' or `True`   Do not hide all axis decorations, i.e. axis labels, spines,
+		                             tick marks, tick labels, and grid lines.
+		                             This is the same as `~.Axes.set_axis_on()`.
+		            'equal'          Set equal scaling (i.e., make circles circular) by
+		                             changing the axis limits. This is the same as
+		                             ``ax.set_aspect('equal', adjustable='datalim')``.
+		                             Explicit data limits may not be respected in this case.
+		            'scaled'         Set equal scaling (i.e., make circles circular) by
+		                             changing dimensions of the plot box. This is the same as
+		                             ``ax.set_aspect('equal', adjustable='box', anchor='C')``.
+		                             Additionally, further autoscaling will be disabled.
+		            'tight'          Set limits just large enough to show all data, then
+		                             disable further autoscaling.
+		            'auto'           Automatic scaling (fill plot box with data).
+		            'image'          'scaled' with axis limits equal to data limits.
+		            'square'         Square plot; similar to 'scaled', but initially forcing
+		                             ``xmax-xmin == ymax-ymin``.
+		            ================ ===========================================================
+
+			Returns
+			-------
+
+			"""
+			ax.axis(axis)
+
+		_ax_axis()
+
+	def ax_spines(self, spines: bool):
+		@self._vectorize(cls=self, spines=spines)
+		def _ax_spines(ax: Axes, spines: (str, list, bool)):
+			locs = np.array(["left", "bottom", "top", "right"])
+
+			if type(spines) is str:
+				spines = [spines]
+
+			if type(spines) is list:
+				locs = np.array(spines)
+				idx = [True] * locs.size
+			elif type(spines) is bool:
+				idx = [False] * locs.size
+				if spines:
+					idx = [True] * locs.size
+			else:
+				raise ValueError("'spines' must be one of (str, list, bool).")
+
+			if locs[idx].size > 0:
+				ax.spines[locs[idx].tolist()].set_visible(True)
+			if locs[np.logical_not(idx)].size > 0:
+				ax.spines[locs[np.logical_not(idx)].tolist()].set_visible(False)
+
+		_ax_spines()
+
+	def ax_ticks(self, ticks: (bool, dict, list)):
+		@self._vectorize(cls=self, ticks=ticks)
+		def _ax_ticks(ax: Axes, ticks: (bool, list)):
+			tick_values = [[], [], []]
+			tick_labels = [[], [], []]
+
+			if ticks is False:
+				pass
+			elif type(ticks) is list:
+				assert len(ticks) <= 3, "len(ticks) must be the same as the graph dimensionality."
+				for i in range(len(ticks)):
+					tick_values[i] = ticks[i].keys()
+					tick_labels[i] = ticks[i].values()
+
+			else:
+				raise ValueError(
+						"'ticks' must be given either a boolean or a list of dicts of the form {val: 'label'}.")
+
+			ax.set_xticks(tick_values[0], tick_labels[0])
+			ax.set_yticks(tick_values[1], tick_labels[1])
+			if hasattr(ax, "set_zticks") and len(ticks) == 3:
+				ax.zticks(tick_values[2], tick_labels[2])
+
+		_ax_ticks()
 
 	def ax_title(self, title: str):
 		@self._vectorize(cls=self, title=title)
@@ -176,11 +270,6 @@ class AxesLironUpper:
 	def ax_grid(self, grid):
 		@self._vectorize(cls=self, grid=grid)
 		def _ax_grid(ax: Axes, grid):
-			if grid is False:
-				grid = None
-			elif type(grid) is not str:  # todo: check condition
-				grid = 'both'
-
 			ax.grid(grid)
 
 		_ax_grid()
@@ -197,16 +286,26 @@ class AxesLironUpper:
 
 		_ax_legend()
 
-	def ax_colorbar(self, mappable: matplotlib.cm.ScalarMappable):
-		@self._vectorize(cls=self, mappable=mappable)
-		def _ax_colorbar(ax, mappable: matplotlib.cm.ScalarMappable):
-			if mappable is False or len(ax.images) == 0 or hasattr(ax, "colorbar_drawn"):  # if no image is plotted
+	def ax_colorbar(self, mappable: matplotlib.cm.ScalarMappable, colorbar_each: bool):
+		@self._vectorize(cls=self, mappable=mappable, colorbar_each=colorbar_each)
+		def _ax_colorbar(ax, mappable: matplotlib.cm.ScalarMappable, colorbar_each: bool):
+			if (mappable is False
+					or len(ax.images) == 0
+					or hasattr(ax.figure, "colorbar_drawn")
+					or hasattr(ax, "colorbar_drawn")):
 				return
-			elif mappable is True:
+			elif mappable is None or mappable is True:
 				mappable = ax.images[0]
 
-			ax.figure.colorbar(mappable=mappable, ax=ax)
-			ax.colorbar_drawn = True
+			if colorbar_each:
+				ax.figure.colorbar(mappable=mappable, ax=ax)
+				ax.colorbar_drawn = True
+
+			else:  # one common colorbar
+				ax.figure.subplots_adjust(right=0.8)
+				cax = ax.figure.add_axes([0.85, 0.15, 0.05, 0.7])
+				ax.figure.colorbar(mappable=mappable, cax=cax)
+				ax.figure.colorbar_drawn = True
 
 		_ax_colorbar()
 
@@ -268,10 +367,19 @@ class AxesLironUpper:
 		# Axes Title
 		caller(self.ax_title, set_props_kw["ax_title"])
 
-		# Labels
+		# Axis
+		caller(self.ax_axis, set_props_kw["axis"])
+
+		# Axis Spines
+		caller(self.ax_spines, set_props_kw["spines"])
+
+		# Axis Ticks
+		caller(self.ax_ticks, set_props_kw["ticks"])
+
+		# Axis Labels
 		caller(self.ax_labels, set_props_kw["labels"])
 
-		# Limits
+		# Axis Limits
 		caller(self.ax_limits, set_props_kw["limits"])
 
 		# View (in case of 3D)
@@ -284,11 +392,11 @@ class AxesLironUpper:
 		self.ax_legend(set_props_kw["legend"], set_props_kw["legend_loc"])
 
 		# Colorbar
-		caller(self.ax_colorbar, set_props_kw["colorbar"])
+		self.ax_colorbar(set_props_kw["colorbar"], set_props_kw["colorbar_each"])
 
-		# Axis Lines
-		if set_props_kw["axis_lines"]:
-			self.draw_axis_lines()
+		# x-y Lines (through the origin)
+		if set_props_kw["xy_lines"]:
+			self.draw_xy_lines()
 
 		# Face Color
 		caller(self.ax_face_color, set_props_kw["face_color"])
@@ -350,9 +458,9 @@ def new_figure(nrows=1, ncols=1,
 	return fig, axs
 
 
-@copy_docstring_and_deprecators(AxesLironUpper.draw_axis_lines)
-def draw_axis_lines(ax: Axes, **axis_lines_kw):
-	AxesLironUpper(axs=ax, **axis_lines_kw)
+@copy_docstring_and_deprecators(AxesLironUpper.draw_xy_lines)
+def draw_xy_lines(ax: Axes, **axis_lines_kw):
+	AxesLironUpper(axs=ax).draw_xy_lines(**axis_lines_kw)
 
 
 @copy_docstring_and_deprecators(AxesLironUpper.save_fig)

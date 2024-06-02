@@ -11,17 +11,21 @@ KWARGS = {
 	"SET_PROPS_KW":    {
 		"sup_title":  None,  # str
 		"ax_title":   None,  # list(str)
+		"axis":          None,  # list(bool)
+		"spines":        None,  # list(bool)
+		"ticks":         None,  # list(bool/dict/list)
 		"labels":     None,  # list(str)
 		"limits":     None,  # list(str)
 		"view":       None,  # list(str)
 		"grid":       None,  # list(bool)
 		"legend":     None,  # list(str)
 		"legend_loc": "best",  # list(str)
-		"colorbar": True,  # list(bool/str/mappable)
-		"axis_lines": True,  # list(bool)
+		"colorbar":      True,  # list(bool/str/mappable)
+		"colorbar_each": True,  # bool
+		"xy_lines":      True,  # list(bool)
 		"face_color": None,  # list(color)
-		"show_fig": True,  # bool
-		"open_dir": False,  # bool
+		"show_fig":      True,  # bool
+		"open_dir":      False,  # bool
 	},
 
 	"AXIS_LINES_KW":   {

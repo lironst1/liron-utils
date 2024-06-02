@@ -34,6 +34,7 @@ conda create --name myenv
 
 pip install --upgrade pip
 pip install audioread
+pip install ipympl
 pip install latex
 pip install librosa
 pip install manim

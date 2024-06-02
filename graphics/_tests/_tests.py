@@ -15,7 +15,7 @@ def fit_fcn(x, a, b, c):
 (p_opt, p_cov) = scipy.optimize.curve_fit(fit_fcn, x, y)
 
 fig, ax = gr.new_figure()
-gr.draw_axis_lines(ax)
+gr.draw_xy_lines(ax)
 ax.plot(range(5))
 # gr.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
 # ax.show_fig()
