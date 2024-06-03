@@ -183,15 +183,15 @@ class AxesLironUpper:
 			nrows, ncols = shape
 
 			self.fig, self.axs = plt.subplots(nrows=nrows, ncols=ncols,
-				sharex=sharex, sharey=sharey,
-				squeeze=False,
-				subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
+					sharex=sharex, sharey=sharey,
+					squeeze=False,
+					subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
 
-			# self.fig = plt.figure(**fig_kw)
-			# gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
-			# self.axs = gs.subplots(sharex=sharex, sharey=sharey,
-			# 		squeeze=False,
-			# 		subplot_kw=subplot_kw)
+		# self.fig = plt.figure(**fig_kw)
+		# gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
+		# self.axs = gs.subplots(sharex=sharex, sharey=sharey,
+		# 		squeeze=False,
+		# 		subplot_kw=subplot_kw)
 
 		elif fig is not None:
 			self.axs = np.atleast_2d(self.fig.axes)
@@ -221,9 +221,9 @@ class AxesLironUpper:
 
 		return vectorize_decorator
 
-	def draw_xy_lines(self, **axis_lines_kw):
+	def draw_xy_lines(self, **xy_lines_kw):
 		@self._vectorize(cls=self)
-		def _draw_xy_lines(ax: Axes, **axis_lines_kw):
+		def _draw_xy_lines(ax: Axes, **xy_lines_kw):
 			"""
 			Draw x-y axes lines to look bolder than the rest of the grid lines
 
@@ -238,26 +238,26 @@ class AxesLironUpper:
 			if hasattr(ax, 'zaxis') or hasattr(ax, "axis_lines_drawn"):  # Don't draw axis lines for 3D plots
 				return
 
-			axis_lines_kw = update_kwargs(axis_lines_kw=axis_lines_kw)["axis_lines_kw"]
+			xy_lines_kw = update_kwargs(xy_lines_kw=xy_lines_kw)["xy_lines_kw"]
 
 			xlim = ax.get_xlim()
 			ylim = ax.get_ylim()
 
-			ax.axhline(**axis_lines_kw)
-			ax.axvline(**axis_lines_kw)
+			ax.axhline(**xy_lines_kw)
+			ax.axvline(**xy_lines_kw)
 
 			ax.set_xlim(*xlim, auto=True)
 			ax.set_ylim(*ylim, auto=True)
 
-		_draw_xy_lines()
+			ax.axis_lines_drawn = True
+
+		_draw_xy_lines(**xy_lines_kw)
 
 	def sup_title(self, title: str):
 		self.fig.suptitle(title)
 
-	def ax_axis(self, axis: bool):
-		@self._vectorize(cls=self, axis=axis)
-		def _ax_axis(ax: Axes, axis: (bool, str)):
-			"""
+	def ax_axis(self, axis: (bool, str)):
+		"""
 
 			Parameters
 			----------
@@ -291,11 +291,23 @@ class AxesLironUpper:
 			-------
 
 			"""
+
+		@self._vectorize(cls=self, axis=axis)
+		def _ax_axis(ax: Axes, axis: (bool, str)):
 			ax.axis(axis)
 
 		_ax_axis()
 
 	def ax_spines(self, spines: bool):
+		"""
+		Show axis spines (boundaries)
+
+		Parameters
+		----------
+		spines :        bool
+
+		"""
+
 		@self._vectorize(cls=self, spines=spines)
 		def _ax_spines(ax: Axes, spines: (str, list, bool)):
 			locs = np.array(["left", "bottom", "top", "right"])
@@ -326,7 +338,7 @@ class AxesLironUpper:
 			tick_values = [[], [], []]
 			tick_labels = [[], [], []]
 
-			if ticks is False:
+			if ticks is False:  # todo: if ticks is True
 				pass
 			elif type(ticks) is list:
 				assert len(ticks) <= 3, "len(ticks) must be the same as the graph dimensionality."
@@ -352,9 +364,9 @@ class AxesLironUpper:
 
 		_ax_title()
 
-	def ax_labels(self, labels: list):
+	def ax_labels(self, labels: list[str]):
 		@self._vectorize(cls=self, labels=labels)
-		def _ax_labels(ax: Axes, labels: list):
+		def _ax_labels(ax: Axes, labels: list[str]):
 			labels = np.atleast_1d(labels)  # In case labels=None or labels is just 1 list (only xlabel)
 			ax.set_xlabel(labels[0])
 			if np.size(labels) >= 2:
@@ -364,9 +376,9 @@ class AxesLironUpper:
 
 		_ax_labels()
 
-	def ax_limits(self, limits: list):
+	def ax_limits(self, limits: list[float]):
 		@self._vectorize(cls=self, limits=limits)
-		def _ax_limits(ax: Axes, limits: list):
+		def _ax_limits(ax: Axes, limits: list[float]):
 			limits = np.array(limits, dtype=object)
 			limits = np.atleast_1d(limits)  # In case limits=None or limits is just 1 list (only xlim)
 
@@ -385,47 +397,52 @@ class AxesLironUpper:
 
 		_ax_view()
 
-	def ax_grid(self, grid):
+	def ax_grid(self, grid: bool):
 		@self._vectorize(cls=self, grid=grid)
-		def _ax_grid(ax: Axes, grid):
+		def _ax_grid(ax: Axes, grid: bool):
 			ax.grid(grid)
 
 		_ax_grid()
 
-	def ax_legend(self, legend: list, legend_loc):
+	def ax_legend(self, legend: (bool, list), legend_loc: str):
 		@self._vectorize(cls=self, legend=legend, legend_loc=legend_loc)
-		def _ax_legend(ax: Axes, legend: list, legend_loc):
-			if legend is None or legend is True:
+		def _ax_legend(ax: Axes, legend: (bool, list), legend_loc: str):
+			if legend is False:
+				legend = ax.get_legend()
+				if legend is not None:
+					legend.remove()
+
+			elif legend is True:
 				handles, labels = ax.get_legend_handles_labels()
 				if len(handles) > 0:
 					ax.legend(handles, labels, loc=legend_loc)  # todo [::-1] ?
+
 			else:
 				ax.legend(legend, loc=legend_loc)
 
 		_ax_legend()
 
-	def ax_colorbar(self, mappable: matplotlib.cm.ScalarMappable, colorbar_each: bool):
-		@self._vectorize(cls=self, mappable=mappable, colorbar_each=colorbar_each)
-		def _ax_colorbar(ax, mappable: matplotlib.cm.ScalarMappable, colorbar_each: bool):
-			if (mappable is False
-					or len(ax.images) == 0
-					or hasattr(ax.figure, "colorbar_drawn")
-					or hasattr(ax, "colorbar_drawn")):
-				return
-			elif mappable is None or mappable is True:
-				mappable = ax.images[0]
+	def ax_colorbar(self, axs: (bool, list[list[Axes], Axes]), **colorbar_kw):
+		if axs is False:
+			return
+		elif axs is True:
+			axs = [[ax] for ax in self.fig.axes if len(ax.images) > 0]
+		elif type(axs) is np.ndarray:
+			axs = axs.tolist()
 
-			if colorbar_each:
-				ax.figure.colorbar(mappable=mappable, ax=ax)
-				ax.colorbar_drawn = True
+		# convert to a list of lists
+		for i in range(len(axs)):  # run through common axes
+			if type(axs[i]) is Axes:  # if not a list, convert to a list
+				axs[i] = [axs[i]]
 
-			else:  # one common colorbar
-				ax.figure.subplots_adjust(right=0.8)
-				cax = ax.figure.add_axes([0.85, 0.15, 0.05, 0.7])
-				ax.figure.colorbar(mappable=mappable, cax=cax)
-				ax.figure.colorbar_drawn = True
+			assert type(axs[i]) is list, "'axs' must be a list of lists."
+			for j in range(len(axs[i])):
+				assert len(axs[i][j].images) > 0, "At least one of the axes provided doesn't have an image plotted."
 
-		_ax_colorbar()
+		# draw colorbar
+		for ax_common in axs:
+			mappable = ax_common[0].images[0]
+			self.fig.colorbar(mappable=mappable, ax=ax_common, **colorbar_kw)
 
 	def ax_face_color(self, face_color):
 		@self._vectorize(cls=self, face_color=face_color)
@@ -462,18 +479,113 @@ class AxesLironUpper:
 		self.fig.show()
 
 	def set_props(self,
-			save_file_name: (str, bool) = False, save_fig_kw: dict = None,
+			save_file_name: (str, bool) = False,
+			colorbar_kw: dict = None,
+			xy_lines_kw: dict = None,
+			save_fig_kw: dict = None,
 			**set_props_kw):
 		"""
+		Set figure properties after plotting.
 
-		Args:
-			save_file_name:         File name. False - don't save, True - save to MAIN_FILE_DIR, str - specify location
-			save_fig_kw:            kwargs for function fig.savefig()
-			**set_props_kw:         See utils.default_kwargs.KWARGS{"SET_PROPS_KW"}
+		Parameters
+		----------
+		save_file_name :        str/bool
+							The file name to be saved.
+							False - don't save, True - save to MAIN_FILE_DIR, str - specify location
 
-		Returns:
+		save_fig_kw :       dict, optional
+							Sent to fig.savefig()
+
+		colorbar_kw :       dict, optional
+							Sent to fig.colorbar()
+
+		xy_lines_kw :       dict, optional
+							Sent to ax.axhline()
+
+
+		Other Parameters
+		----------------
+		* For the following parameters, a '*' symbol means that it can be vectorized
+		  to all axes by being sent as a list.
+
+		sup_title :         str, default: None
+							supreme figure title
+
+		*ax_title :         str, default: None
+							axis title
+
+		*axis :             str/bool, default: None
+
+		*spines :           bool/list/str, default: None
+							show axis boundaries.
+							'True' will plot all boundaries.
+							Can be specified as one (or a list) of the strings ["left", "bottom", "top", "right"]
+
+		*ticks :            bool/dict/list, default: None
+							axis ticks
+							'False' will remove all ticks.
+							A dict is passed as {value: label}.
+							A list of dicts will set the ticks for the x,y,z axes
+
+		*labels :           list[str], default: None
+							axis labels for the x,y,z axes
+
+		*limits :           list[float], default: None
+							axis limits for the x,y,z axes, given as a 2-tuple,
+							e.g., limits=[[0,2], [-1,1]] will set xlim=[0,2],ylim=[-1,1]
+
+		*view :             list[float], default: None
+							axis view in case of a 3D plot, given as a 2-tuple.
+
+		*grid :             bool, default: None
+							Show grid.
+							'None' will toggle the grid on and off
+
+		*legend :           bool/list[str], default: True
+							Show legend.
+							A list of strings would set the legend labels
+
+		*legend_loc :       str, default: None
+							The location of the legend:
+							- 'upper left', 'upper right', 'lower left', 'lower right' place the legend at the
+							  corresponding corner of the axes.
+							- 'upper center', 'lower center', 'center left', 'center right' place the legend
+							  at the center of the corresponding edge of the axes.
+							- 'center' places the legend at the center of the axes.
+							- 'best' places the legend at the location, among the nine locations defined so far, with
+							  the minimum overlap with other drawn artists.
+							  This option can be quite slow for plots with
+							  large amounts of data; your plotting speed may benefit from providing a specific location.
+							The location can also be a 2-tuple giving the coordinates of the lower-left corner of the
+							legend in axes coordinates (in which case bbox_to_anchor will be ignored).
+
+		colorbar :          bool/list[list[Axes], Axes], default: False
+							A boolean decides whether to add a colorbar to each axis containing an image.
+							Otherwise, provide a list of the desired axes.
+							A list inside the list would create a common colorbar.
+
+		*xy_lines :         bool, default: True
+							Draw x-y axis lines (the lines x=0 and y=0).
+
+		*face_color :       color, default: None
+							axes face color
+
+		show_fig :          bool, default: True
+							Show figure at the end of the function run
+
+		open_dir :          bool, default: False
+							If file saved, open directory afterward.
+
+		Returns
+		-------
 
 		"""
+		if colorbar_kw is None:
+			colorbar_kw = dict()
+		if xy_lines_kw is None:
+			xy_lines_kw = dict()
+		if save_fig_kw is None:
+			save_fig_kw = dict()
 
 		set_props_kw = update_kwargs(set_props_kw=set_props_kw)["set_props_kw"]
 
@@ -510,11 +622,11 @@ class AxesLironUpper:
 		self.ax_legend(set_props_kw["legend"], set_props_kw["legend_loc"])
 
 		# Colorbar
-		self.ax_colorbar(set_props_kw["colorbar"], set_props_kw["colorbar_each"])
+		self.ax_colorbar(set_props_kw["colorbar"], **colorbar_kw)
 
 		# x-y Lines (through the origin)
 		if set_props_kw["xy_lines"]:
-			self.draw_xy_lines()
+			self.draw_xy_lines(**xy_lines_kw)
 
 		# Face Color
 		caller(self.ax_face_color, set_props_kw["face_color"])
@@ -523,12 +635,9 @@ class AxesLironUpper:
 
 		# Save Figure
 		file_name = None
-		if save_file_name is not False:  # if user wants to save fig
-			if save_file_name is True:
-				# True sets default file name, otherwise provide a string
+		if save_file_name is not False:  # if user wants to save figure
+			if save_file_name is True:  # default file name, otherwise provide a string
 				save_file_name = None
-			if save_fig_kw is None:
-				save_fig_kw = dict()
 
 			file_name = self.save_fig(file_name=save_file_name, **save_fig_kw)
 

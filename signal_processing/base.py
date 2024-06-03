@@ -131,3 +131,14 @@ def rms(x: np.ndarray, *args, **kwargs):
 
 	"""
 	return np.sqrt(np.mean(x ** 2, *args, **kwargs))
+
+
+def rescale(x: np.ndarray, lower=0, upper=1):
+	x = x.astype(float)
+	# bring to [0, 1]
+	x -= np.min(x)
+	x /= np.max(x)
+	# bring to [lower, upper]
+	x *= upper - lower
+	x += lower
+	return x

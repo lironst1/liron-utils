@@ -9,26 +9,25 @@ KWARGS = {
 
 	# Axes
 	"SET_PROPS_KW":    {
-		"sup_title":  None,  # str
-		"ax_title":   None,  # list(str)
+		"sup_title":     None,  # str
+		"ax_title":      None,  # list(str)
 		"axis":          None,  # list(bool)
 		"spines":        None,  # list(bool)
 		"ticks":         None,  # list(bool/dict/list)
-		"labels":     None,  # list(str)
-		"limits":     None,  # list(str)
-		"view":       None,  # list(str)
-		"grid":       None,  # list(bool)
-		"legend":     None,  # list(str)
-		"legend_loc": "best",  # list(str)
-		"colorbar":      True,  # list(bool/str/mappable)
-		"colorbar_each": True,  # bool
+		"labels":        None,  # list(list(str))
+		"limits":        None,  # list(list(float))
+		"view":          None,  # list(list(float))
+		"grid":          None,  # list(bool)
+		"legend":        True,  # list(bool/list(str))
+		"legend_loc":    None,  # list(str)
+		"colorbar":      False,  # list(bool/list)
 		"xy_lines":      True,  # list(bool)
-		"face_color": None,  # list(color)
+		"face_color":    None,  # list(color)
 		"show_fig":      True,  # bool
 		"open_dir":      False,  # bool
 	},
 
-	"AXIS_LINES_KW":   {
+	"XY_LINES_KW":     {
 		"color":     COLORS.DARK_GREY,
 		"linewidth": 2
 	},
