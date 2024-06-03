@@ -18,36 +18,145 @@ class AxesLironUpper:
 			shape: tuple = (1, 1),
 			sharex: (bool, str) = False, sharey: (bool, str) = False,
 			projection: str = None,
+			layout: str = None,
 			fig: Figure = None, axs: Axes = None,
-			subplot_kw: dict = None, gridspec_kw: dict = None, **figure_kw):
+			subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
 		"""
-		Create a new figure with (possibly) subplots
+		Create a new figure with (possibly) subplots using the plt.subplots() function.
 
 		Parameters
 		----------
-		shape :             tuple (int, int)
-							number of rows, columns (in case of subplots). Default is (1,1)
-		sharex, sharey :    bool or {'none', 'all', 'row', 'col'}
+		shape :             tuple (int, int), default: (1, 1)
+							number of rows, columns (in case of subplots).
+
+		sharex, sharey :    bool or {'none', 'all', 'row', 'col'}, default: False
 							Share the x or y `~matplotlib.axis` with sharex and/or sharey.
 				            The axis will have the same limits, ticks, and scale as the axis
 				            of the shared axes.
-		projection :        {None, 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear', str}, optional
+
+		projection :        {None, 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear', str}, default: None
 							The projection type of the subplot (`~.axes.Axes`). *str* is the
 				            name of a custom projection, see `~matplotlib.projections`. The
 				            default None results in a 'rectilinear' projection.
+
+		layout :            {'constrained', 'compressed', 'tight', 'none', `.LayoutEngine`, None}, default: None
+					        The layout mechanism for positioning of plot elements to avoid
+					        overlapping Axes decorations (labels, ticks, etc). Note that layout
+					        managers can measurably slow down figure display.
+
+					        - 'constrained': The constrained layout solver adjusts axes sizes
+					          to avoid overlapping axes decorations.  Can handle complex plot
+					          layouts and colorbars, and is thus recommended.
+
+					          See :ref:`constrainedlayout_guide`
+					          for examples.
+
+					        - 'compressed': uses the same algorithm as 'constrained', but
+					          removes extra space between fixed-aspect-ratio Axes.  Best for
+					          simple grids of axes.
+
+					        - 'tight': Use the tight layout mechanism. This is a relatively
+					          simple algorithm that adjusts the subplot parameters so that
+					          decorations do not overlap. See `.Figure.set_tight_layout` for
+					          further details.
+
+					        - 'none': Do not use a layout engine.
+
+					        - A `.LayoutEngine` instance. Builtin layout classes are
+					          `.ConstrainedLayoutEngine` and `.TightLayoutEngine`, more easily
+					          accessible by 'constrained' and 'tight'.  Passing an instance
+					          allows third parties to provide their own layout engine.
+
+					        If not given, fall back to using the parameters *tight_layout* and
+					        *constrained_layout*, including their config defaults
+					        :rc:`figure.autolayout` and :rc:`figure.constrained_layout.use`.
+
 		fig :               Figure, optional
-							Usually None, or send own figure
+							Usually None, or send an existing figure
+
 		axs :               Axes, optional
 							Usually None, or send own axis/axes
-		subplot_kw :
-		gridspec_kw :
-		figure_kw :
+
+		Other Parameters
+		----------------
+		subplot_kw :        dict, optional
+							Not interesting
+
+		gridspec_kw :       dict, optional
+							left, right, top, bottom : float, optional
+					            Extent of the subplots as a fraction of figure width or height.
+					            Left cannot be larger than right, and bottom cannot be larger than
+					            top. If not given, the values will be inferred from a figure or
+					            rcParams at draw time. See also `GridSpec.get_subplot_params`.
+
+					        wspace : float, optional
+					            The amount of width reserved for space between subplots,
+					            expressed as a fraction of the average axis width.
+					            If not given, the values will be inferred from a figure or
+					            rcParams when necessary. See also `GridSpec.get_subplot_params`.
+
+					        hspace : float, optional
+					            The amount of height reserved for space between subplots,
+					            expressed as a fraction of the average axis height.
+					            If not given, the values will be inferred from a figure or
+					            rcParams when necessary. See also `GridSpec.get_subplot_params`.
+
+					        width_ratios : array-like of length *ncols*, optional
+					            Defines the relative widths of the columns. Each column gets a
+					            relative width of ``width_ratios[i] / sum(width_ratios)``.
+					            If not given, all columns will have the same width.
+
+					        height_ratios : array-like of length *nrows*, optional
+					            Defines the relative heights of the rows. Each row gets a
+					            relative height of ``height_ratios[i] / sum(height_ratios)``.
+					            If not given, all rows will have the same height.
+
+		fig_kw :            dict, optional
+							num : int or str or `.Figure` or `.SubFigure`, optional
+						        A unique identifier for the figure.
+
+						        If a figure with that identifier already exists, this figure is made
+						        active and returned. An integer refers to the ``Figure.number``
+						        attribute, a string refers to the figure label.
+
+						        If there is no figure with the identifier or *num* is not given, a new
+						        figure is created, made active and returned.  If *num* is an int, it
+						        will be used for the ``Figure.number`` attribute, otherwise, an
+						        auto-generated integer value is used (starting at 1 and incremented
+						        for each new figure). If *num* is a string, the figure label and the
+						        window title is set to this value.  If num is a ``SubFigure``, its
+						        parent ``Figure`` is activated.
+
+						    figsize : (float, float), default: :rc:`figure.figsize`
+						        Width, height in inches.
+
+						    dpi : float, default: :rc:`figure.dpi`
+						        The resolution of the figure in dots-per-inch.
+
+						    facecolor : color, default: :rc:`figure.facecolor`
+						        The background color.
+
+						    edgecolor : color, default: :rc:`figure.edgecolor`
+						        The border color.
+
+						    frameon : bool, default: True
+						        If False, suppress drawing the figure frame.
+
+						    FigureClass : subclass of `~matplotlib.figure.Figure`
+						        If set, an instance of this subclass will be created, rather than a
+						        plain `.Figure`.
+
+						    clear : bool, default: False
+						        If True and the figure already exists, then it is cleared.
+
+						    **kwargs
+						        Additional keyword arguments are passed to the `.Figure` constructor.
 
 
 		Examples
 		--------
 			>> from plotting import plot
-			>> Ax = AxesLiron(2, 3)
+			>> Ax = AxesLiron([2, 3])
 			>> t = np.linspace(0, 10, 1001)
 			>> plot(Ax.axs[0,0], t, np.sin(t))
 			>> plot(Ax.axs[1,0], t, np.cos(t))
@@ -62,18 +171,27 @@ class AxesLironUpper:
 
 		self.fig = fig
 		self.axs = np.atleast_2d(axs)
-		self.func_animation = None
 
 		if fig is None and axs is None:
 			if subplot_kw is None:
 				subplot_kw = dict()
-			subplot_kw = {'projection': projection} | subplot_kw
+			subplot_kw = {"projection": projection} | subplot_kw
+			if fig_kw is None:
+				fig_kw = dict()
+			fig_kw = {"layout": layout} | fig_kw
 
 			nrows, ncols = shape
+
 			self.fig, self.axs = plt.subplots(nrows=nrows, ncols=ncols,
-					sharex=sharex, sharey=sharey,
-					squeeze=False,
-					subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **figure_kw)
+				sharex=sharex, sharey=sharey,
+				squeeze=False,
+				subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
+
+			# self.fig = plt.figure(**fig_kw)
+			# gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
+			# self.axs = gs.subplots(sharex=sharex, sharey=sharey,
+			# 		squeeze=False,
+			# 		subplot_kw=subplot_kw)
 
 		elif fig is not None:
 			self.axs = np.atleast_2d(self.fig.axes)
