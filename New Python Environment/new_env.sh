@@ -48,4 +48,5 @@ pip install resampy
 pip install SoundFile
 pip install tmm
 pip install torch
+pip install torchmetrics
 pip install uncertainties
