@@ -18,32 +18,32 @@ dft_matrix = scipy.linalg.dft  # in 'scipy.linalg._special_matrices'
 
 
 def nextpow2(a):
-    """
-    Exponent of next higher power of 2. Returns the exponents for the smallest powers
-    of two that satisfy 2**p > a
+	"""
+	Exponent of next higher power of 2. Returns the exponents for the smallest powers
+	of two that satisfy 2**p > a
 
-    Parameters
-    ----------
-    a :     array_like
+	Parameters
+	----------
+	a :     array_like
 
-    Returns
-    -------
-    p :     array_like
+	Returns
+	-------
+	p :     array_like
 
-    """
+	"""
 
-    if np.isscalar(a):
-        if a == 0:
-            p = 0
-        else:
-            p = int(np.ceil(np.log2(a)))
-    else:
-        a = np.asarray(a)
-        p = np.zeros(a.shape, dtype=int)
-        idx = (a != 0)
-        p[idx] = np.ceil(np.log2(a[idx]))
+	if np.isscalar(a):
+		if a == 0:
+			p = 0
+		else:
+			p = int(np.ceil(np.log2(a)))
+	else:
+		a = np.asarray(a)
+		p = np.zeros(a.shape, dtype=int)
+		idx = (a != 0)
+		p[idx] = np.ceil(np.log2(a[idx]))
 
-    return p
+	return p
 
 
 # Convolution
@@ -62,96 +62,96 @@ movmin = scipy.ndimage.filters.minimum_filter
 
 
 def filter2(h, x, shape="full"):
-    """
-    2-D digital FIR filter
+	"""
+	2-D digital FIR filter
 
-    Parameters
-    ----------
-    h :     array_like
-        The filter, given as a 2D matrix
-    x :     array_like
-        The data, given as a 2D matrix
-    shape : str {'full', 'valid', 'same'}, optional
-        A string indicating the size of the output:
+	Parameters
+	----------
+	h :     array_like
+		The filter, given as a 2D matrix
+	x :     array_like
+		The data, given as a 2D matrix
+	shape : str {'full', 'valid', 'same'}, optional
+		A string indicating the size of the output:
 
-        ``full``
-           Return the full 2-D filtered data.
-        ``valid``
-           Return only parts of the filtered data that are computed without zero-padded edges.
-        ``same``
-           Return the central part of the filtered data, which is the same size as x.
+		``full``
+		   Return the full 2-D filtered data.
+		``valid``
+		   Return only parts of the filtered data that are computed without zero-padded edges.
+		``same``
+		   Return the central part of the filtered data, which is the same size as x.
 
-    Returns
-    -------
-    out :   array_like
-        The filtered data
-    """
+	Returns
+	-------
+	out :   array_like
+		The filtered data
+	"""
 
-    out = scipy.signal.convolve2d(x, np.rot90(h, 2), mode=shape)
-    return out
+	out = scipy.signal.convolve2d(x, np.rot90(h, 2), mode=shape)
+	return out
 
 
 def movsum(x: np.ndarray, N: int, mode: str = 'same') -> np.ndarray:
-    """
-    Moving sum filter
+	"""
+	Moving sum filter
 
-    Args:
-        x:          Input array
-        N:          Filter size
-        mode:       Mode
+	Args:
+		x:          Input array
+		N:          Filter size
+		mode:       Mode
 
-    Returns:
-        Filtered array
-    """
+	Returns:
+		Filtered array
+	"""
 
-    return np.correlate(x, np.ones(N), mode=mode)
+	return np.correlate(x, np.ones(N), mode=mode)
 
 
 def movmean(x: np.ndarray, N: int, *args, **kwargs) -> np.ndarray:
-    """
-    Moving average filter
+	"""
+	Moving average filter
 
-    Args:
-        x:          Input array
-        N:          Filter size
-        mode:       Mode
+	Args:
+		x:          Input array
+		N:          Filter size
+		mode:       Mode
 
-    Returns:
-        Filtered array
-    """
+	Returns:
+		Filtered array
+	"""
 
-    return movsum(x, N, *args, **kwargs) / N
+	return movsum(x, N, *args, **kwargs) / N
 
 
 def movvar(x: np.ndarray, N: int, ddof: int = 1, *args, **kwargs) -> np.ndarray:
-    """
-    Moving variance filter
+	"""
+	Moving variance filter
 
-    Args:
-        x:          Input array
-        N:          Filter size
-        ddof:
+	Args:
+		x:          Input array
+		N:          Filter size
+		ddof:
 
-    Returns:
-        Filtered array
-    """
+	Returns:
+		Filtered array
+	"""
 
-    out = movmean(x ** 2, N, *args, **kwargs) - movmean(x, N, *args, **kwargs) ** 2
-    out *= N / (N - ddof)
-    return out
+	out = movmean(x ** 2, N, *args, **kwargs) - movmean(x, N, *args, **kwargs) ** 2
+	out *= N / (N - ddof)
+	return out
 
 
 def movstd(x: np.ndarray, N: int, *args, **kwargs) -> np.ndarray:
-    """
-    Moving std filter
+	"""
+	Moving std filter
 
-    Args:
-        x:          Input array
-        N:          Filter size
-        mode:       Mode
+	Args:
+		x:          Input array
+		N:          Filter size
+		mode:       Mode
 
-    Returns:
-        Filtered array
-    """
-    out = np.sqrt(movvar(x, N, *args, **kwargs))
-    return out
+	Returns:
+		Filtered array
+	"""
+	out = np.sqrt(movvar(x, N, *args, **kwargs))
+	return out

@@ -19,13 +19,13 @@ from ..signal_processing.base import interp1
 
 class AxesLiron(AxesLironUpper):
 	def plot(self,
-	         x, y,
-	         **plot_kw):
+			x, y=None, z=None,
+			**plot_kw):
 
-		@self._vectorize(cls=self, x=x, y=y)
+		@self._vectorize(cls=self, x=x, y=y, z=z)
 		def _plot(ax: Axes,
-		          x, y,
-		          **plot_kw):
+				x, y=None, z=None,
+				**plot_kw):
 			"""
 			2D plot of y=f(x)
 
@@ -33,26 +33,32 @@ class AxesLiron(AxesLironUpper):
 				ax:
 				x:
 				y:
+				z:
 				**plot_kw:
 
 			Returns:
 
 			"""
-
 			plot_kw = update_kwargs(plot_kw=plot_kw)["plot_kw"]
 
-			ax.plot(x, y, **plot_kw)
+			args = [x]
+			if y is not None:
+				args += [y]
+			if z is not None:
+				args += [z]
+
+			ax.plot(*args, **plot_kw)
 
 		return _plot(**plot_kw)
 
 	def plot_errorbar(self,
-	                  x, y, xerr=None, yerr=None,
-	                  **errorbar_kw):
+			x, y, xerr=None, yerr=None,
+			**errorbar_kw):
 
 		@self._vectorize(cls=self, x=x, y=y, xerr=xerr, yerr=yerr)
 		def _plot_errorbar(ax: Axes,
-		                   x, y, xerr=None, yerr=None,
-		                   **errorbar_kw):
+				x, y, xerr=None, yerr=None,
+				**errorbar_kw):
 			"""
 			2D plot of y=f(x) with errorbars
 
@@ -80,18 +86,18 @@ class AxesLiron(AxesLironUpper):
 		return _plot_errorbar(**errorbar_kw)
 
 	def plot_data_and_curve_fit(self,
-	                            x, y, fit_fcn, xerr=None, yerr=None,
-	                            p_opt=None, p_cov=None, n_std=2, interp_factor=20,
-	                            curve_fit_plot_kw=None, **errorbar_kw):
+			x, y, fit_fcn, xerr=None, yerr=None,
+			p_opt=None, p_cov=None, n_std=2, interp_factor=20,
+			curve_fit_plot_kw=None, **errorbar_kw):
 
 		@self._vectorize(cls=self,
-		                 x=x, y=y, fit_fcn=fit_fcn, xerr=xerr, yerr=yerr,
-		                 p_opt=p_opt, p_cov=p_cov, n_std=n_std, interp_factor=interp_factor,
-		                 curve_fit_plot_kw=curve_fit_plot_kw)
+				x=x, y=y, fit_fcn=fit_fcn, xerr=xerr, yerr=yerr,
+				p_opt=p_opt, p_cov=p_cov, n_std=n_std, interp_factor=interp_factor,
+				curve_fit_plot_kw=curve_fit_plot_kw)
 		def _plot_data_and_curve_fit(ax: Axes,
-		                             x, y, fit_fcn, xerr=None, yerr=None,
-		                             p_opt=None, p_cov=None, n_std=2, interp_factor=20,
-		                             curve_fit_plot_kw=None, **errorbar_kw):
+				x, y, fit_fcn, xerr=None, yerr=None,
+				p_opt=None, p_cov=None, n_std=2, interp_factor=20,
+				curve_fit_plot_kw=None, **errorbar_kw):
 			"""
 			2D scatter plot y=f(x) + curve fit
 
@@ -164,20 +170,20 @@ class AxesLiron(AxesLironUpper):
 				fit_high = fit_fcn(x_interp, *(p_opt + n_std * p_err))
 
 				ax.fill_between(x_interp, fit_low, fit_high, linestyle='-', color=COLORS.LIGHT_GREY, alpha=0.4,
-				                label=f'{n_std} std confidence')
+						label=f'{n_std} std confidence')
 
 		return _plot_data_and_curve_fit(**errorbar_kw)
 
 	def plot_data_and_lin_reg(self,
-	                          x, y, reg=None, xerr=None, yerr=None,
-	                          reg_plot_kw=None, **plot_errorbar_kw):
+			x, y, reg=None, xerr=None, yerr=None,
+			reg_plot_kw=None, **plot_errorbar_kw):
 
 		@self._vectorize(cls=self,
-		                 x=x, y=y, reg=reg, xerr=xerr, yerr=yerr,
-		                 reg_plot_kw=reg_plot_kw)
+				x=x, y=y, reg=reg, xerr=xerr, yerr=yerr,
+				reg_plot_kw=reg_plot_kw)
 		def _plot_data_and_lin_reg(ax: Axes,
-		                           x, y, reg=None, xerr=None, yerr=None,
-		                           reg_plot_kw=None, **plot_errorbar_kw):
+				x, y, reg=None, xerr=None, yerr=None,
+				reg_plot_kw=None, **plot_errorbar_kw):
 			"""
 			2D scatter plot y=f(x) + linear regression.
 
@@ -223,7 +229,7 @@ class AxesLiron(AxesLironUpper):
 			y, yerr = to_numpy(y, yerr)
 
 			self.plot_errorbar(x, y, xerr=xerr, yerr=yerr,
-			                   **plot_errorbar_kw)  # TODO: need to change to _plot_errorbar
+					**plot_errorbar_kw)  # TODO: need to change to _plot_errorbar
 
 			if reg is not None:
 				tmp = [reg.slope * i + reg.intercept for i in x]
@@ -232,13 +238,13 @@ class AxesLiron(AxesLironUpper):
 		return _plot_data_and_lin_reg(**plot_errorbar_kw)
 
 	def plot_line_collection(self,
-	                         x: np.ndarray, y: np.ndarray, arr: np.ndarray,
-	                         **LineCollection_kwargs):
+			x: np.ndarray, y: np.ndarray, arr: np.ndarray,
+			**LineCollection_kwargs):
 
 		@self._vectorize(cls=self, x=x, y=y, arr=arr)
 		def _plot_line_collection(ax: Axes,
-		                          x: np.ndarray, y: np.ndarray, arr: np.ndarray,
-		                          **LineCollection_kwargs):
+				x: np.ndarray, y: np.ndarray, arr: np.ndarray,
+				**LineCollection_kwargs):
 			"""
 
 			Args:
@@ -269,13 +275,13 @@ class AxesLiron(AxesLironUpper):
 		return _plot_line_collection(**LineCollection_kwargs)
 
 	def plot_specgram(self,
-	                  y: np.ndarray, fs: int,
-	                  **specgram_kw):
+			y: np.ndarray, fs: int,
+			**specgram_kw):
 
 		@self._vectorize(cls=self, y=y, fs=fs)
 		def _plot_specgram(ax: Axes,
-		                   y: np.ndarray, fs: int,
-		                   **specgram_kw):
+				y: np.ndarray, fs: int,
+				**specgram_kw):
 			"""
 			Plot spectrogram
 
@@ -306,13 +312,13 @@ class AxesLiron(AxesLironUpper):
 		return _plot_specgram(**specgram_kw)
 
 	def plot_surf(self,
-	              x, y, z,
-	              **plot_surface_kw):
+			x, y, z,
+			**plot_surface_kw):
 
 		@self._vectorize(cls=self, x=x, y=y, z=z)
 		def _plot_surf(ax: Axes,
-		               x, y, z,
-		               **plot_surface_kw):
+				x, y, z,
+				**plot_surface_kw):
 			"""
 			3D surf plot of z=f(x,y)
 
@@ -346,13 +352,13 @@ class AxesLiron(AxesLironUpper):
 		return _plot_surf(**plot_surface_kw)
 
 	def plot_contour(self,
-	                 x, y, z, contours,
-	                 *args, **kwargs):
+			x, y, z, contours,
+			*args, **kwargs):
 
 		@self._vectorize(cls=self, x=x, y=y, z=z, contours=contours)
 		def _plot_contour(ax: Axes,
-		                  x, y, z, contours,
-		                  *args, **kwargs):
+				x, y, z, contours,
+				*args, **kwargs):
 			"""
 			Contour plot of scalar field z=f(x,y)
 
@@ -376,15 +382,15 @@ class AxesLiron(AxesLironUpper):
 		return _plot_contour(*args, **kwargs)
 
 	def plot_animation(self,
-	                   images, titles=None,
-	                   im_instance: AxesImage = None,
-	                   *args, **kwargs):
+			images, titles=None,
+			im_instance: AxesImage = None,
+			*args, **kwargs):
 
 		@self._vectorize(cls=self, images=images, titles=titles, im_instance=im_instance)
 		def _plot_animation(ax: Axes,
-		                    images, titles=None,
-		                    im_instance: AxesImage = None,
-		                    *args, **kwargs):
+				images, titles=None,
+				im_instance: AxesImage = None,
+				*args, **kwargs):
 			"""
 			Plot animation
 
@@ -420,7 +426,7 @@ class AxesLiron(AxesLironUpper):
 			"""
 
 			if titles is not None:
-				kwargs |= {"blit": False}
+				kwargs = {"blit": False} | kwargs
 
 				if callable(titles):
 					titles = [titles(i) for i in range(len(images))]
@@ -445,7 +451,7 @@ class AxesLiron(AxesLironUpper):
 					return im
 
 			self.func_animation = matplotlib.animation.FuncAnimation(fig=ax.figure,
-			                                                         func=update_image, frames=images.shape[0],
-			                                                         *args, **kwargs)
+					func=update_image, frames=images.shape[0],
+					*args, **kwargs)
 
 		return _plot_animation(*args, **kwargs)

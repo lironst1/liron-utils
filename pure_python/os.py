@@ -1,6 +1,5 @@
 import platform
 
-
 get_os = platform.system()
 
 ispc = get_os == "Windows"

@@ -1,6 +1,7 @@
 ### Install New Environment
 To install a new Anaconda environment, open Terminal and run:\
-`bash "Others/New Python Environment/new_env.sh"`
+`bash "new_env.sh"`\
+If using windows, open git bash and run the above line.
 
 * To create a new environment without the default packages set by the `.condarc` file, run:\
 `conda create --name <env_name> --no-default-packages`
@@ -13,8 +14,8 @@ Python Interpreter > Add Interpreter > Conda Environment > Use Existing Environm
 
 ### pip
 To install using pip, run:\
-`pip install -r "/Users/lironst/Code Projects/Home/Others/pip requirements.txt" -U --progress-bar on`
+`pip install -r "pip_requirements.txt" -U --progress-bar on`
 
 
 To save the `requirements` file, run:\
-`pip freeze => "/Users/lironst/Code Projects/Home/Others/pip requirements.txt"`
+`pip freeze => "pip_requirements.txt"`

@@ -4,8 +4,9 @@ conda config
 conda config --set pip_interop_enabled True
 conda config --set add_pip_as_python_dependency True
 
-conda config --add channels anaconda
-conda config --add channels conda-forge
+##don't enable more than one channel as this can cause dependency issues
+#conda config --add channels anaconda
+#conda config --add channels conda-forge
 
 conda config --add create_default_packages pip
 conda config --add create_default_packages numpy
@@ -33,6 +34,7 @@ conda create --name myenv
 
 pip install --upgrade pip
 pip install audioread
+pip install ipympl
 pip install latex
 pip install librosa
 pip install manim
@@ -46,4 +48,5 @@ pip install resampy
 pip install SoundFile
 pip install tmm
 pip install torch
+pip install torchmetrics
 pip install uncertainties
