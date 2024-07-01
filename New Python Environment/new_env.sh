@@ -35,6 +35,7 @@ conda create --name myenv
 pip install --upgrade pip
 pip install audioread
 pip install ipympl
+pip install ipykernel
 pip install latex
 pip install librosa
 pip install manim
@@ -44,6 +45,7 @@ pip install pytube
 pip install pystoi
 pip install qiskit
 pip install qutip
+pip install qsharp qsharp-widgets azure-quantum
 pip install resampy
 pip install SoundFile
 pip install tmm
