@@ -60,6 +60,7 @@ def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
 	if num_processes > NUM_CPUS:
 		warnings.warn(f"Requested number of processes {num_processes} is larger than number of CPUs {NUM_CPUS}.\n"
 		              f"For better performance, consider reducing 'num_processes'.", category=UserWarning)
+	num_processes = min(num_processes, NUM_CPUS, len(iterable))
 
 	with Pool(processes=num_processes) as pool:
 		func_partial = functools.partial(func, **kwargs)
