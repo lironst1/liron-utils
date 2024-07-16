@@ -33,22 +33,24 @@ conda config --add create_default_packages tqdm
 conda create --name myenv
 
 pip install --upgrade pip
-pip install audioread
-pip install ipympl
-pip install ipykernel
-pip install latex
-pip install librosa
-pip install manim
-pip install pdflatex
-pip install python-docx
-pip install pytube
-pip install pystoi
-pip install qiskit
-pip install qutip
-pip install qsharp qsharp-widgets azure-quantum
-pip install resampy
-pip install SoundFile
-pip install tmm
-pip install torch
-pip install torchmetrics
-pip install uncertainties
+pip install \
+audioread \
+ipympl \
+ipykernel \
+latex \
+librosa \
+manim \
+pdflatex \
+pipdeptree \
+python-docx \
+pytube \
+pystoi \
+qiskit \
+qutip \
+qsharp qsharp-widgets azure-quantum \
+resampy \
+SoundFile \
+tmm \
+torch \
+torchmetrics \
+uncertainties \
