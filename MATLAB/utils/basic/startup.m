@@ -21,4 +21,6 @@ else
     fprintf("Breakpoints not restored.\n")
 end
 
+boot()
+
 end
