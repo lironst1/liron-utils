@@ -1,6 +1,7 @@
 function startup()
 
-ll
+% warnings
+% warning("on", "verbose")
 
 % format
 format compact
@@ -18,5 +19,7 @@ if exist(filename, "file")
 else
     fprintf("Breakpoints not restored.\n")
 end
+
+boot()
 
 end

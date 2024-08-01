@@ -28,6 +28,7 @@ arguments (Repeating)
     shape       % shape of subplots in the i-th figure
 end
 
+defaultFigureWindowStyle = get(0, "DefaultFigureWindowStyle");
 set(0, "DefaultFigureWindowStyle", "docked")
 
 if isempty(shape)
@@ -51,6 +52,6 @@ for i = 1 : nFigures
     end
 end
 
-set(0, "DefaultFigureWindowStyle", "default")
+set(0, "DefaultFigureWindowStyle", defaultFigureWindowStyle)
 
 end
