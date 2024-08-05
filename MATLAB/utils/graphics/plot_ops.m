@@ -12,14 +12,14 @@ arguments
     options.ylim            double  = []
     options.zlim            double  = []
     options.legend          logical = false
-    options.view            double = []
+    options.view            double  = []
 
     options.filename        string  = []
     options.format  (1,1)   string  = ".png"
     options.closefig        logical = false
-
-    options.title_kwargs    cell    = {"FontSize", 16, "Interpreter", "latex"}
-    options.label_kwargs    cell    = {"FontSize", 12, "Interpreter", "latex"}
+    
+    options.title_kwargs    cell    = {"FontSize", 18, "Interpreter", "latex"}
+    options.label_kwargs    cell    = {"FontSize", 14, "Interpreter", "latex"}
 end
 
 if ax.Type == "axes"  % in case user wants to save figure, a figure handle can also be passed

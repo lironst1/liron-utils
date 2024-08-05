@@ -1,9 +1,12 @@
 function startup()
 
-ll
+% warnings
+% warning("on", "verbose")
 
 % format
 format compact
+
+boot()
 
 % restore breakpoints
 filename = PATHS().breakpoints;
@@ -13,10 +16,11 @@ if exist(filename, "file")
 
     dbstop(sBreakpoints)
     
-    fprintf("Breakpoints restored.\n")
     dbstatus()
 else
     fprintf("Breakpoints not restored.\n")
 end
+
+boot()
 
 end
