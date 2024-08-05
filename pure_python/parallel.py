@@ -28,6 +28,7 @@ def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
 
 	Examples
 	--------
+	>>> import time
 	>>> def func(iter, x, y):
 	>>> 	time.sleep(1)
 	>>> 	return (x + y) ** iter
