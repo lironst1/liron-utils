@@ -335,11 +335,19 @@ class AxesLironUpper:
 	def ax_ticks(self, ticks: (bool, dict, list)):
 		@self._vectorize(cls=self, ticks=ticks)
 		def _ax_ticks(ax: Axes, ticks: (bool, list)):
-			tick_values = [[], [], []]
-			tick_labels = [[], [], []]
+			tick_values = [ax.get_xticks(), ax.get_yticks()]
+			tick_labels = [ax.get_xticklabels(), ax.get_yticklabels()]
+			if hasattr(ax, "set_zticks"):
+				tick_values += [ax.get_zticks()]
+				tick_labels += [ax.get_zticklabels()]
 
 			if ticks is False:  # todo: if ticks is True
-				pass
+				tick_values = [[], [], []]
+				tick_labels = [[], [], []]
+
+			elif ticks == "nolabel":
+				tick_labels = [[], [], []]
+
 			elif type(ticks) is list:
 				assert len(ticks) <= 3, "len(ticks) must be the same as the graph dimensionality."
 				for i in range(len(ticks)):
