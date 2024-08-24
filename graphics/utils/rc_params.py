@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 from . import COLORS
 from .COLORS import *
 
+
+def get_style_rcparams(style: str):
+	return plt.style.core._base_library[style]
+
+
 RC_PARAMS = {
 	# ***************************************************************************
 	# * BACKENDS                                                                *
@@ -43,7 +48,6 @@ RC_PARAMS = {
 	# * AXES                                                                    *
 	# ***************************************************************************
 	'axes.titlesize':              'x-large',  # font size of the axes title
-	'axes.facecolor':              (.98, .98, .98),  # axes background color
 	'axes.formatter.use_mathtext': True,  # When True, use mathtext for scientific
 	'axes.grid':                   True,  # display grid or not
 	'axes.grid.which':             'both',  # grid lines at {major, minor, both} ticks
@@ -51,7 +55,7 @@ RC_PARAMS = {
 
 	'axes.labelsize':              'large',  # font size of the x and y labels
 
-	'axes.prop_cycle':             mpl.cycler(color=[DARK_BLUE, ORANGE_A, PURPLE, GREEN, GREY_BROWN,
+	'axes.prop_cycle':             mpl.cycler(color=[DARK_BLUE, ORANGE_B, PURPLE, GREEN, GREY_BROWN,
 		GOLD, TEAL, MAROON, BLUE_C, PINK_A]),
 
 	'axes.spines.left':            True,  # display axis spines
@@ -79,7 +83,6 @@ RC_PARAMS = {
 	# * FIGURE                                                                  *
 	# ***************************************************************************
 	'figure.autolayout':           True,  # When True, automatically adjust subplot
-	'figure.facecolor':            (.98, .98, .98),  # figure face color
 	'figure.figsize':              [8, 8],  # figure size in inches
 	'figure.dpi':                  200,
 
@@ -115,7 +118,7 @@ RC_PARAMS = {
 	# ***************************************************************************
 	# * SAVING FIGURES                                                          *
 	# ***************************************************************************
-	'savefig.format':              'png',
+	'savefig.format':              'svg',  # {png, ps, pdf, svg}
 	'savefig.bbox':                'tight',  # {tight, standard}
 
 	# ***************************************************************************
@@ -887,6 +890,19 @@ RC_PARAMS_DEFAULT = {
 
 }
 
+STYLES = {
+	"article": get_style_rcparams("seaborn-v0_8-talk") | {
+		'xtick.top':          True,  # draw ticks on the top side
+		'xtick.direction':    'in',  # direction: {in, out, inout}
+		'ytick.right':        True,  # draw ticks on the right side
+		'ytick.direction':    'in',  # direction: {in, out, inout}
+		'axes.spines.left':   True,  # display axis spines
+		'axes.spines.bottom': True,
+		'axes.spines.top':    True,
+		'axes.spines.right':  True,
+	}
+}
+
 
 def plot_color_cycler(cycler_or_all_colors="cycler"):
 	"""
@@ -917,6 +933,30 @@ def plot_color_cycler(cycler_or_all_colors="cycler"):
 	fig.show()
 
 
-def update_rcParams(new_rcParams: dict):
-	print("Changing default MatPlotLib rcParams...")
-	mpl.rcParams.update(new_rcParams)
+def update_rcParams(new_params: (str, dict)):
+	"""
+	Update the default MatPlotLib rcParams.
+
+	Parameters
+	----------
+	new_params :    str or dict
+					- str: either one of plt.style.available or one of STYLES
+					- dict: dictionary of rcParams
+
+	Returns
+	-------
+
+	"""
+
+	if type(new_params) is str:
+		if new_params in STYLES:
+			new_params = STYLES[new_params]
+			mpl.rcParams.update(new_params)
+		else:  # new_rcParams in plt.style.available
+			plt.style.use(new_params)
+			new_params = get_style_rcparams(new_params)
+
+	else:  # type(new_rcParams) is dict
+		mpl.rcParams.update(new_params)
+
+	return new_params

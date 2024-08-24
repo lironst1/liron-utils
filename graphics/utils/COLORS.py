@@ -82,6 +82,7 @@ GREY_BROWN: str = "#736357"
 # %%
 RGB = (RED_A, GREEN_A, BLUE_A)
 ORANGE_A = "#FF7F0E"
+ORANGE_B = "#D95319"
 PINK_A = "#E377C2"
 
 __all__ = dir()

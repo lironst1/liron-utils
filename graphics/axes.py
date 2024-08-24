@@ -1,5 +1,4 @@
 import os
-
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm
@@ -8,7 +7,7 @@ from matplotlib.axes import Axes
 
 from .utils.default_kwargs import update_kwargs
 from ..time import get_time_str
-from ..files import MAIN_FILE_DIR, open_file
+from ..files import MAIN_FILE_DIR, open_file, mkdirs
 from ..pure_python.dicts import DL_to_LD
 from ..pure_python.docstring import copy_docstring_and_deprecators
 
@@ -332,16 +331,18 @@ class AxesLironUpper:
 
 		_ax_spines()
 
-	def ax_ticks(self, ticks: (bool, dict, list)):
+	def ax_ticks(self, ticks: (bool, dict, list[dict])):
 		@self._vectorize(cls=self, ticks=ticks)
-		def _ax_ticks(ax: Axes, ticks: (bool, list)):
+		def _ax_ticks(ax: Axes, ticks: (bool, dict, list)):
 			tick_values = [ax.get_xticks(), ax.get_yticks()]
 			tick_labels = [ax.get_xticklabels(), ax.get_yticklabels()]
 			if hasattr(ax, "set_zticks"):
 				tick_values += [ax.get_zticks()]
 				tick_labels += [ax.get_zticklabels()]
 
-			if ticks is False:  # todo: if ticks is True
+			if type(ticks) is dict:
+				ticks = [ticks]
+			elif ticks is False:  # todo: if ticks is True
 				tick_values = [[], [], []]
 				tick_labels = [[], [], []]
 
@@ -351,17 +352,26 @@ class AxesLironUpper:
 			elif type(ticks) is list:
 				assert len(ticks) <= 3, "len(ticks) must be the same as the graph dimensionality."
 				for i in range(len(ticks)):
-					tick_values[i] = ticks[i].keys()
-					tick_labels[i] = ticks[i].values()
+					if ticks[i] is None:
+						continue
+					elif ticks[i] is False:
+						tick_values[i] = []
+						tick_labels[i] = []
+					elif ticks[i] == "nolabel":
+						tick_labels[i] = []
+					elif type(ticks[i]) is dict:
+						tick_values[i] = ticks[i].keys()
+						tick_labels[i] = ticks[i].values()
 
 			else:
 				raise ValueError(
 						"'ticks' must be given either a boolean or a list of dicts of the form {val: 'label'}.")
 
-			ax.set_xticks(tick_values[0], tick_labels[0])
-			ax.set_yticks(tick_values[1], tick_labels[1])
-			if hasattr(ax, "set_zticks") and len(ticks) == 3:
-				ax.zticks(tick_values[2], tick_labels[2])
+			ax.set_xticks(list(tick_values[0]), list(tick_labels[0]))
+			if len(ticks) >= 2:
+				ax.set_yticks(list(tick_values[1]), list(tick_labels[1]))
+			if len(ticks) >= 3 and hasattr(ax, "set_zticks"):
+				ax.set_zticks(list(tick_values[2]), list(tick_labels[2]))
 
 		_ax_ticks()
 
@@ -388,7 +398,7 @@ class AxesLironUpper:
 		@self._vectorize(cls=self, limits=limits)
 		def _ax_limits(ax: Axes, limits: list[float]):
 			limits = np.array(limits, dtype=object)
-			limits = np.atleast_1d(limits)  # In case limits=None or limits is just 1 list (only xlim)
+			limits = np.atleast_2d(limits)  # In case limits=None or limits is just 1 list (only xlim)
 
 			ax.set_xlim(limits[0])
 			if len(limits) >= 2:
@@ -471,7 +481,7 @@ class AxesLironUpper:
 
 		"""
 
-		file_name = _get_savefig_file_name(file_name)
+		file_name = get_savefig_file_name(file_name)
 
 		format = os.path.splitext(file_name)[-1]
 
@@ -730,7 +740,7 @@ def set_props(ax: Axes = None,
 			**set_props_kw)
 
 
-def _get_savefig_file_name(file_name: str):
+def get_savefig_file_name(file_name: str):
 	"""
 
 	Parameters
@@ -751,11 +761,11 @@ def _get_savefig_file_name(file_name: str):
 		dir_name = os.path.dirname(file_name)
 
 	if not os.path.exists(dir_name):
-		os.mkdir(dir_name)
+		mkdirs(dir_name)
 
 	if file_name is None:
 		file_name = os.path.join(dir_name, f"fig {get_time_str()}")
-	elif os.path.dirname(file_name) == '':
+	elif os.path.dirname(file_name) == "":
 		file_name = os.path.join(dir_name, file_name)
 
 	return file_name
