@@ -445,6 +445,8 @@ class AxesLironUpper:
 			return
 		elif axs is True:
 			axs = [[ax] for ax in self.fig.axes if len(ax.images) > 0]
+		elif type(axs) is Axes:
+			axs = [axs]
 		elif type(axs) is np.ndarray:
 			axs = axs.tolist()
 

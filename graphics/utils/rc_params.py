@@ -85,6 +85,8 @@ RC_PARAMS = {
 	'figure.autolayout':           True,  # When True, automatically adjust subplot
 	'figure.figsize':              [8, 8],  # figure size in inches
 	'figure.dpi':                  200,
+	'figure.facecolor':            'none',  # figure face color
+	'figure.edgecolor':            'none',  # figure edge color
 
 	# ***************************************************************************
 	# * IMAGES                                                                  *
@@ -896,6 +898,7 @@ STYLES = {
 		'xtick.direction':    'in',  # direction: {in, out, inout}
 		'ytick.right':        True,  # draw ticks on the right side
 		'ytick.direction':    'in',  # direction: {in, out, inout}
+		'axes.grid':          False,  # display grid or not
 		'axes.spines.left':   True,  # display axis spines
 		'axes.spines.bottom': True,
 		'axes.spines.top':    True,
