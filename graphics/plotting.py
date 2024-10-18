@@ -5,6 +5,7 @@ import matplotlib.collections
 import matplotlib.colors
 import matplotlib.style
 import matplotlib.animation
+from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
 
@@ -18,6 +19,15 @@ from ..signal_processing.base import interp1
 
 
 class AxesLiron(AxesLironUpper):
+	def __init__(self,
+			shape: tuple = (1, 1),
+			sharex: (bool, str) = False, sharey: (bool, str) = False,
+			projection: str = None,
+			layout: str = None,
+			fig: Figure = None, axs: Axes = None,
+			subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
+		super().__init__(shape, sharex, sharey, projection, layout, fig, axs, subplot_kw, gridspec_kw, **fig_kw)
+
 	def plot(self,
 			x, y=None, z=None,
 			**plot_kw):
@@ -362,16 +372,18 @@ class AxesLiron(AxesLironUpper):
 			"""
 			Contour plot of scalar field z=f(x,y)
 
-			Args:
-				ax:
-				x:
-				y:
-				z:
-				contours:
-				*args:
-				**kwargs:
+			Parameters
+			----------
+			ax :
+			x :
+			y :
+			z :
+			contours :
+			args, kwargs :
+			 :
 
-			Returns:
+			Returns
+			-------
 
 			"""
 
@@ -381,77 +393,74 @@ class AxesLiron(AxesLironUpper):
 
 		return _plot_contour(*args, **kwargs)
 
-	def plot_animation(self,
-			images, titles=None,
-			im_instance: AxesImage = None,
+	def plot_animation(self, axs: (Axes, np.ndarray[Axes]),
+			data: list[np.ndarray],
+			data_instance: list,
+			titles: list = None,
 			*args, **kwargs):
+		"""
+		Plot animation
 
-		@self._vectorize(cls=self, images=images, titles=titles, im_instance=im_instance)
-		def _plot_animation(ax: Axes,
-				images, titles=None,
-				im_instance: AxesImage = None,
-				*args, **kwargs):
-			"""
-			Plot animation
+		Examples
+		--------
+			>>> import numpy as np
+			>>> from liron_utils import graphics as gr
 
-			Examples:
-				>>> import numpy as np
-				>>> from liron_utils import graphics as gr
+			>>> nimages = 10
+			>>> images = np.random.random((nimages))
+			>>> Ax = gr.AxesLiron()
+			>>> Ax.plot_animation(images)
+			>>> Ax.save_fig("test.gif")
 
-				>>> nimages = 10
-				>>> images = np.random.random((nimages))
-				>>> Ax = gr.AxesLiron()
-				>>> Ax.plot_animation(images)
-				>>> Ax.save_fig("test.gif")
+		Parameters
+		----------
+		axs :               Axes or list[Axes]
+							All axes should be of the same figure
+		data :              array_like
+							The data to be plotted, given as list of size len(axs) of:
+								- (image) a 4D array of size [#n_frames, x, y]
+								- (plot)  a 4D array of size [#n_frames, 2, xy]
+		data_instance   :   array_like of matplotlib objects
+							Image/line/etc. handle to use in case user wants some pre-defined properties.
+							First axis should be of size 'len(axs)'
+		titles :            list or function handle, optional
+							Axis titles. Can be given as:
+								- List of changing titles
+								- function handle whose input argument is iterable and outputs the title
+		args, kwargs :      sent to matplotlib.animation.FuncAnimation
 
-			Parameters
-			----------
-			ax :
-			images :            array_like
-								The images to be plotted. Can be given as:
-								- a 3D array of size [#images, x, y]
-								- a list of 2D arrays of size [x, y]
-								- a list of image handles. In this case, im_instance is ignored
-			titles :            list or function handle, optional
-									- List of changing titles
-									- function handle whose input argument is iterable and outputs the title
-			im_instance   :     AxesImage
-								an image handle to use in case user wants some pre-defined properties
-			args :              sent to matplotlib.animation.FuncAnimation
-			kwargs :
+		Returns
+		-------
 
-			Returns
-			-------
+		"""
+		if type(axs) is Axes:  # convert to array
+			axs = [axs]
+			data = [data]
+			data_instance = [data_instance]
+		assert len(axs) == len(data) == len(data_instance), "Number of axes should be equal to number of data sets."
 
-			"""
+		assert (axs[i].figure == axs[i + 1].figure
+			for i in range(len(axs) - 1)), "All axes should be of the same figure."
 
-			if titles is not None:
-				kwargs = {"blit": False} | kwargs
+		n_frames = len(data[0])
 
-				if callable(titles):
-					titles = [titles(i) for i in range(len(images))]
+		if titles is not None:
+			kwargs = {"blit": False} | kwargs
+		# if callable(titles):
+		# 	titles = [titles(i) for i in range(n_frames)]  # convert to list
 
-			if type(images[0]) is AxesImage:
-				def update_image(i):
-					im = images[i]
-					if titles is not None:
-						ax.set_title(titles[i])
-					return im
-			else:
-				images = np.asarray(images)
+		def update_data(i):
+			for idx_ax, ax in enumerate(axs):
+				h = data_instance[idx_ax]
+				if type(h) is list:  # multiple objects
+					h = h[0]
 
-				im = im_instance
-				if im_instance is None:
-					im = ax.imshow(images[0])
+				h.set_data(data[idx_ax][i])  # update image
+				if titles is not None:
+					ax.set_title(titles[i])  # update title
 
-				def update_image(i):
-					im.set_data(images[i])
-					if titles is not None:
-						ax.set_title(titles[i])
-					return im
+			return data_instance
 
-			self.func_animation = matplotlib.animation.FuncAnimation(fig=ax.figure,
-					func=update_image, frames=images.shape[0],
-					*args, **kwargs)
-
-		return _plot_animation(*args, **kwargs)
+		self.func_animation = matplotlib.animation.FuncAnimation(fig=axs[0].figure,
+				func=update_data, frames=np.arange(n_frames),
+				*args, **kwargs)

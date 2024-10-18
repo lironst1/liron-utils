@@ -8,14 +8,14 @@ NUM_CPUS = mp.cpu_count()
 NUM_PROCESSES_TO_USE = NUM_CPUS // 2
 
 
-def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
+def parallel_map(func, iterable, num_processes: int = NUM_PROCESSES_TO_USE, desc: str = None, **kwargs):
 	"""
 	Run function 'func' in parallel.
 	See qutip.parallel.parallel_map for reference.
 
 	Notes
 	-----
-	- 'func' must be a global function.
+	- 'func' must be a global function (can't be nested inside another function).
 	- parallel_map uses 'spawn' [1,2] by default in Windows, which starts a Python child process from scratch.
 	  This means that everything not under an 'if __name__==__main__' block will be executed multiple times.
 	- In UNIX we use 'fork'.
@@ -44,10 +44,13 @@ def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
 	Parameters
 	----------
 	func :          The function to evaluate in parallel. The first argument is the changing value of each iteration
-	iterable :      First input argument for 'func'
-	num_processes : number of processes to use
-	args :          passed to func
-	kwargs :        passed to func
+	iterable :      array_like
+					First input argument for 'func'
+	num_processes : int
+					number of processes to use
+	desc :          str
+					description for tqdm
+	args, kwargs :  passed to func
 
 	Returns
 	-------
@@ -69,7 +72,7 @@ def parallel_map(func, iterable, num_processes=NUM_PROCESSES_TO_USE, **kwargs):
 		out_async = [pool.apply_async(func=func_partial, args=(i,)) for i in iterable]
 
 		out = []
-		for out_async_i in tqdm(out_async, total=len(iterable)):
+		for out_async_i in tqdm(out_async, total=len(iterable), desc=desc):
 			try:
 				out += [out_async_i.get()]
 

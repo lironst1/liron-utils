@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import matplotlib.layout_engine
 import matplotlib.pyplot as plt
 import matplotlib.cm
 from matplotlib.figure import Figure
@@ -178,6 +179,10 @@ class AxesLironUpper:
 			if fig_kw is None:
 				fig_kw = dict()
 			fig_kw = {"layout": layout} | fig_kw
+			padding = [None] * 4
+			for i, key in enumerate(["w_pad", "h_pad", "wspace", "hspace"]):
+				if key in fig_kw:
+					padding[i] = fig_kw.pop(key)
 
 			nrows, ncols = shape
 
@@ -185,6 +190,9 @@ class AxesLironUpper:
 					sharex=sharex, sharey=sharey,
 					squeeze=False,
 					subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
+
+			if type(self.fig.get_layout_engine()) is matplotlib.layout_engine.ConstrainedLayoutEngine:
+				self.fig.get_layout_engine().set(w_pad=padding[0], h_pad=padding[1], hspace=padding[2], wspace=padding[3])
 
 		# self.fig = plt.figure(**fig_kw)
 		# gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
@@ -197,6 +205,8 @@ class AxesLironUpper:
 
 		elif axs is not None:
 			self.fig = self.axs[0, 0].figure
+
+		self.func_animation = None
 
 	@staticmethod
 	def _vectorize(cls, **vec_params):
@@ -331,37 +341,48 @@ class AxesLironUpper:
 
 		_ax_spines()
 
-	def ax_ticks(self, ticks: (bool, dict, list[dict])):
+	def ax_ticks(self, ticks: (bool, dict, list[dict], list[list])):
 		@self._vectorize(cls=self, ticks=ticks)
-		def _ax_ticks(ax: Axes, ticks: (bool, dict, list)):
+		def _ax_ticks(ax: Axes, ticks: (bool, dict, list[dict], list[list])):
 			tick_values = [ax.get_xticks(), ax.get_yticks()]
 			tick_labels = [ax.get_xticklabels(), ax.get_yticklabels()]
 			if hasattr(ax, "set_zticks"):
 				tick_values += [ax.get_zticks()]
 				tick_labels += [ax.get_zticklabels()]
 
-			if type(ticks) is dict:
+			if ticks is None or ticks is True:
+				ticks = [None] * len(tick_values)
+
+			elif type(ticks) is dict:  # only x-axis
 				ticks = [ticks]
-			elif ticks is False:  # todo: if ticks is True
+
+			elif ticks is False:
 				tick_values = [[], [], []]
 				tick_labels = [[], [], []]
 
 			elif ticks == "nolabel":
 				tick_labels = [[], [], []]
 
-			elif type(ticks) is list:
-				assert len(ticks) <= 3, "len(ticks) must be the same as the graph dimensionality."
+			elif type(ticks) is list:  # x,y,z axes
+				if hasattr(ax, "set_zticks"):
+					assert len(ticks) <= 3, "len(ticks) must be <= graph dimensionality."
+				else:
+					assert len(ticks) <= 2, "len(ticks) must be <= graph dimensionality."
+
 				for i in range(len(ticks)):
-					if ticks[i] is None:
+					if ticks[i] is None or ticks[i] is True:  # show ticks and labels
 						continue
-					elif ticks[i] is False:
+					elif ticks[i] is False:  # hide ticks and labels
 						tick_values[i] = []
 						tick_labels[i] = []
-					elif ticks[i] == "nolabel":
+					elif ticks[i] == "nolabel":  # hide labels
 						tick_labels[i] = []
-					elif type(ticks[i]) is dict:
+					elif type(ticks[i]) is dict:  # custom ticks and labels
 						tick_values[i] = ticks[i].keys()
 						tick_labels[i] = ticks[i].values()
+					elif type(ticks[i]) is list or type(ticks[i]) is np.ndarray:  # custom ticks
+						tick_values[i] = ticks[i]
+						tick_labels[i] = ticks[i]
 
 			else:
 				raise ValueError(
@@ -488,7 +509,7 @@ class AxesLironUpper:
 		format = os.path.splitext(file_name)[-1]
 
 		if format == ".gif":
-			assert hasattr(self, "func_animation"), "Call plot_animation() before saving gif."
+			assert self.func_animation is not None, "Call plot_animation() before saving gif."
 			self.func_animation.save(file_name, **savefig_kw)
 		else:
 			self.fig.savefig(file_name, **savefig_kw)
@@ -525,8 +546,8 @@ class AxesLironUpper:
 
 		Other Parameters
 		----------------
-		* For the following parameters, a '*' symbol means that it can be vectorized
-		  to all axes by being sent as a list.
+		For the following parameters, a '*' symbol means that it can be vectorized
+		to all axes by being sent as a list.
 
 		sup_title :         str, default: None
 							supreme figure title
@@ -623,14 +644,8 @@ class AxesLironUpper:
 		# Axis Spines
 		caller(self.ax_spines, set_props_kw["spines"])
 
-		# Axis Ticks
-		caller(self.ax_ticks, set_props_kw["ticks"])
-
 		# Axis Labels
 		caller(self.ax_labels, set_props_kw["labels"])
-
-		# Axis Limits
-		caller(self.ax_limits, set_props_kw["limits"])
 
 		# View (in case of 3D)
 		caller(self.ax_view, set_props_kw["view"])
@@ -643,6 +658,12 @@ class AxesLironUpper:
 
 		# Colorbar
 		self.ax_colorbar(set_props_kw["colorbar"], **colorbar_kw)
+
+		# Axis Ticks
+		self.ax_ticks(set_props_kw["ticks"])
+
+		# Axis Limits
+		caller(self.ax_limits, set_props_kw["limits"])
 
 		# x-y Lines (through the origin)
 		if set_props_kw["xy_lines"]:

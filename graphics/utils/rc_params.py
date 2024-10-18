@@ -4,11 +4,6 @@ import matplotlib.pyplot as plt
 from . import COLORS
 from .COLORS import *
 
-
-def get_style_rcparams(style: str):
-	return plt.style.core._base_library[style]
-
-
 RC_PARAMS = {
 	# ***************************************************************************
 	# * BACKENDS                                                                *
@@ -18,7 +13,7 @@ RC_PARAMS = {
 	# ***************************************************************************
 	# * LINES                                                                   *
 	# ***************************************************************************
-	'lines.linewidth':             1.8,
+	'lines.linewidth':             1.8,  # line width in points
 
 	# ***************************************************************************
 	# * PATHCES                                                                 *
@@ -274,7 +269,7 @@ RC_PARAMS_DEFAULT = {
 	# Patches are graphical objects that fill 2D space, like polygons or circles.
 	# See https://matplotlib.org/api/artist_api.html#module-matplotlib.patches
 	# for more information on patch properties.
-	'patch.linewidth':                    1,  # edge width in points.
+	'patch.linewidth':                    1,  # edge width in points
 	'patch.facecolor':                    'C0',
 	'patch.edgecolor':                    'black',  # if forced, or patch is not filled
 	'patch.force_edgecolor':              False,  # True to always use edgecolor
@@ -892,17 +887,47 @@ RC_PARAMS_DEFAULT = {
 
 }
 
-STYLES = {
-	"article": get_style_rcparams("seaborn-v0_8-talk") | {
-		'xtick.top':          True,  # draw ticks on the top side
-		'xtick.direction':    'in',  # direction: {in, out, inout}
-		'ytick.right':        True,  # draw ticks on the right side
-		'ytick.direction':    'in',  # direction: {in, out, inout}
-		'axes.grid':          False,  # display grid or not
-		'axes.spines.left':   True,  # display axis spines
-		'axes.spines.bottom': True,
-		'axes.spines.top':    True,
-		'axes.spines.right':  True,
+
+def get_style_rcparams(style: str):
+	return plt.style.core._base_library[style]
+
+
+STYLES = plt.style.core._base_library | {
+	"default":             RC_PARAMS_DEFAULT,
+
+	"liron_utils-default": RC_PARAMS,
+
+	"liron_utils-article": {
+		# get_style_rcparams("seaborn-v0_8-talk")
+		'axes.labelsize':        14.3,  # font size of the x and y labels
+		'axes.titlesize':        15.6,  # font size of the axes title
+		'figure.figsize':        [10.4, 7.15],  # figure size in inches
+		'grid.linewidth':        1.3,  # in points
+		'legend.fontsize':       13.0,
+		'lines.linewidth':       2.275,  # line width in points
+		'lines.markeredgewidth': 0.0,  # the line width around the marker symbol
+		'lines.markersize':      9.1,  # marker size, in points
+		'patch.linewidth':       0.39,  # edge width in points.
+		'xtick.labelsize':       13.0,  # font size of the tick labels
+		'xtick.major.pad':       9.1,  # distance to major tick label in points
+		'xtick.major.width':     1.3,  # major tick width in points
+		'xtick.minor.width':     0.65,  # minor tick width in points
+		'ytick.labelsize':       13.0,  # font size of the tick labels
+		'ytick.major.pad':       9.1,  # distance to major tick label in points
+		'ytick.major.width':     1.3,  # major tick width in points
+		'ytick.minor.width':     0.65,  # minor tick width in points
+
+		# Custom
+		'xtick.top':             True,  # draw ticks on the top side
+		'xtick.direction':       'in',  # direction: {in, out, inout}
+		'ytick.right':           True,  # draw ticks on the right side
+		'ytick.direction':       'in',  # direction: {in, out, inout}
+		'axes.grid':             False,  # display grid or not
+		'axes.spines.left':      True,  # display axis spines
+		'axes.spines.bottom':    True,
+		'axes.spines.top':       True,
+		'axes.spines.right':     True,
+		'savefig.pad_inches':    0,  # Padding to be used when bbox is set to 'tight'
 	}
 }
 
@@ -936,7 +961,7 @@ def plot_color_cycler(cycler_or_all_colors="cycler"):
 	fig.show()
 
 
-def update_rcParams(new_params: (str, dict)):
+def update_rcParams(new_params: (str, dict) = "liron_utils-default"):
 	"""
 	Update the default MatPlotLib rcParams.
 
