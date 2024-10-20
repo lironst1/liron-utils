@@ -893,7 +893,7 @@ def get_style_rcparams(style: str):
 
 
 STYLES = plt.style.core._base_library | {
-	"default":             RC_PARAMS_DEFAULT,
+	"default":             mpl.rcParamsDefault,
 
 	"liron_utils-default": RC_PARAMS,
 
@@ -932,33 +932,50 @@ STYLES = plt.style.core._base_library | {
 }
 
 
-def plot_color_cycler(cycler_or_all_colors="cycler"):
+def get_color_cycler(colors: (str, list) = "cycler", plot: bool = False):
 	"""
 	Show all of a cycler colors in a graph
 
 	Parameters
 	----------
-	cycler_or_all_colors :      "cycler" - only plot current cycler colors, otherwise plot all colors given in COLORS.py
+	colors :        str or list, optional
+					- "all" - return all colors given in COLORS.py
+					- "cycler" - return only cycler colors given in RC_PARAMS["axes.prop_cycle"]
+	plot :          bool, optional
+					Plot the colors
 
 	Returns
 	-------
-
+	list of colors
 	"""
 
-	if cycler_or_all_colors == "cycler":
-		cycler = RC_PARAMS["axes.prop_cycle"]
-		colors_to_plot = [cycler._left[i]['color'] for i in range(len(cycler._left))]
-	else:
-		all_str = COLORS.__all__
-		colors_to_plot = [getattr(COLORS, all_str[i]) for i in range(len(all_str))]
+	if type(colors) is str:
+		if colors == "cycler":
+			cycler = RC_PARAMS["axes.prop_cycle"]
+			colors = [cycler._left[i]['color'] for i in range(len(cycler._left))]
+		elif colors == "all":
+			all_str = COLORS.__all__
+			colors = [getattr(COLORS, all_str[i]) for i in range(len(all_str))]
+		else:
+			raise ValueError("Invalid value for 'colors'.")
 
-	fig, ax = plt.subplots()
-	ax.axes.yaxis.set_visible(False)
-	for i in range(len(colors_to_plot)):
-		h = ax.bar(i + 1, 1, color=colors_to_plot[i])
-		ax.bar_label(h, labels=[colors_to_plot[i]], label_type="center", rotation=-90)
-	ax.grid(None)
-	fig.show()
+	elif type(colors) is list:
+		pass
+
+	else:
+		raise ValueError("Invalid type for 'colors'.")
+
+	# plot colors
+	if plot:
+		fig, ax = plt.subplots()
+		ax.axes.yaxis.set_visible(False)
+		for i in range(len(colors)):
+			h = ax.bar(i + 1, 1, color=colors[i])
+			ax.bar_label(h, labels=[colors[i]], label_type="center", rotation=-90)
+		ax.grid(None)
+		fig.show()
+
+	return colors
 
 
 def update_rcParams(new_params: (str, dict) = "liron_utils-default"):

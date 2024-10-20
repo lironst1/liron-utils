@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
 from .utils.default_kwargs import update_kwargs
-from ..time import get_time_str
+from ..time import TIME_STR, get_time_str
 from ..files import MAIN_FILE_DIR, open_file, mkdirs
 from ..pure_python.dicts import DL_to_LD
 from ..pure_python.docstring import copy_docstring_and_deprecators
@@ -192,7 +192,8 @@ class AxesLironUpper:
 					subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
 
 			if type(self.fig.get_layout_engine()) is matplotlib.layout_engine.ConstrainedLayoutEngine:
-				self.fig.get_layout_engine().set(w_pad=padding[0], h_pad=padding[1], hspace=padding[2], wspace=padding[3])
+				self.fig.get_layout_engine().set(w_pad=padding[0], h_pad=padding[1], hspace=padding[2],
+						wspace=padding[3])
 
 		# self.fig = plt.figure(**fig_kw)
 		# gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
@@ -763,25 +764,30 @@ def set_props(ax: Axes = None,
 			**set_props_kw)
 
 
-def get_savefig_file_name(file_name: str):
+def get_savefig_file_name(file_name: str = None, time_dir: bool = False):
 	"""
 
 	Parameters
 	----------
-	file_name :     str
+	file_name :     str, optional
 					If <file_name> doesn't contain a directory name, the default saving directory
 					will be "<CUR_DIR>/figs", where <CUR_DIR> is the current directory of the directory
 					of the Python file being called.
+	time_dir :      bool, optional
+					If True, a time directory will be created in the default saving directory.
 
 	Returns
 	-------
-		Full path of file to be saved.
+	Full path of file to be saved.
 	"""
 
-	if file_name is None or os.path.dirname(file_name) == '':
+	if file_name is None or os.path.dirname(file_name) == "":
 		dir_name = os.path.join(MAIN_FILE_DIR, "figs")
 	else:
 		dir_name = os.path.dirname(file_name)
+
+	if time_dir:
+		dir_name = os.path.join(dir_name, TIME_STR)
 
 	if not os.path.exists(dir_name):
 		mkdirs(dir_name)

@@ -41,6 +41,11 @@ def parallel_map(func, iterable, num_processes: int = NUM_PROCESSES_TO_USE, desc
 	>>> 	print(out[:5])
 	>>> 	print(f"time: {time.time() - t0}sec")
 
+	Notes
+	-----
+	- If you get UserWarning: Can't pickle local object 'func.<locals>.func_partial', try to define 'func' in
+	  the global scope.
+
 	Parameters
 	----------
 	func :          The function to evaluate in parallel. The first argument is the changing value of each iteration

@@ -79,10 +79,12 @@ DARK_BROWN: str = "#8B4513"
 GRAY_BROWN: str = "#736357"
 GREY_BROWN: str = "#736357"
 
-# %%
-RGB = (RED_A, GREEN_A, BLUE_A)
+# %% Custom Colors
 ORANGE_A = "#FF7F0E"
 ORANGE_B = "#D95319"
 PINK_A = "#E377C2"
 
-__all__ = dir()
+__all__ = [item for item in dir() if not item.startswith('_')]
+
+# %% Custom Variables
+RGB = (RED_A, GREEN_A, BLUE_A)
