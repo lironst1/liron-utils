@@ -505,7 +505,7 @@ class AxesLironUpper:
 
 		"""
 
-		file_name = get_savefig_file_name(file_name)
+		file_name = get_savefig_file_name(file_name, mkdir=True)
 
 		format = os.path.splitext(file_name)[-1]
 
@@ -764,7 +764,7 @@ def set_props(ax: Axes = None,
 			**set_props_kw)
 
 
-def get_savefig_file_name(file_name: str = None, time_dir: bool = False):
+def get_savefig_file_name(file_name: str = None, time_dir: bool = False, mkdir: bool = False):
 	"""
 
 	Parameters
@@ -789,7 +789,7 @@ def get_savefig_file_name(file_name: str = None, time_dir: bool = False):
 	if time_dir:
 		dir_name = os.path.join(dir_name, TIME_STR)
 
-	if not os.path.exists(dir_name):
+	if mkdir and not os.path.exists(dir_name):
 		mkdirs(dir_name)
 
 	if file_name is None:
