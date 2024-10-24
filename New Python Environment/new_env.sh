@@ -19,6 +19,8 @@ conda config --add create_default_packages matplotlib
 conda config --add create_default_packages notebook
 conda config --add create_default_packages opencv
 conda config --add create_default_packages ipython
+conda config --add create_default_packages ipympl
+conda config --add create_default_packages ipykernel
 conda config --add create_default_packages pandas
 conda config --add create_default_packages plotly
 conda config --add create_default_packages pycairo
@@ -30,17 +32,14 @@ conda config --add create_default_packages tqdm
 
 #conda info
 
-conda create --name myenv
+conda create --name myenv --yes
 
 pip install --upgrade pip
 pip install \
 audioread \
-ipympl \
-ipykernel \
-latex \
+latex pdflatex \
 librosa \
 manim \
-pdflatex \
 pipdeptree \
 python-docx \
 pytube \
@@ -51,6 +50,5 @@ qsharp qsharp-widgets azure-quantum \
 resampy \
 SoundFile \
 tmm \
-torch \
-torchmetrics \
-uncertainties \
+torch torchmetrics \
+uncertainties
