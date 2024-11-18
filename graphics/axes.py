@@ -727,12 +727,12 @@ def new_figure(nrows=1, ncols=1,
 	return fig, axs
 
 
-@copy_docstring_and_deprecators(AxesLironUpper.draw_xy_lines)
+# @copy_docstring_and_deprecators(AxesLironUpper.draw_xy_lines)
 def draw_xy_lines(ax: Axes, **axis_lines_kw):
 	AxesLironUpper(axs=ax).draw_xy_lines(**axis_lines_kw)
 
 
-@copy_docstring_and_deprecators(AxesLironUpper.save_fig)
+# @copy_docstring_and_deprecators(AxesLironUpper.save_fig)
 def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 	"""
 	Save figure as file
@@ -752,7 +752,7 @@ def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 	AxesLironUpper(fig=fig).save_fig(file_name, **savefig_kw)
 
 
-@copy_docstring_and_deprecators(AxesLironUpper.set_props)
+# @copy_docstring_and_deprecators(AxesLironUpper.set_props)
 def set_props(ax: Axes = None,
 		save_file_name: (str, bool) = False, save_fig_kw: dict = None,
 		**set_props_kw):
