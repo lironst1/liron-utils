@@ -39,7 +39,7 @@ KWARGS = {
 	},
 
 	"ERRORBAR_KW":     {
-		"fmt":        ".",
+		"marker":        ".",
 		# "color":      COLORS.DARK_BLUE,
 		"markersize": 10,
 		"ecolor":     COLORS.RED_E,
