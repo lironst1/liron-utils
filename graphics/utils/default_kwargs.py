@@ -9,22 +9,23 @@ KWARGS = {
 
 	# Axes
 	"SET_PROPS_KW":    {
-		"sup_title":  None,  # str
-		"ax_title":   None,  # list(str)
-		"axis":       None,  # list(bool)
-		"spines":     None,  # list(bool)
-		"ticks":      None,  # list(bool/dict/list)
-		"labels":     None,  # list(list(str))
-		"limits":     None,  # list(list(float))
-		"view":       None,  # list(list(float))
-		"grid":       None,  # list(bool)
-		"legend":     True,  # list(bool/list(str))
-		"legend_loc": None,  # list(str)
-		"colorbar":   False,  # list(bool/list)
-		"xy_lines":   True,  # list(bool)
-		"face_color": None,  # list(color)
-		"show_fig":   True,  # bool
-		"open_dir":   False,  # bool
+		"sup_title":   None,  # str
+		"ax_title":    None,  # list(str)
+		"axis":        None,  # list(bool)
+		"spines":      None,  # list(bool)
+		"ticks":       None,  # list(bool/list)
+		"tick_labels": None,  # list(bool/list)
+		"labels":      None,  # list(list(str))
+		"limits":      None,  # list(list(float))
+		"view":        None,  # list(list(float))
+		"grid":        None,  # list(bool)
+		"legend":      True,  # list(bool/list(str))
+		"legend_loc":  None,  # list(str)
+		"colorbar":    False,  # list(bool/list)
+		"xy_lines":    True,  # list(bool)
+		"face_color":  None,  # list(color)
+		"show_fig":    True,  # bool
+		"open_dir":    False,  # bool
 	},
 
 	"XY_LINES_KW":     {

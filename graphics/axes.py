@@ -342,33 +342,26 @@ class AxesLironUpper:
 
 		_ax_spines()
 
-	def ax_ticks(self, ticks: (bool, dict, list[dict], list[list])):
-		@self._vectorize(cls=self, ticks=ticks)
-		def _ax_ticks(ax: Axes, ticks: (bool, dict, list[dict], list[list])):
+	def ax_ticks(self, ticks: (bool, list[list]), labels: (bool, list[list])):
+		@self._vectorize(cls=self, ticks=ticks, labels=labels)
+		def _ax_ticks(ax: Axes, ticks: (bool, list[list]), labels: (bool, list[list])):
 			tick_values = [ax.get_xticks(), ax.get_yticks()]
 			tick_labels = [ax.get_xticklabels(), ax.get_yticklabels()]
 			if hasattr(ax, "set_zticks"):
 				tick_values += [ax.get_zticks()]
 				tick_labels += [ax.get_zticklabels()]
 
-			if ticks is None or ticks is True:
-				ticks = [None] * len(tick_values)
+			ndim = len(tick_values)
 
-			elif type(ticks) is dict:  # only x-axis
-				ticks = [ticks]
+			if ticks is None or ticks is True:
+				ticks = [None] * ndim
 
 			elif ticks is False:
 				tick_values = [[], [], []]
 				tick_labels = [[], [], []]
 
-			elif ticks == "nolabel":
-				tick_labels = [[], [], []]
-
 			elif type(ticks) is list:  # x,y,z axes
-				if hasattr(ax, "set_zticks"):
-					assert len(ticks) <= 3, "len(ticks) must be <= graph dimensionality."
-				else:
-					assert len(ticks) <= 2, "len(ticks) must be <= graph dimensionality."
+				assert len(ticks) <= ndim, "len(ticks) must be <= graph dimensionality."
 
 				for i in range(len(ticks)):
 					if ticks[i] is None or ticks[i] is True:  # show ticks and labels
@@ -376,23 +369,34 @@ class AxesLironUpper:
 					elif ticks[i] is False:  # hide ticks and labels
 						tick_values[i] = []
 						tick_labels[i] = []
-					elif ticks[i] == "nolabel":  # hide labels
-						tick_labels[i] = []
-					elif type(ticks[i]) is dict:  # custom ticks and labels
-						tick_values[i] = ticks[i].keys()
-						tick_labels[i] = ticks[i].values()
 					elif type(ticks[i]) is list or type(ticks[i]) is np.ndarray:  # custom ticks
 						tick_values[i] = ticks[i]
 						tick_labels[i] = ticks[i]
 
 			else:
-				raise ValueError(
-						"'ticks' must be given either a boolean or a list of dicts of the form {val: 'label'}.")
+				raise ValueError("'ticks' must be given either as a boolean or list[list].")
+
+			if labels is None or labels is True:
+				pass
+			elif labels is False:
+				tick_labels = [[], [], []]
+			elif type(labels) is list:
+				assert len(labels) <= ndim, "len(labels) must be <= graph dimensionality."
+
+				for i in range(len(labels)):
+					if labels[i] is None or labels[i] is True:  # show labels
+						continue
+					elif labels[i] is False:  # hide labels
+						tick_labels[i] = []
+					elif type(labels[i]) is list or type(labels[i]) is np.ndarray:  # custom labels
+						tick_labels[i] = labels[i]
+			else:
+				raise ValueError("'labels' must be given either as a boolean or list[list].")
 
 			ax.set_xticks(list(tick_values[0]), list(tick_labels[0]))
-			if len(ticks) >= 2:
+			if ndim >= 2:
 				ax.set_yticks(list(tick_values[1]), list(tick_labels[1]))
-			if len(ticks) >= 3 and hasattr(ax, "set_zticks"):
+			if ndim >= 3:
 				ax.set_zticks(list(tick_values[2]), list(tick_labels[2]))
 
 		_ax_ticks()
@@ -563,11 +567,15 @@ class AxesLironUpper:
 							'True' will plot all boundaries.
 							Can be specified as one (or a list) of the strings ["left", "bottom", "top", "right"]
 
-		*ticks :            bool/dict/list, default: None
+		*ticks :            bool/list, default: None
 							axis ticks
-							'False' will remove all ticks.
-							A dict is passed as {value: label}.
-							A list of dicts will set the ticks for the x,y,z axes
+							'False' will remove all ticks and tick labels.
+							A list will set the ticks for the x,y,z axes
+
+		*ticks_labels :     bool/list, default: None
+							axis tick labels
+							'False' will remove all tick labels.
+							A list will set the tick labels for the x,y,z axes
 
 		*labels :           list[str], default: None
 							axis labels for the x,y,z axes
@@ -661,7 +669,7 @@ class AxesLironUpper:
 		self.ax_colorbar(set_props_kw["colorbar"], **colorbar_kw)
 
 		# Axis Ticks
-		self.ax_ticks(set_props_kw["ticks"])
+		self.ax_ticks(set_props_kw["ticks"], set_props_kw["tick_labels"])
 
 		# Axis Limits
 		caller(self.ax_limits, set_props_kw["limits"])
