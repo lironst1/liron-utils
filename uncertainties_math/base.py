@@ -49,7 +49,7 @@ def to_numpy(x, xerr=None):
 	return x, xerr
 
 
-def from_numpy(x, xerr):
+def from_numpy(x, xerr=0):
 	if type(x) is float:
 		return ufloat(x, xerr)
 	else:
