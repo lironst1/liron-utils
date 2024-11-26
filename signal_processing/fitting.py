@@ -58,7 +58,7 @@ def linear_fit(x, y, xerr=None, yerr=None, beta0=None, **kwargs):
     return {"h":         out,
             "y_pred":    y_pred,
             "slope":     slope,
-            "inetrcept": intercept,
+            "intercept": intercept,
             "r_squared": r_squared}
 
 
