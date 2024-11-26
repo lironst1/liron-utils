@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
@@ -50,8 +51,8 @@ RC_PARAMS = {
 
 	'axes.labelsize':              'large',  # font size of the x and y labels
 
-	'axes.prop_cycle':             mpl.cycler(color=[DARK_BLUE, ORANGE_B, PURPLE, GREEN, GREY_BROWN,
-		GOLD, TEAL, MAROON, BLUE_C, PINK_A]),
+	'axes.prop_cycle':             mpl.cycler(color=[DARK_BLUE, ORANGE_B, PURPLE_D, GREEN, GREY_BROWN,
+		GOLD, MAROON_D, BLUE_C, BLACK, PINK]),
 
 	'axes.spines.left':            True,  # display axis spines
 	'axes.spines.bottom':          True,
@@ -115,7 +116,7 @@ RC_PARAMS = {
 	# ***************************************************************************
 	# * SAVING FIGURES                                                          *
 	# ***************************************************************************
-	'savefig.format':              'png',  # {png, ps, pdf, svg}
+	'savefig.format':              'svg',  # {png, ps, pdf, svg}
 	'savefig.bbox':                'tight',  # {tight, standard}
 
 	# ***************************************************************************
@@ -932,7 +933,7 @@ STYLES = plt.style.core._base_library | {
 }
 
 
-def get_color_cycler(colors: (str, list) = "cycler", plot: bool = False):
+def get_color_cycler(colors: (str, list) = "cycler", plot: (bool, str) = False):
 	"""
 	Show all of a cycler colors in a graph
 
@@ -966,13 +967,22 @@ def get_color_cycler(colors: (str, list) = "cycler", plot: bool = False):
 		raise ValueError("Invalid type for 'colors'.")
 
 	# plot colors
-	if plot:
+	if plot is not False:
 		fig, ax = plt.subplots()
-		ax.axes.yaxis.set_visible(False)
-		for i in range(len(colors)):
-			h = ax.bar(i + 1, 1, color=colors[i])
-			ax.bar_label(h, labels=[colors[i]], label_type="center", rotation=-90)
-		ax.grid(None)
+		if plot is True or plot in ["color", "colors"]:
+			ax.axes.yaxis.set_visible(False)
+			for i in range(len(colors)):
+				h = ax.bar(i + 1, 1, color=colors[i])
+				ax.bar_label(h, labels=[colors[i]], label_type="center", rotation=-90)
+			ax.grid(None)
+
+		elif plot == "sine":
+			x = np.linspace(0, 1, 1001)
+			y = lambda f: np.sin(2 * np.pi * f * x)
+			for i in range(len(colors)):
+				ax.plot(x, y((i + 1) / 4), label=colors[i])
+				ax.legend()
+
 		fig.show()
 
 	return colors

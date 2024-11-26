@@ -668,11 +668,11 @@ class AxesLironUpper:
 		# Colorbar
 		self.ax_colorbar(set_props_kw["colorbar"], **colorbar_kw)
 
-		# Axis Ticks
-		self.ax_ticks(set_props_kw["ticks"], set_props_kw["tick_labels"])
-
 		# Axis Limits
 		caller(self.ax_limits, set_props_kw["limits"])
+
+		# Axis Ticks
+		self.ax_ticks(set_props_kw["ticks"], set_props_kw["tick_labels"])
 
 		# x-y Lines (through the origin)
 		if set_props_kw["xy_lines"]:
