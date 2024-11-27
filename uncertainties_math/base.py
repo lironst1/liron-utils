@@ -6,7 +6,7 @@ from uncertainties import ufloat
 
 def is_unumpy(arr):
 	try:
-		return isinstance(arr[0], uncertainties.core.AffineScalarFunc)
+		return any([isinstance(arr[i], uncertainties.core.AffineScalarFunc) for i in range(len(arr))])
 	except TypeError:
 		return False
 

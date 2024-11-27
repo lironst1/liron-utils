@@ -535,7 +535,7 @@ class AxesLironUpper:
 
 		Parameters
 		----------
-		save_file_name :        str/bool
+		save_file_name :    str/bool
 							The file name to be saved.
 							False - don't save, True - save to MAIN_FILE_DIR, str - specify location
 
