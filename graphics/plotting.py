@@ -95,6 +95,60 @@ class AxesLiron(AxesLironUpper):
 
 		return _plot_errorbar(**errorbar_kw)
 
+	def plot_filled_error(self, ax: Axes,
+			x,
+			y=None, yerr=None, n_std=2,
+			y_low=None, y_high=None,
+			**fill_between_kw):
+
+		@self._vectorize(cls=self, ax=ax,
+				x=x,
+				y=y, yerr=yerr, n_std=n_std,
+				y_low=y_low, y_high=y_high)
+		def _plot_filled_error(ax: Axes,
+				x,
+				y=None, yerr=None, n_std=2,
+				y_low=None, y_high=None,
+				**fill_between_kw):
+			"""
+			Plot error using filled area
+
+			Parameters
+			----------
+			ax :   		        Axes
+			x :  		        array_like
+			y, yerr :  		    array_like, optional
+			n_std :  		    int, optional
+								Number of standard deviations to fill.
+			y_low, y_high :     array_like, optional
+								Lower and upper bounds of the filled area.
+								If not given, will be calculated as y-n_std*yerr, y+n_std*yerr
+			fill_between_kw :
+
+			Returns
+			-------
+
+			"""
+
+			fill_between_kw = update_kwargs(fill_between_kw=fill_between_kw)["fill_between_kw"]
+
+			# Data
+			x, _ = to_numpy(x)
+			if y is None:
+				assert y_low is not None and y_high is not None, "(y, yerr) or (y_low, y_high) should be given."
+			else:
+				assert y_low is None and y_high is None, "(y, yerr) or (y_low, y_high) should be given."
+				y, yerr = to_numpy(y, yerr)
+				assert yerr is not None, "yerr should be given."
+
+				y_low = y - n_std * yerr
+				y_high = y + n_std * yerr
+
+			ax.fill_between(x, y_low, y_high,
+					**fill_between_kw)
+
+		return _plot_filled_error(**fill_between_kw)
+
 	def plot_data_and_curve_fit(self,
 			x, y, fit_fcn, xerr=None, yerr=None,
 			p_opt=None, p_cov=None, n_std=2, interp_factor=20,
@@ -144,16 +198,16 @@ class AxesLiron(AxesLironUpper):
 
 				>>> (p_opt, p_cov) = scipy.optimize.curve_fit(fit_fcn, x, y)
 
-				>>> ax = gr.AxesLiron()
-				>>> ax.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
-				>>> ax.show_fig()
-
+				>>> Ax = gr.AxesLiron()
+				>>> Ax.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
+				>>> Ax.show_fig()
 			"""
 
 			errorbar_kw = {
 				              "label":  'Data',
-				              "zorder": -1,
+				              "zorder": -1
 			              } | errorbar_kw
+			errorbar_kw = update_kwargs(errorbar_kw=errorbar_kw)["errorbar_kw"]
 
 			if curve_fit_plot_kw is None:
 				curve_fit_plot_kw = dict()
@@ -179,8 +233,9 @@ class AxesLiron(AxesLironUpper):
 				fit_low = fit_fcn(x_interp, *(p_opt - n_std * p_err))
 				fit_high = fit_fcn(x_interp, *(p_opt + n_std * p_err))
 
-				ax.fill_between(x_interp, fit_low, fit_high, linestyle='-', color=COLORS.LIGHT_GREY, alpha=0.4,
-						label=f'{n_std} std confidence')
+				# ax.fill_between(x_interp, fit_low, fit_high, linestyle='-', color=COLORS.LIGHT_GREY, alpha=0.4,
+				# 		label=f'{n_std} std confidence')
+				self.plot_filled_error(ax=ax, x=x_interp, y_low=fit_low, y_high=fit_high)
 
 		return _plot_data_and_curve_fit(**errorbar_kw)
 
@@ -446,6 +501,7 @@ class AxesLiron(AxesLironUpper):
 
 		if titles is not None:
 			kwargs = {"blit": False} | kwargs
+
 		# if callable(titles):
 		# 	titles = [titles(i) for i in range(n_frames)]  # convert to list
 

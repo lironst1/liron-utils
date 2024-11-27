@@ -133,6 +133,7 @@ def curve_fit(fit_fcn,
 				xerr=xerr, yerr=yerr,
 				p_opt=p_opt, p_cov=p_cov,
 				**plot_data_and_curve_fit_kw)
+
 		return p_opt_err, p_cov, Ax
 
 	return p_opt_err, p_cov

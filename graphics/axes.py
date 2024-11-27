@@ -210,9 +210,13 @@ class AxesLironUpper:
 		self.func_animation = None
 
 	@staticmethod
-	def _vectorize(cls, **vec_params):
-		def vectorize_decorator(func):
-			def vectorize_wrapper(*args, **kwargs):
+	def _vectorize(cls, ax: Axes = None, **vec_params):
+		def decorator(func):
+			def wrapper(*args, **kwargs):
+				if ax is not None:
+					return func(ax, *args, **vec_params, **kwargs)
+
+				# Vectorize the function
 				m, n = cls.axs.shape
 
 				params_list = DL_to_LD(vec_params)
@@ -227,9 +231,9 @@ class AxesLironUpper:
 
 				return out
 
-			return vectorize_wrapper
+			return wrapper
 
-		return vectorize_decorator
+		return decorator
 
 	def draw_xy_lines(self, **xy_lines_kw):
 		@self._vectorize(cls=self)
