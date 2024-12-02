@@ -1,6 +1,6 @@
 from . import COLORS
 
-KWARGS = {
+DEFAULT_KWARGS = {
 
 	# Figure
 	"FIG_KW":          {
@@ -65,7 +65,29 @@ KWARGS = {
 }
 
 
-def update_kwargs(**kwargs):
+def update_kwargs(key=None, **kwargs):
+	"""
+	Update the default kwargs with the new ones.
+
+	Args:
+		key (str):  Key to KWARGS to update.
+		**kwargs:   New kwargs to update or merge.
+
+	Returns:
+		dict: Updated KWARGS.
+	"""
+
+	if key:
+		DEFAULT_KWARGS[key.upper()].update(kwargs)
+
+	else:
+		for key in kwargs.keys():
+			DEFAULT_KWARGS[key.upper()].update(kwargs[key])
+
+	return DEFAULT_KWARGS
+
+
+def merge_kwargs(**kwargs):
 	"""
 	Merge between empty/partially filled kwargs to the default ones, giving priority to the new settings.
 
@@ -80,6 +102,6 @@ def update_kwargs(**kwargs):
 		if kwargs[key] is None:
 			kwargs[key] = dict()
 
-		kwargs[key] = KWARGS[key.upper()] | kwargs[key]
+		kwargs[key] = DEFAULT_KWARGS[key.upper()] | kwargs[key]
 
 	return kwargs

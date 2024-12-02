@@ -11,7 +11,7 @@ from matplotlib.image import AxesImage
 
 from .axes import AxesLironUpper
 from ..uncertainties_math import to_numpy
-from .utils.default_kwargs import update_kwargs, COLORS
+from .utils.default_kwargs import merge_kwargs, COLORS
 from ..signal_processing.base import interp1
 
 
@@ -49,7 +49,7 @@ class AxesLiron(AxesLironUpper):
 			Returns:
 
 			"""
-			plot_kw = update_kwargs(plot_kw=plot_kw)["plot_kw"]
+			plot_kw = merge_kwargs(plot_kw=plot_kw)["plot_kw"]
 
 			args = [x]
 			if y is not None:
@@ -86,7 +86,7 @@ class AxesLiron(AxesLironUpper):
 
 			"""
 
-			errorbar_kw = update_kwargs(errorbar_kw=errorbar_kw)["errorbar_kw"]
+			errorbar_kw = merge_kwargs(errorbar_kw=errorbar_kw)["errorbar_kw"]
 
 			x, xerr = to_numpy(x, xerr)
 			y, yerr = to_numpy(y, yerr)
@@ -130,7 +130,7 @@ class AxesLiron(AxesLironUpper):
 
 			"""
 
-			fill_between_kw = update_kwargs(fill_between_kw=fill_between_kw)["fill_between_kw"]
+			fill_between_kw = merge_kwargs(fill_between_kw=fill_between_kw)["fill_between_kw"]
 
 			# Data
 			x, _ = to_numpy(x)
@@ -207,7 +207,7 @@ class AxesLiron(AxesLironUpper):
 				              "label":  'Data',
 				              "zorder": -1
 			              } | errorbar_kw
-			errorbar_kw = update_kwargs(errorbar_kw=errorbar_kw)["errorbar_kw"]
+			errorbar_kw = merge_kwargs(errorbar_kw=errorbar_kw)["errorbar_kw"]
 
 			if curve_fit_plot_kw is None:
 				curve_fit_plot_kw = dict()
@@ -360,7 +360,7 @@ class AxesLiron(AxesLironUpper):
 
 			"""
 
-			specgram_kw = update_kwargs(specgram_kw=specgram_kw)["specgram_kw"]
+			specgram_kw = merge_kwargs(specgram_kw=specgram_kw)["specgram_kw"]
 
 			specgram_out = ax.specgram(y, Fs=fs, **specgram_kw)
 
@@ -400,7 +400,7 @@ class AxesLiron(AxesLironUpper):
 			assert hasattr(ax, "plot_surface"), "Axes does not have a plot_surface attribute. " \
 			                                    "make sure that you created an axes with projection='3d'"
 
-			plot_surface_kw = update_kwargs(plot_surface_kw=plot_surface_kw)["plot_surface_kw"]
+			plot_surface_kw = merge_kwargs(plot_surface_kw=plot_surface_kw)["plot_surface_kw"]
 
 			X, Y, Z = x, y, z
 			if x.ndim == 1:

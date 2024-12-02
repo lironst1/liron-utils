@@ -6,7 +6,7 @@ import matplotlib.cm
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 
-from .utils.default_kwargs import update_kwargs
+from .utils.default_kwargs import merge_kwargs
 from ..time import TIME_STR, get_time_str
 from ..files import MAIN_FILE_DIR, open_file, mkdirs
 from ..pure_python.dicts import DL_to_LD
@@ -252,7 +252,7 @@ class AxesLironUpper:
 			if hasattr(ax, 'zaxis') or hasattr(ax, "axis_lines_drawn"):  # Don't draw axis lines for 3D plots
 				return
 
-			xy_lines_kw = update_kwargs(xy_lines_kw=xy_lines_kw)["xy_lines_kw"]
+			xy_lines_kw = merge_kwargs(xy_lines_kw=xy_lines_kw)["xy_lines_kw"]
 
 			xlim = ax.get_xlim()
 			ylim = ax.get_ylim()
@@ -641,7 +641,7 @@ class AxesLironUpper:
 		if save_fig_kw is None:
 			save_fig_kw = dict()
 
-		set_props_kw = update_kwargs(set_props_kw=set_props_kw)["set_props_kw"]
+		set_props_kw = merge_kwargs(set_props_kw=set_props_kw)["set_props_kw"]
 
 		caller = lambda func, arg: func(arg) if arg is not None else None
 

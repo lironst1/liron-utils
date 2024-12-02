@@ -3,7 +3,7 @@ import scipy.stats
 import scipy.optimize
 import scipy.odr as odr
 from sklearn.metrics import r2_score
-from ..uncertainties_math import to_numpy, from_numpy, ufloat
+from ..uncertainties_math import to_numpy, from_numpy, ufloat, val
 from .. import graphics as gr
 
 linear_regression = scipy.stats.linregress
@@ -47,15 +47,16 @@ def linear_fit(x, y, xerr=None, yerr=None, beta0=None, **kwargs):
 	out = odr.ODR(data, linear_model, beta0, **kwargs).run()
 
 	# Calculate params
-	y_pred = f(out.beta, x)
-
 	slope = ufloat(out.beta[0], out.sd_beta[0])
 	intercept = ufloat(out.beta[1], out.sd_beta[1])
 
-	r_squared = r2_score(y, y_pred)
+	pred = lambda x: f([slope, intercept], x)
+
+	y_pred = pred(x)
+	r_squared = r2_score(y, val(y_pred))
 
 	return {"h":     out,
-		"y_pred":    y_pred,
+		"eval":      pred,
 		"slope":     slope,
 		"intercept": intercept,
 		"r_squared": r_squared}
