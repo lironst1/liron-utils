@@ -62,3 +62,9 @@ def val(x, xerr=None):
 
 def dev(x, xerr=None):
 	return to_numpy(x, xerr)[1]
+
+
+def make_independent(x, xerr=None):
+	x, xerr = to_numpy(x, xerr)
+
+	return unumpy.uarray(x, xerr)

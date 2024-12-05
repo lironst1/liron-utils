@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats
 import scipy.optimize
 import scipy.odr as odr
+import uncertainties.core
 from sklearn.metrics import r2_score
 from ..uncertainties_math import to_numpy, from_numpy, ufloat, val
 from .. import graphics as gr
