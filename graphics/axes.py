@@ -13,7 +13,7 @@ from ..pure_python.dicts import DL_to_LD
 from ..pure_python.docstring import copy_docstring_and_deprecators
 
 
-class AxesLironUpper:
+class _AxesLiron:
 	def __init__(self,
 			shape: tuple = (1, 1),
 			sharex: (bool, str) = False, sharey: (bool, str) = False,
@@ -741,7 +741,7 @@ def new_figure(nrows=1, ncols=1,
 
 # @copy_docstring_and_deprecators(AxesLironUpper.draw_xy_lines)
 def draw_xy_lines(ax: Axes, **axis_lines_kw):
-	AxesLironUpper(axs=ax).draw_xy_lines(**axis_lines_kw)
+	_AxesLiron(axs=ax).draw_xy_lines(**axis_lines_kw)
 
 
 # @copy_docstring_and_deprecators(AxesLironUpper.save_fig)
@@ -761,7 +761,7 @@ def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 	if fig is None:
 		fig = plt.gcf()
 
-	AxesLironUpper(fig=fig).save_fig(file_name, **savefig_kw)
+	_AxesLiron(fig=fig).save_fig(file_name, **savefig_kw)
 
 
 # @copy_docstring_and_deprecators(AxesLironUpper.set_props)
@@ -771,7 +771,7 @@ def set_props(ax: Axes = None,
 	if ax is None:
 		ax = plt.gca()
 
-	AxesLironUpper(axs=ax).set_props(save_file_name=save_file_name,
+	_AxesLiron(axs=ax).set_props(save_file_name=save_file_name,
 			save_fig_kw=save_fig_kw,
 			**set_props_kw)
 

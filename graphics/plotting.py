@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from matplotlib.image import AxesImage
 
-from .axes import AxesLironUpper
+from .axes import _AxesLiron
 from ..uncertainties_math import to_numpy
 from .utils.default_kwargs import merge_kwargs, COLORS
 from ..signal_processing.base import interp1
@@ -18,7 +18,7 @@ from ..signal_processing.base import interp1
 # TODO add standalone functions out of class gr.plot
 
 
-class AxesLiron(AxesLironUpper):
+class AxesLiron(_AxesLiron):
 	def __init__(self,
 			shape: tuple = (1, 1),
 			sharex: (bool, str) = False, sharey: (bool, str) = False,
