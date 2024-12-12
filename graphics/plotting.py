@@ -7,11 +7,9 @@ import matplotlib.style
 import matplotlib.animation
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from matplotlib.image import AxesImage
 
 from .axes import _AxesLiron
 from ..uncertainties_math import to_numpy
-from .utils.default_kwargs import merge_kwargs, COLORS
 from ..signal_processing.base import interp1
 
 
@@ -32,6 +30,7 @@ class AxesLiron(_AxesLiron):
 			x, y=None, z=None,
 			**plot_kw):
 
+		@self._merge_kwargs("plot_kw", **plot_kw)
 		@self._vectorize(cls=self, x=x, y=y, z=z)
 		def _plot(ax: Axes,
 				x, y=None, z=None,
@@ -49,7 +48,6 @@ class AxesLiron(_AxesLiron):
 			Returns:
 
 			"""
-			plot_kw = merge_kwargs(plot_kw=plot_kw)["plot_kw"]
 
 			args = [x]
 			if y is not None:
@@ -59,15 +57,16 @@ class AxesLiron(_AxesLiron):
 
 			ax.plot(*args, **plot_kw)
 
-		return _plot(**plot_kw)
+		return _plot()
 
 	def plot_errorbar(self,
-			x, y, xerr=None, yerr=None,
+			x, y=None, xerr=None, yerr=None,
 			**errorbar_kw):
 
+		@self._merge_kwargs("errorbar_kw", **errorbar_kw)
 		@self._vectorize(cls=self, x=x, y=y, xerr=xerr, yerr=yerr)
 		def _plot_errorbar(ax: Axes,
-				x, y, xerr=None, yerr=None,
+				x, y=None, xerr=None, yerr=None,
 				**errorbar_kw):
 			"""
 			2D plot of y=f(x) with errorbars
@@ -86,14 +85,17 @@ class AxesLiron(_AxesLiron):
 
 			"""
 
-			errorbar_kw = merge_kwargs(errorbar_kw=errorbar_kw)["errorbar_kw"]
+			if y is None:
+				assert xerr is None and yerr is None, "If y is not given, xerr and yerr should not be given."
+				y = x
+				x = np.arange(len(y))
 
 			x, xerr = to_numpy(x, xerr)
 			y, yerr = to_numpy(y, yerr)
 
 			ax.errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
 
-		return _plot_errorbar(**errorbar_kw)
+		return _plot_errorbar()
 
 	def plot_filled_error(self, ax: Axes,
 			x,
@@ -101,6 +103,7 @@ class AxesLiron(_AxesLiron):
 			y_low=None, y_high=None,
 			**fill_between_kw):
 
+		@self._merge_kwargs("fill_between_kw", **fill_between_kw)
 		@self._vectorize(cls=self, ax=ax,
 				x=x,
 				y=y, yerr=yerr, n_std=n_std,
@@ -130,8 +133,6 @@ class AxesLiron(_AxesLiron):
 
 			"""
 
-			fill_between_kw = merge_kwargs(fill_between_kw=fill_between_kw)["fill_between_kw"]
-
 			# Data
 			x, _ = to_numpy(x)
 			if y is None:
@@ -147,13 +148,14 @@ class AxesLiron(_AxesLiron):
 			ax.fill_between(x, y_low, y_high,
 					**fill_between_kw)
 
-		return _plot_filled_error(**fill_between_kw)
+		return _plot_filled_error()
 
 	def plot_data_and_curve_fit(self,
 			x, y, fit_fcn, xerr=None, yerr=None,
 			p_opt=None, p_cov=None, n_std=2, interp_factor=20,
 			curve_fit_plot_kw=None, **errorbar_kw):
 
+		@self._merge_kwargs("errorbar_kw", **errorbar_kw)
 		@self._vectorize(cls=self,
 				x=x, y=y, fit_fcn=fit_fcn, xerr=xerr, yerr=yerr,
 				p_opt=p_opt, p_cov=p_cov, n_std=n_std, interp_factor=interp_factor,
@@ -207,7 +209,6 @@ class AxesLiron(_AxesLiron):
 				              "label":  'Data',
 				              "zorder": -1
 			              } | errorbar_kw
-			errorbar_kw = merge_kwargs(errorbar_kw=errorbar_kw)["errorbar_kw"]
 
 			if curve_fit_plot_kw is None:
 				curve_fit_plot_kw = dict()
@@ -237,18 +238,19 @@ class AxesLiron(_AxesLiron):
 				# 		label=f'{n_std} std confidence')
 				self.plot_filled_error(ax=ax, x=x_interp, y_low=fit_low, y_high=fit_high)
 
-		return _plot_data_and_curve_fit(**errorbar_kw)
+		return _plot_data_and_curve_fit()
 
 	def plot_data_and_lin_reg(self,
 			x, y, reg=None, xerr=None, yerr=None,
-			reg_plot_kw=None, **plot_errorbar_kw):
+			reg_plot_kw=None, **errorbar_kw):
 
+		@self._merge_kwargs("errorbar_kw", **errorbar_kw)
 		@self._vectorize(cls=self,
 				x=x, y=y, reg=reg, xerr=xerr, yerr=yerr,
 				reg_plot_kw=reg_plot_kw)
 		def _plot_data_and_lin_reg(ax: Axes,
 				x, y, reg=None, xerr=None, yerr=None,
-				reg_plot_kw=None, **plot_errorbar_kw):
+				reg_plot_kw=None, **errorbar_kw):
 			"""
 			2D scatter plot y=f(x) + linear regression.
 
@@ -274,33 +276,33 @@ class AxesLiron(_AxesLiron):
 				xerr:                   Error in x
 				yerr:                   Error in y
 				reg_plot_kw:
-				**plot_errorbar_kw:
+				**errorbar_kw:
 
 			Returns:
 
 			"""
 
-			plot_errorbar_kw = {
-				                   "label": "Data"
-			                   } | plot_errorbar_kw
+			errorbar_kw = {
+				              "label": "Data"
+			              } | errorbar_kw
 
 			if reg_plot_kw is None:
 				reg_plot_kw = dict()
 			reg_plot_kw = {
-				              "label": fr"{plot_errorbar_kw['label']} linreg: slope={reg.slope:.3f}$\pm${reg.stderr:.3f}, $R^2$={reg.rvalue ** 2:.3f}"
+				              "label": fr"{errorbar_kw['label']} linreg: slope={reg.slope:.3f}$\pm${reg.stderr:.3f}, $R^2$={reg.rvalue ** 2:.3f}"
 			              } | reg_plot_kw
 
 			x, xerr = to_numpy(x, xerr)
 			y, yerr = to_numpy(y, yerr)
 
 			self.plot_errorbar(x, y, xerr=xerr, yerr=yerr,
-					**plot_errorbar_kw)  # TODO: need to change to _plot_errorbar
+					**errorbar_kw)  # TODO: need to change to _plot_errorbar
 
 			if reg is not None:
 				tmp = [reg.slope * i + reg.intercept for i in x]
 				self.plot(x, tmp, **reg_plot_kw)
 
-		return _plot_data_and_lin_reg(**plot_errorbar_kw)
+		return _plot_data_and_lin_reg()
 
 	def plot_line_collection(self,
 			x: np.ndarray, y: np.ndarray, arr: np.ndarray,
@@ -343,6 +345,7 @@ class AxesLiron(_AxesLiron):
 			y: np.ndarray, fs: int,
 			**specgram_kw):
 
+		@self._merge_kwargs("specgram_kw", **specgram_kw)
 		@self._vectorize(cls=self, y=y, fs=fs)
 		def _plot_specgram(ax: Axes,
 				y: np.ndarray, fs: int,
@@ -360,8 +363,6 @@ class AxesLiron(_AxesLiron):
 
 			"""
 
-			specgram_kw = merge_kwargs(specgram_kw=specgram_kw)["specgram_kw"]
-
 			specgram_out = ax.specgram(y, Fs=fs, **specgram_kw)
 
 			if ax.get_title() == '':
@@ -374,12 +375,13 @@ class AxesLiron(_AxesLiron):
 
 			return specgram_out
 
-		return _plot_specgram(**specgram_kw)
+		return _plot_specgram()
 
 	def plot_surf(self,
 			x, y, z,
 			**plot_surface_kw):
 
+		@self._merge_kwargs("plot_surface_kw", **plot_surface_kw)
 		@self._vectorize(cls=self, x=x, y=y, z=z)
 		def _plot_surf(ax: Axes,
 				x, y, z,
@@ -400,8 +402,6 @@ class AxesLiron(_AxesLiron):
 			assert hasattr(ax, "plot_surface"), "Axes does not have a plot_surface attribute. " \
 			                                    "make sure that you created an axes with projection='3d'"
 
-			plot_surface_kw = merge_kwargs(plot_surface_kw=plot_surface_kw)["plot_surface_kw"]
-
 			X, Y, Z = x, y, z
 			if x.ndim == 1:
 				X, Y = np.meshgrid(x, y)
@@ -414,7 +414,7 @@ class AxesLiron(_AxesLiron):
 
 		# ax.figure.colorbar(matplotlib.cm.ScalarMappable(), ax=ax)
 
-		return _plot_surf(**plot_surface_kw)
+		return _plot_surf()
 
 	def plot_contour(self,
 			x, y, z, contours,

@@ -1,4 +1,5 @@
 import os
+import functools
 import numpy as np
 import matplotlib.layout_engine
 import matplotlib.pyplot as plt
@@ -176,9 +177,8 @@ class _AxesLiron:
 			if subplot_kw is None:
 				subplot_kw = dict()
 			subplot_kw = {"projection": projection} | subplot_kw
-			if fig_kw is None:
-				fig_kw = dict()
 			fig_kw = {"layout": layout} | fig_kw
+			fig_kw = merge_kwargs(fig_kw=fig_kw)["fig_kw"]
 			padding = [None] * 4
 			for i, key in enumerate(["w_pad", "h_pad", "wspace", "hspace"]):
 				if key in fig_kw:
@@ -212,6 +212,7 @@ class _AxesLiron:
 	@staticmethod
 	def _vectorize(cls, ax: Axes = None, **vec_params):
 		def decorator(func):
+			@functools.wraps(func)
 			def wrapper(*args, **kwargs):
 				if ax is not None:
 					return func(ax, *args, **vec_params, **kwargs)
@@ -235,7 +236,21 @@ class _AxesLiron:
 
 		return decorator
 
+	@staticmethod
+	def _merge_kwargs(key, **kwargs):
+		def decorator(func):
+			@functools.wraps(func)
+			def wrapper(*args):
+				kwargs_merged = merge_kwargs(**{key: kwargs})[key]
+
+				return func(*args, **kwargs_merged)
+
+			return wrapper
+
+		return decorator
+
 	def draw_xy_lines(self, **xy_lines_kw):
+		@self._merge_kwargs("xy_lines_kw", **xy_lines_kw)
 		@self._vectorize(cls=self)
 		def _draw_xy_lines(ax: Axes, **xy_lines_kw):
 			"""
@@ -252,8 +267,6 @@ class _AxesLiron:
 			if hasattr(ax, 'zaxis') or hasattr(ax, "axis_lines_drawn"):  # Don't draw axis lines for 3D plots
 				return
 
-			xy_lines_kw = merge_kwargs(xy_lines_kw=xy_lines_kw)["xy_lines_kw"]
-
 			xlim = ax.get_xlim()
 			ylim = ax.get_ylim()
 
@@ -265,7 +278,7 @@ class _AxesLiron:
 
 			ax.axis_lines_drawn = True
 
-		_draw_xy_lines(**xy_lines_kw)
+		_draw_xy_lines()
 
 	def sup_title(self, title: str):
 		self.fig.suptitle(title)
@@ -528,6 +541,9 @@ class _AxesLiron:
 	def show_fig(self):
 		self.fig.show()
 
+	def show(self):
+		self.show_fig()
+
 	def set_props(self,
 			save_file_name: (str, bool) = False,
 			colorbar_kw: dict = None,
@@ -739,12 +755,12 @@ def new_figure(nrows=1, ncols=1,
 	return fig, axs
 
 
-# @copy_docstring_and_deprecators(AxesLironUpper.draw_xy_lines)
+# @copy_docstring_and_deprecators(_AxesLiron.draw_xy_lines)
 def draw_xy_lines(ax: Axes, **axis_lines_kw):
 	_AxesLiron(axs=ax).draw_xy_lines(**axis_lines_kw)
 
 
-# @copy_docstring_and_deprecators(AxesLironUpper.save_fig)
+# @copy_docstring_and_deprecators(_AxesLiron.save_fig)
 def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 	"""
 	Save figure as file
@@ -764,7 +780,7 @@ def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 	_AxesLiron(fig=fig).save_fig(file_name, **savefig_kw)
 
 
-# @copy_docstring_and_deprecators(AxesLironUpper.set_props)
+# @copy_docstring_and_deprecators(_AxesLiron.set_props)
 def set_props(ax: Axes = None,
 		save_file_name: (str, bool) = False, save_fig_kw: dict = None,
 		**set_props_kw):
