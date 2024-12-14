@@ -115,7 +115,7 @@ def parallel_threading(func,
 		iterable,
 		lock: bool = False,
 		num_threads: int = NUM_THREADS_TO_USE,
-		desc: str = None,
+		desc=None,
 		**kwargs) -> list:
 	"""
 	Run function 'func' in parallel using threads.
@@ -130,8 +130,8 @@ def parallel_threading(func,
 					use a lock to prevent concurrent access to shared resources
 	num_threads :   int
 					number of threads to use
-	desc :          str
-					description for tqdm
+	desc :          str or callable
+					description for tqdm. If callable, should return a string.
 	kwargs :        passed to func
 
 	Returns
@@ -141,11 +141,13 @@ def parallel_threading(func,
 
 	if lock:
 		lock = threading.Lock()
+	if not callable(desc):
+		desc_str = desc
+		desc = lambda i: desc_str
 
-	pbar = tqdm(total=len(iterable), desc=desc)
 	out = [None] * len(iterable)
 
-	def worker(queue):
+	def worker(queue: Queue, pbar: tqdm):
 		while True:
 			index, item = queue.get()
 
@@ -155,6 +157,7 @@ def parallel_threading(func,
 						out[index] = func(item, **kwargs)
 				else:
 					out[index] = func(item, **kwargs)
+				pbar.set_description(desc(index))
 				pbar.update(1)
 
 			except Exception as e:
@@ -164,15 +167,15 @@ def parallel_threading(func,
 
 	queue = Queue()
 	threads = []
-	for _ in range(num_threads):
-		thread = threading.Thread(target=worker, args=(queue,), daemon=True)
-		thread.start()
-		threads.append(thread)
+	with tqdm(total=len(iterable), desc=desc(0)) as pbar:
+		for _ in range(num_threads):
+			thread = threading.Thread(target=worker, args=(queue, pbar), daemon=True)
+			thread.start()
+			threads.append(thread)
 
-	for index, item in enumerate(iterable):
-		queue.put((index, item))
+		for index, item in enumerate(iterable):
+			queue.put((index, item))
 
-	queue.join()
-	pbar.close()
+		queue.join()
 
 	return out
