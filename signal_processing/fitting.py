@@ -198,6 +198,9 @@ def find_peaks(
 		b = b_center - 2 * a_center * x0
 		c = a_center * x0 ** 2 - b_center * x0 + c_center
 
+		if val(a) == 0:
+			raise ValueError("Quadratic fit failed: a=0")
+
 		x_peaks_fit[i] = - b / (2 * a)  # Vertex of the parabola (peak location)
 		y_peaks_fit[i] = quadratic(x_peaks_fit[i], a, b, c)
 
