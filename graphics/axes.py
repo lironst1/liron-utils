@@ -650,6 +650,9 @@ class _AxesLiron:
 		-------
 
 		"""
+
+		# TODO: fix: removes "x 10^y" from the tick labels
+
 		if colorbar_kw is None:
 			colorbar_kw = dict()
 		if xy_lines_kw is None:
