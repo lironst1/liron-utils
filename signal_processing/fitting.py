@@ -126,6 +126,8 @@ def curve_fit(fit_fcn,
 	# Curve-Fit
 	p_opt, p_cov = scipy.optimize.curve_fit(fit_fcn, x, y, p0=p0, sigma=yerr, **kwargs)
 
+	chi_squared = scipy.stats.chisquare(f_obs=y/y.sum(), f_exp=fit_fcn(x, *p_opt)/np.sum(fit_fcn(x, *p_opt)))
+
 	p_err = np.sqrt(np.diag(p_cov))
 	p_opt_err = from_numpy(p_opt, p_err)
 
@@ -136,9 +138,9 @@ def curve_fit(fit_fcn,
 				p_opt=p_opt, p_cov=p_cov,
 				**plot_data_and_curve_fit_kw)
 
-		return p_opt_err, p_cov, Ax
+		return p_opt_err, p_cov, chi_squared, Ax
 
-	return p_opt_err, p_cov
+	return p_opt_err, p_cov, chi_squared
 
 
 def find_peaks(
@@ -186,13 +188,13 @@ def find_peaks(
 
 		# Perform quadratic fit
 		x0 = np.mean(x[left:right])
-		popt, pcov = curve_fit(fit_fcn=quadratic,
+		popt = curve_fit(fit_fcn=quadratic,
 				x=x[left:right] - x0,
 				y=y[left:right],
 				xerr=xerr[left:right] if xerr is not None else None,
 				yerr=yerr[left:right] if yerr is not None else None,
 				p0=[0, 0, y[peaks[i]]],
-		)
+		)[0]
 		a_center, b_center, c_center = popt
 		a = a_center
 		b = b_center - 2 * a_center * x0
