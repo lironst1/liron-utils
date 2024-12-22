@@ -146,7 +146,7 @@ def curve_fit(fit_fcn,
 def find_peaks(
 		y, yerr=None,
 		x=None, xerr=None,
-		n_points=3,
+		n_fit_points=None,
 		plot=False,
 		**kwargs):
 	"""
@@ -175,16 +175,25 @@ def find_peaks(
 
 	peaks, properties = scipy.signal.find_peaks(val(y), **kwargs)
 
-	# fit quadratic around peaks
-	def quadratic(x, a, b, c):
-		return a * x ** 2 + b * x + c
+	if n_fit_points is None:
+		x_peaks = x[peaks]
+		y_peaks = y[peaks]
+		if xerr is not None:
+			x_peaks = from_numpy(x_peaks, xerr[peaks])
+		if yerr is not None:
+			y_peaks = from_numpy(y_peaks, yerr[peaks])
 
-	x_peaks_fit = from_numpy(np.zeros(len(peaks)), 0)
-	y_peaks_fit = from_numpy(np.zeros(len(peaks)), 0)
-	for i in range(len(peaks)):
-		# Define a small range around the peak
-		left = max(0, peaks[i] - n_points)
-		right = min(len(y), peaks[i] + n_points + 1)
+	else:
+		# fit quadratic around peaks
+		def quadratic(x, a, b, c):
+			return a * x ** 2 + b * x + c
+
+		x_peaks = from_numpy(np.zeros(len(peaks)), 0)
+		y_peaks = from_numpy(np.zeros(len(peaks)), 0)
+		for i in range(len(peaks)):
+			# Define a small range around the peak
+			left = max(0, peaks[i] - n_fit_points)
+			right = min(len(y), peaks[i] + n_fit_points + 1)
 
 		# Perform quadratic fit
 		x0 = np.mean(x[left:right])
@@ -203,16 +212,16 @@ def find_peaks(
 		if val(a) == 0:
 			raise ValueError("Quadratic fit failed: a=0")
 
-		x_peaks_fit[i] = - b / (2 * a)  # Vertex of the parabola (peak location)
-		y_peaks_fit[i] = quadratic(x_peaks_fit[i], a, b, c)
+			x_peaks[i] = - b / (2 * a)  # Vertex of the parabola (peak location)
+			y_peaks[i] = quadratic(x_peaks[i], a, b, c)
 
 	if plot:
 		Ax = gr.AxesLiron()
 		Ax.plot_errorbar(x, y,
 				xerr=xerr, yerr=yerr)
-		Ax.plot_errorbar(x_peaks_fit, y_peaks_fit,
+		Ax.plot_errorbar(x_peaks, y_peaks,
 				marker="o", color="black", linestyle="none")
 
-		return x_peaks_fit, y_peaks_fit, peaks, properties, Ax
+		return x_peaks, y_peaks, peaks, properties, Ax
 
-	return x_peaks_fit, y_peaks_fit, peaks, properties
+	return x_peaks, y_peaks, peaks, properties
