@@ -132,7 +132,7 @@ def curve_fit(fit_fcn,
 	p_opt_err = from_numpy(p_opt, p_err)
 
 	if plot:
-		Ax = gr.AxesLiron()
+		Ax = gr.Axes()
 		Ax.plot_data_and_curve_fit(x, y, fit_fcn,
 				xerr=xerr, yerr=yerr,
 				p_opt=p_opt, p_cov=p_cov,
@@ -216,7 +216,7 @@ def find_peaks(
 			y_peaks[i] = quadratic(x_peaks[i], a, b, c)
 
 	if plot:
-		Ax = gr.AxesLiron()
+		Ax = gr.Axes()
 		Ax.plot_errorbar(x, y,
 				xerr=xerr, yerr=yerr)
 		Ax.plot_errorbar(x_peaks, y_peaks,

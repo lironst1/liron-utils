@@ -5,7 +5,8 @@ import matplotlib.layout_engine
 import matplotlib.pyplot as plt
 import matplotlib.cm
 from matplotlib.figure import Figure
-from matplotlib.axes import Axes
+from matplotlib.axes import Axes as Axes_plt
+from matplotlib.ticker import ScalarFormatter
 
 from .utils.default_kwargs import merge_kwargs
 from ..time import TIME_STR, get_time_str
@@ -14,13 +15,13 @@ from ..pure_python.dicts import DL_to_LD
 from ..pure_python.docstring import copy_docstring_and_deprecators
 
 
-class _AxesLiron:
+class _Axes:
 	def __init__(self,
 			shape: tuple = (1, 1),
 			sharex: (bool, str) = False, sharey: (bool, str) = False,
 			projection: str = None,
 			layout: str = None,
-			fig: Figure = None, axs: Axes = None,
+			fig: Figure = None, axs: Axes_plt = None,
 			subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
 		"""
 		Create a new figure with (possibly) subplots using the plt.subplots() function.
@@ -210,7 +211,7 @@ class _AxesLiron:
 		self.func_animation = None
 
 	@staticmethod
-	def _vectorize(cls, ax: Axes = None, **vec_params):
+	def _vectorize(cls, ax: Axes_plt = None, **vec_params):
 		def decorator(func):
 			@functools.wraps(func)
 			def wrapper(*args, **kwargs):
@@ -252,7 +253,7 @@ class _AxesLiron:
 	def draw_xy_lines(self, **xy_lines_kw):
 		@self._merge_kwargs("xy_lines_kw", **xy_lines_kw)
 		@self._vectorize(cls=self)
-		def _draw_xy_lines(ax: Axes, **xy_lines_kw):
+		def _draw_xy_lines(ax: Axes_plt, **xy_lines_kw):
 			"""
 			Draw x-y axes lines to look bolder than the rest of the grid lines
 
@@ -320,7 +321,7 @@ class _AxesLiron:
 			"""
 
 		@self._vectorize(cls=self, axis=axis)
-		def _ax_axis(ax: Axes, axis: (bool, str)):
+		def _ax_axis(ax: Axes_plt, axis: (bool, str)):
 			ax.axis(axis)
 
 		_ax_axis()
@@ -336,7 +337,7 @@ class _AxesLiron:
 		"""
 
 		@self._vectorize(cls=self, spines=spines)
-		def _ax_spines(ax: Axes, spines: (str, list, bool)):
+		def _ax_spines(ax: Axes_plt, spines: (str, list, bool)):
 			locs = np.array(["left", "bottom", "top", "right"])
 
 			if type(spines) is str:
@@ -359,75 +360,123 @@ class _AxesLiron:
 
 		_ax_spines()
 
-	def ax_ticks(self, ticks: (bool, list[list]), labels: (bool, list[list])):
+	def ax_ticks(self, ticks: (bool, list[list], dict, list[dict]), labels: (bool, list[list])):
 		@self._vectorize(cls=self, ticks=ticks, labels=labels)
-		def _ax_ticks(ax: Axes, ticks: (bool, list[list]), labels: (bool, list[list])):
-			tick_values = [ax.get_xticks(), ax.get_yticks()]
-			tick_labels = [ax.get_xticklabels(), ax.get_yticklabels()]
-			if hasattr(ax, "set_zticks"):
-				tick_values += [ax.get_zticks()]
-				tick_labels += [ax.get_zticklabels()]
+		def _ax_ticks(ax: Axes_plt, ticks: (bool, list[list], dict, list[dict]), labels: (bool, list[list])):
+			ndim = 3 if hasattr(ax, "get_zticks") else 2
 
-			ndim = len(tick_values)
+			if ticks is None or ticks is True:  # show ticks for all axes
+				ticks = [True] * ndim
+				if labels is None:  # show labels for all axes
+					labels = [True] * ndim
+			elif ticks is False:  # hide ticks for all axes
+				ticks = [False] * ndim
+				if labels is None:  # hide labels for all axes
+					labels = [False] * ndim
+			elif type(ticks) is dict:  # only x-axis
+				ticks = [ticks] + [True] * (ndim - 1)
+			# labels check is done later
 
-			if ticks is None or ticks is True:
-				ticks = [None] * ndim
+			if labels is True:  # show labels for all axes
+				labels = [True] * ndim
+			elif labels is False:  # hide labels for all axes
+				labels = [False] * ndim
 
-			elif ticks is False:
-				tick_values = [[], [], []]
-				tick_labels = [[], [], []]
+			ticks = np.atleast_1d(ticks)
+			labels = np.atleast_1d(labels)
+			assert len(ticks) <= ndim, "len(ticks) must be <= graph dimensionality."
+			assert len(labels) <= ndim, "len(labels) must be <= graph dimensionality."
 
-			elif type(ticks) is list:  # x,y,z axes
-				assert len(ticks) <= ndim, "len(ticks) must be <= graph dimensionality."
+			d = {
+				"ticks":  {
+					0: ax.get_xticks(),
+					1: ax.get_yticks(),
+					2: ax.get_zticks() if ndim == 3 else None,
+				},
 
-				for i in range(len(ticks)):
-					if ticks[i] is None or ticks[i] is True:  # show ticks and labels
-						continue
-					elif ticks[i] is False:  # hide ticks and labels
-						tick_values[i] = []
-						tick_labels[i] = []
-					elif type(ticks[i]) is list or type(ticks[i]) is np.ndarray:  # custom ticks
-						tick_values[i] = ticks[i]
-						tick_labels[i] = ticks[i]
+				"labels": {
+					0: ax.get_xticklabels(),
+					1: ax.get_yticklabels(),
+					2: ax.get_zticklabels() if ndim == 3 else None,
+				},
+				# "offset": {
+				# 	0: ax.xaxis.get_offset_text(),
+				# 	1: ax.yaxis.get_offset_text(),
+				# 	2: ax.zaxis.get_offset_text() if ndim == 3 else None,
+				# },
+			}
 
-			else:
-				raise ValueError("'ticks' must be given either as a boolean or list[list].")
+			funcs = [ax.get_xlim, ax.get_ylim]
+			if ndim == 3:
+				funcs += [ax.get_zlim]
+			for i, func in enumerate(funcs):
+				lim = func()
+				idx = np.logical_and(lim[0] <= d["ticks"][i], d["ticks"][i] <= lim[1])
+				d["ticks"][i] = d["ticks"][i][idx]
+				d["labels"][i] = np.array(d["labels"][i])[idx]
 
-			if labels is None or labels is True:
-				pass
-			elif labels is False:
-				tick_labels = [[], [], []]
-			elif type(labels) is list:
-				assert len(labels) <= ndim, "len(labels) must be <= graph dimensionality."
+			for i in range(len(ticks)):  # x,y,z axes
+				if ticks[i] is None or ticks[i] is np.True_:  # show ticks
+					pass
 
-				for i in range(len(labels)):
-					if labels[i] is None or labels[i] is True:  # show labels
-						continue
-					elif labels[i] is False:  # hide labels
-						tick_labels[i] = []
-					elif type(labels[i]) is list or type(labels[i]) is np.ndarray:  # custom labels
-						tick_labels[i] = labels[i]
-			else:
-				raise ValueError("'labels' must be given either as a boolean or list[list].")
+				elif ticks[i] is np.False_:  # hide ticks
+					d["ticks"][i] = []
+					if labels[i] is None:  # hide labels
+						d["labels"][i] = []
+						d["offset"][i] = None
 
-			ax.set_xticks(list(tick_values[0]), list(tick_labels[0]))
-			if ndim >= 2:
-				ax.set_yticks(list(tick_values[1]), list(tick_labels[1]))
-			if ndim >= 3:
-				ax.set_zticks(list(tick_values[2]), list(tick_labels[2]))
+				elif type(ticks[i]) is dict:  # custom ticks
+					assert labels[i] is None or labels[
+						i] is np.True_, "When 'ticks' is a dict, 'labels' must not be given."
+					d["ticks"][i] = ticks[i].keys()
+					d["labels"][i] = ticks[i].values()
+
+				elif type(ticks[i]) is list or type(ticks[i]) is np.ndarray:  # custom ticks
+					d["ticks"][i] = ticks[i]
+					d["labels"][i] = ticks[i]
+					d["offset"][i] = None  # todo: check
+
+				else:
+					raise ValueError("'ticks' must be given either as a boolean, list[list] or list[dict].")
+
+				if labels[i] is None or labels[i] is np.True_:  # show labels
+					pass
+
+				elif labels[i] is np.False_:  # hide labels
+					d["labels"][i] = []
+					d["offset"][i] = None
+
+				elif type(labels[i]) is list or type(labels[i]) is np.ndarray:  # custom labels
+					assert len(labels[i]) == len(ticks[i]), "len(labels[i]) must be equal to len(ticks[i])."
+					d["labels"][i] = labels[i]
+					d["offset"][i] = None  # todo: check
+
+				else:
+					raise ValueError("'labels' must be given either as a boolean or list[list].")
+
+			# Set ticks and labels
+			ax.set_xticks(d["ticks"][0], d["labels"][0])
+			ax.set_yticks(d["ticks"][1], d["labels"][1])
+
+			if ndim == 3:
+				ax.set_zticks(d["ticks"][2], d["labels"][2])
+				ax.zaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+
+			ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+			ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
 
 		_ax_ticks()
 
 	def ax_title(self, title: str):
 		@self._vectorize(cls=self, title=title)
-		def _ax_title(ax: Axes, title: str):
+		def _ax_title(ax: Axes_plt, title: str):
 			ax.set_title(title)
 
 		_ax_title()
 
 	def ax_labels(self, labels: list[str]):
 		@self._vectorize(cls=self, labels=labels)
-		def _ax_labels(ax: Axes, labels: list[str]):
+		def _ax_labels(ax: Axes_plt, labels: list[str]):
 			labels = np.atleast_1d(labels)  # In case labels=None or labels is just 1 list (only xlabel)
 			ax.set_xlabel(labels[0])
 			if np.size(labels) >= 2:
@@ -439,7 +488,7 @@ class _AxesLiron:
 
 	def ax_limits(self, limits: list[float]):
 		@self._vectorize(cls=self, limits=limits)
-		def _ax_limits(ax: Axes, limits: list[float]):
+		def _ax_limits(ax: Axes_plt, limits: list[float]):
 			limits = np.array(limits, dtype=object)
 			limits = np.atleast_2d(limits)  # In case limits=None or limits is just 1 list (only xlim)
 
@@ -453,21 +502,21 @@ class _AxesLiron:
 
 	def ax_view(self, view: list):
 		@self._vectorize(cls=self, view=view)
-		def _ax_view(ax: Axes, view: list):
+		def _ax_view(ax: Axes_plt, view: list):
 			ax.view_init(view[0], view[1])
 
 		_ax_view()
 
 	def ax_grid(self, grid: bool):
 		@self._vectorize(cls=self, grid=grid)
-		def _ax_grid(ax: Axes, grid: bool):
+		def _ax_grid(ax: Axes_plt, grid: bool):
 			ax.grid(grid)
 
 		_ax_grid()
 
 	def ax_legend(self, legend: (bool, list), legend_loc: str):
 		@self._vectorize(cls=self, legend=legend, legend_loc=legend_loc)
-		def _ax_legend(ax: Axes, legend: (bool, list), legend_loc: str):
+		def _ax_legend(ax: Axes_plt, legend: (bool, list), legend_loc: str):
 			if legend is False:
 				legend = ax.get_legend()
 				if legend is not None:
@@ -483,19 +532,19 @@ class _AxesLiron:
 
 		_ax_legend()
 
-	def ax_colorbar(self, axs: (bool, list[list[Axes], Axes]), **colorbar_kw):
+	def ax_colorbar(self, axs: (bool, list[list[Axes_plt], Axes_plt]), **colorbar_kw):
 		if axs is False:
 			return
 		elif axs is True:
 			axs = [[ax] for ax in self.fig.axes if len(ax.images) > 0]
-		elif type(axs) is Axes:
+		elif type(axs) is Axes_plt:
 			axs = [axs]
 		elif type(axs) is np.ndarray:
 			axs = axs.tolist()
 
 		# convert to a list of lists
 		for i in range(len(axs)):  # run through common axes
-			if type(axs[i]) is Axes:  # if not a list, convert to a list
+			if type(axs[i]) is Axes_plt:  # if not a list, convert to a list
 				axs[i] = [axs[i]]
 
 			assert type(axs[i]) is list, "'axs' must be a list of lists."
@@ -727,7 +776,7 @@ def new_figure(nrows=1, ncols=1,
 		sharex=False, sharey=False,
 		projection=None,
 		squeeze=True,
-		subplot_kw=None, gridspec_kw=None, **figure_kw) -> (Figure, Axes):
+		subplot_kw=None, gridspec_kw=None, **figure_kw) -> (Figure, Axes_plt):
 	"""
 	Create new figure with (possibly) subplots
 
@@ -759,8 +808,8 @@ def new_figure(nrows=1, ncols=1,
 
 
 # @copy_docstring_and_deprecators(_AxesLiron.draw_xy_lines)
-def draw_xy_lines(ax: Axes, **axis_lines_kw):
-	_AxesLiron(axs=ax).draw_xy_lines(**axis_lines_kw)
+def draw_xy_lines(ax: Axes_plt, **axis_lines_kw):
+	_Axes(axs=ax).draw_xy_lines(**axis_lines_kw)
 
 
 # @copy_docstring_and_deprecators(_AxesLiron.save_fig)
@@ -780,17 +829,17 @@ def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 	if fig is None:
 		fig = plt.gcf()
 
-	_AxesLiron(fig=fig).save_fig(file_name, **savefig_kw)
+	_Axes(fig=fig).save_fig(file_name, **savefig_kw)
 
 
 # @copy_docstring_and_deprecators(_AxesLiron.set_props)
-def set_props(ax: Axes = None,
+def set_props(ax: Axes_plt = None,
 		save_file_name: (str, bool) = False, save_fig_kw: dict = None,
 		**set_props_kw):
 	if ax is None:
 		ax = plt.gca()
 
-	_AxesLiron(axs=ax).set_props(save_file_name=save_file_name,
+	_Axes(axs=ax).set_props(save_file_name=save_file_name,
 			save_fig_kw=save_fig_kw,
 			**set_props_kw)
 

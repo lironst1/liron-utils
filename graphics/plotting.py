@@ -6,9 +6,9 @@ import matplotlib.colors
 import matplotlib.style
 import matplotlib.animation
 from matplotlib.figure import Figure
-from matplotlib.axes import Axes
+from matplotlib.axes import Axes as Axes_plt
 
-from .axes import _AxesLiron
+from .axes import _Axes
 from ..uncertainties_math import to_numpy
 from ..signal_processing.base import interp1
 
@@ -16,13 +16,13 @@ from ..signal_processing.base import interp1
 # TODO add standalone functions out of class gr.plot
 
 
-class AxesLiron(_AxesLiron):
+class Axes(_Axes):
 	def __init__(self,
 			shape: tuple = (1, 1),
 			sharex: (bool, str) = False, sharey: (bool, str) = False,
 			projection: str = None,
 			layout: str = None,
-			fig: Figure = None, axs: Axes = None,
+			fig: Figure = None, axs: Axes_plt = None,
 			subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
 		super().__init__(shape, sharex, sharey, projection, layout, fig, axs, subplot_kw, gridspec_kw, **fig_kw)
 
@@ -32,7 +32,7 @@ class AxesLiron(_AxesLiron):
 
 		@self._merge_kwargs("plot_kw", **plot_kw)
 		@self._vectorize(cls=self, x=x, y=y, z=z)
-		def _plot(ax: Axes,
+		def _plot(ax: Axes_plt,
 				x, y=None, z=None,
 				**plot_kw):
 			"""
@@ -65,7 +65,7 @@ class AxesLiron(_AxesLiron):
 
 		@self._merge_kwargs("errorbar_kw", **errorbar_kw)
 		@self._vectorize(cls=self, x=x, y=y, xerr=xerr, yerr=yerr)
-		def _plot_errorbar(ax: Axes,
+		def _plot_errorbar(ax: Axes_plt,
 				x, y=None, xerr=None, yerr=None,
 				**errorbar_kw):
 			"""
@@ -97,7 +97,7 @@ class AxesLiron(_AxesLiron):
 
 		return _plot_errorbar()
 
-	def plot_filled_error(self, ax: Axes,
+	def plot_filled_error(self, ax: Axes_plt,
 			x,
 			y=None, yerr=None, n_std=2,
 			y_low=None, y_high=None,
@@ -108,7 +108,7 @@ class AxesLiron(_AxesLiron):
 				x=x,
 				y=y, yerr=yerr, n_std=n_std,
 				y_low=y_low, y_high=y_high)
-		def _plot_filled_error(ax: Axes,
+		def _plot_filled_error(ax: Axes_plt,
 				x,
 				y=None, yerr=None, n_std=2,
 				y_low=None, y_high=None,
@@ -160,7 +160,7 @@ class AxesLiron(_AxesLiron):
 				x=x, y=y, fit_fcn=fit_fcn, xerr=xerr, yerr=yerr,
 				p_opt=p_opt, p_cov=p_cov, n_std=n_std, interp_factor=interp_factor,
 				curve_fit_plot_kw=curve_fit_plot_kw)
-		def _plot_data_and_curve_fit(ax: Axes,
+		def _plot_data_and_curve_fit(ax: Axes_plt,
 				x, y, fit_fcn, xerr=None, yerr=None,
 				p_opt=None, p_cov=None, n_std=2, interp_factor=20,
 				curve_fit_plot_kw=None, **errorbar_kw):
@@ -200,7 +200,7 @@ class AxesLiron(_AxesLiron):
 
 				>>> (p_opt, p_cov) = scipy.optimize.curve_fit(fit_fcn, x, y)
 
-				>>> Ax = gr.AxesLiron()
+				>>> Ax = gr.Axes()
 				>>> Ax.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
 				>>> Ax.show_fig()
 			"""
@@ -248,7 +248,7 @@ class AxesLiron(_AxesLiron):
 		@self._vectorize(cls=self,
 				x=x, y=y, reg=reg, xerr=xerr, yerr=yerr,
 				reg_plot_kw=reg_plot_kw)
-		def _plot_data_and_lin_reg(ax: Axes,
+		def _plot_data_and_lin_reg(ax: Axes_plt,
 				x, y, reg=None, xerr=None, yerr=None,
 				reg_plot_kw=None, **errorbar_kw):
 			"""
@@ -264,7 +264,7 @@ class AxesLiron(_AxesLiron):
 				>>> y = 2*x + np.random.randn(N)
 				>>> reg = linregress(x, y)
 
-				>>> ax = gr.AxesLiron()
+				>>> ax = gr.Axes()
 				>>> ax.plot_data_and_lin_reg(x, y, reg)
 				>>> ax.show_fig()
 
@@ -309,7 +309,7 @@ class AxesLiron(_AxesLiron):
 			**LineCollection_kwargs):
 
 		@self._vectorize(cls=self, x=x, y=y, arr=arr)
-		def _plot_line_collection(ax: Axes,
+		def _plot_line_collection(ax: Axes_plt,
 				x: np.ndarray, y: np.ndarray, arr: np.ndarray,
 				**LineCollection_kwargs):
 			"""
@@ -347,7 +347,7 @@ class AxesLiron(_AxesLiron):
 
 		@self._merge_kwargs("specgram_kw", **specgram_kw)
 		@self._vectorize(cls=self, y=y, fs=fs)
-		def _plot_specgram(ax: Axes,
+		def _plot_specgram(ax: Axes_plt,
 				y: np.ndarray, fs: int,
 				**specgram_kw):
 			"""
@@ -383,7 +383,7 @@ class AxesLiron(_AxesLiron):
 
 		@self._merge_kwargs("plot_surface_kw", **plot_surface_kw)
 		@self._vectorize(cls=self, x=x, y=y, z=z)
-		def _plot_surf(ax: Axes,
+		def _plot_surf(ax: Axes_plt,
 				x, y, z,
 				**plot_surface_kw):
 			"""
@@ -421,7 +421,7 @@ class AxesLiron(_AxesLiron):
 			*args, **kwargs):
 
 		@self._vectorize(cls=self, x=x, y=y, z=z, contours=contours)
-		def _plot_contour(ax: Axes,
+		def _plot_contour(ax: Axes_plt,
 				x, y, z, contours,
 				*args, **kwargs):
 			"""
@@ -448,7 +448,7 @@ class AxesLiron(_AxesLiron):
 
 		return _plot_contour(*args, **kwargs)
 
-	def plot_animation(self, axs: (Axes, np.ndarray[Axes]),
+	def plot_animation(self, axs: (Axes_plt, np.ndarray[Axes_plt]),
 			data: list[np.ndarray],
 			data_instance: list,
 			titles: list = None,
@@ -463,7 +463,7 @@ class AxesLiron(_AxesLiron):
 
 			>>> nimages = 10
 			>>> images = np.random.random((nimages))
-			>>> Ax = gr.AxesLiron()
+			>>> Ax = gr.Axes()
 			>>> Ax.plot_animation(images)
 			>>> Ax.save_fig("test.gif")
 
@@ -488,7 +488,7 @@ class AxesLiron(_AxesLiron):
 		-------
 
 		"""
-		if type(axs) is Axes:  # convert to array
+		if type(axs) is Axes_plt:  # convert to array
 			axs = [axs]
 			data = [data]
 			data_instance = [data_instance]
