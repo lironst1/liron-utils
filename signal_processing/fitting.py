@@ -126,25 +126,27 @@ def curve_fit(fit_fcn,
 	# Curve-Fit
 	p_opt, p_cov = scipy.optimize.curve_fit(fit_fcn, x, y, p0=p0, sigma=yerr, **kwargs)
 
+	chi_squared = scipy.stats.chisquare(f_obs=y/y.sum(), f_exp=fit_fcn(x, *p_opt)/np.sum(fit_fcn(x, *p_opt)))
+
 	p_err = np.sqrt(np.diag(p_cov))
 	p_opt_err = from_numpy(p_opt, p_err)
 
 	if plot:
-		Ax = gr.AxesLiron()
+		Ax = gr.Axes()
 		Ax.plot_data_and_curve_fit(x, y, fit_fcn,
 				xerr=xerr, yerr=yerr,
 				p_opt=p_opt, p_cov=p_cov,
 				**plot_data_and_curve_fit_kw)
 
-		return p_opt_err, p_cov, Ax
+		return p_opt_err, p_cov, chi_squared, Ax
 
-	return p_opt_err, p_cov
+	return p_opt_err, p_cov, chi_squared
 
 
 def find_peaks(
 		y, yerr=None,
 		x=None, xerr=None,
-		n_points=3,
+		n_fit_points=None,
 		plot=False,
 		**kwargs):
 	"""
@@ -173,41 +175,53 @@ def find_peaks(
 
 	peaks, properties = scipy.signal.find_peaks(val(y), **kwargs)
 
-	# fit quadratic around peaks
-	def quadratic(x, a, b, c):
-		return a * x ** 2 + b * x + c
+	if n_fit_points is None:
+		x_peaks = x[peaks]
+		y_peaks = y[peaks]
+		if xerr is not None:
+			x_peaks = from_numpy(x_peaks, xerr[peaks])
+		if yerr is not None:
+			y_peaks = from_numpy(y_peaks, yerr[peaks])
 
-	x_peaks_fit = from_numpy(np.zeros(len(peaks)), 0)
-	y_peaks_fit = from_numpy(np.zeros(len(peaks)), 0)
-	for i in range(len(peaks)):
-		# Define a small range around the peak
-		left = max(0, peaks[i] - n_points)
-		right = min(len(y), peaks[i] + n_points + 1)
+	else:
+		# fit quadratic around peaks
+		def quadratic(x, a, b, c):
+			return a * x ** 2 + b * x + c
+
+		x_peaks = from_numpy(np.zeros(len(peaks)), 0)
+		y_peaks = from_numpy(np.zeros(len(peaks)), 0)
+		for i in range(len(peaks)):
+			# Define a small range around the peak
+			left = max(0, peaks[i] - n_fit_points)
+			right = min(len(y), peaks[i] + n_fit_points + 1)
 
 		# Perform quadratic fit
 		x0 = np.mean(x[left:right])
-		popt, pcov = curve_fit(fit_fcn=quadratic,
+		popt = curve_fit(fit_fcn=quadratic,
 				x=x[left:right] - x0,
 				y=y[left:right],
 				xerr=xerr[left:right] if xerr is not None else None,
 				yerr=yerr[left:right] if yerr is not None else None,
 				p0=[0, 0, y[peaks[i]]],
-		)
+		)[0]
 		a_center, b_center, c_center = popt
 		a = a_center
 		b = b_center - 2 * a_center * x0
 		c = a_center * x0 ** 2 - b_center * x0 + c_center
 
-		x_peaks_fit[i] = - b / (2 * a)  # Vertex of the parabola (peak location)
-		y_peaks_fit[i] = quadratic(x_peaks_fit[i], a, b, c)
+		if val(a) == 0:
+			raise ValueError("Quadratic fit failed: a=0")
+
+			x_peaks[i] = - b / (2 * a)  # Vertex of the parabola (peak location)
+			y_peaks[i] = quadratic(x_peaks[i], a, b, c)
 
 	if plot:
-		Ax = gr.AxesLiron()
+		Ax = gr.Axes()
 		Ax.plot_errorbar(x, y,
 				xerr=xerr, yerr=yerr)
-		Ax.plot_errorbar(x_peaks_fit, y_peaks_fit,
+		Ax.plot_errorbar(x_peaks, y_peaks,
 				marker="o", color="black", linestyle="none")
 
-		return x_peaks_fit, y_peaks_fit, peaks, properties, Ax
+		return x_peaks, y_peaks, peaks, properties, Ax
 
-	return x_peaks_fit, y_peaks_fit, peaks, properties
+	return x_peaks, y_peaks, peaks, properties

@@ -4,6 +4,31 @@ from uncertainties import unumpy
 from uncertainties import ufloat
 
 
+# f"{a:.2fP}" -> "a±0.01"  (P = pretty-print ±)
+
+def __repr__(self):
+	# Not putting spaces around "+/-" helps with arrays of
+	# Variable, as each value with an uncertainty is a
+	# block of signs (otherwise, the standard deviation can be
+	# mistaken for another element of the array).
+
+	std_dev = self.std_dev  # Optimization, since std_dev is calculated
+
+	# A zero standard deviation is printed because otherwise,
+	# ufloat_fromstr() does not correctly parse back the value
+	# ("1.23" is interpreted as "1.23(1)"):
+
+	if std_dev:
+		std_dev_str = repr(std_dev)
+	else:
+		std_dev_str = '0'
+
+	return "%r±%s" % (self.nominal_value, std_dev_str)
+
+
+uncertainties.core.AffineScalarFunc.__repr__ = __repr__
+
+
 def is_unumpy(arr):
 	try:
 		return any([isinstance(arr[i], uncertainties.core.AffineScalarFunc) for i in range(len(arr))])
