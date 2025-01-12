@@ -4,6 +4,8 @@ import scipy.optimize
 import scipy.odr as odr
 import scipy.signal
 from sklearn.metrics import r2_score
+
+from .stats import reduced_chi_squared
 from ..uncertainties_math import ufloat, val, to_numpy, from_numpy
 from .. import graphics as gr
 
@@ -126,10 +128,13 @@ def curve_fit(fit_fcn,
 	# Curve-Fit
 	p_opt, p_cov = scipy.optimize.curve_fit(fit_fcn, x, y, p0=p0, sigma=yerr, **kwargs)
 
-	chi_squared = scipy.stats.chisquare(f_obs=y/y.sum(), f_exp=fit_fcn(x, *p_opt)/np.sum(fit_fcn(x, *p_opt)))
+	chi_squared, p_value = reduced_chi_squared(f_exp=fit_fcn(x, *p_opt), f_obs=y, f_obs_err=yerr)
+	chi_squared = {
+		"statistic": chi_squared,
+		"pvalue":    p_value,
+	}
 
-	p_err = np.sqrt(np.diag(p_cov))
-	p_opt_err = from_numpy(p_opt, p_err)
+	p_opt = from_numpy(p_opt, np.sqrt(np.diag(p_cov)))
 
 	if plot:
 		Ax = gr.Axes()
@@ -138,9 +143,9 @@ def curve_fit(fit_fcn,
 				p_opt=p_opt, p_cov=p_cov,
 				**plot_data_and_curve_fit_kw)
 
-		return p_opt_err, p_cov, chi_squared, Ax
+		return p_opt, p_cov, chi_squared, Ax
 
-	return p_opt_err, p_cov, chi_squared
+	return p_opt, p_cov, chi_squared
 
 
 def find_peaks(

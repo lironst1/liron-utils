@@ -2,6 +2,7 @@ import numpy as np
 import uncertainties
 from uncertainties import unumpy
 from uncertainties import ufloat
+from uncertainties import umath
 
 
 # f"{a:.2fP}" -> "a±0.01"  (P = pretty-print ±)
