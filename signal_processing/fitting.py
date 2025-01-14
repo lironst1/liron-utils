@@ -5,7 +5,7 @@ import scipy.odr as odr
 import scipy.signal
 from sklearn.metrics import r2_score
 
-from .stats import reduced_chi_squared
+from .stats import chi_squared_test
 from ..uncertainties_math import ufloat, val, to_numpy, from_numpy
 from .. import graphics as gr
 
@@ -128,7 +128,7 @@ def curve_fit(fit_fcn,
 	# Curve-Fit
 	p_opt, p_cov = scipy.optimize.curve_fit(fit_fcn, x, y, p0=p0, sigma=yerr, **kwargs)
 
-	chi_squared, p_value = reduced_chi_squared(f_exp=fit_fcn(x, *p_opt), f_obs=y, f_obs_err=yerr)
+	chi_squared, p_value = chi_squared_test(f_exp=fit_fcn(x, *p_opt), f_obs=y)
 	chi_squared = {
 		"statistic": chi_squared,
 		"pvalue":    p_value,
