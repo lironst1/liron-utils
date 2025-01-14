@@ -219,6 +219,9 @@ class Axes(_Axes):
 			# Data
 			x, xerr = to_numpy(x, xerr)
 			y, yerr = to_numpy(y, yerr)
+			p_opt, _ = to_numpy(p_opt)
+			idx = np.argsort(x)
+			x, y, xerr, yerr = x[idx], y[idx], xerr[idx], yerr[idx]
 
 			self.plot_errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
 
@@ -231,11 +234,19 @@ class Axes(_Axes):
 			# Confidence fill
 			if p_opt is not None and p_cov is not None:
 				p_err = np.sqrt(np.diag(p_cov))
-				fit_low = fit_fcn(x_interp, *(p_opt - n_std * p_err))
-				fit_high = fit_fcn(x_interp, *(p_opt + n_std * p_err))
+				fit_low = np.ones(interp_factor * len(x)) * np.inf
+				fit_high = np.ones(interp_factor * len(x)) * (-np.inf)
 
-				# ax.fill_between(x_interp, fit_low, fit_high, linestyle='-', color=COLORS.LIGHT_GREY, alpha=0.4,
-				# 		label=f'{n_std} std confidence')
+				for i in range(len(p_opt)):
+					p_opt_i = p_opt.copy()
+					p_opt_i[i] = p_opt[i] - n_std * p_err[i]
+					low = fit_fcn(x_interp, *p_opt_i)
+					p_opt_i[i] = p_opt[i] + n_std * p_err[i]
+					high = fit_fcn(x_interp, *p_opt_i)
+
+					fit_low = np.minimum(fit_low, np.minimum(low, high))
+					fit_high = np.maximum(fit_high, np.maximum(low, high))
+
 				self.plot_filled_error(ax=ax, x=x_interp, y_low=fit_low, y_high=fit_high)
 
 		return _plot_data_and_curve_fit()

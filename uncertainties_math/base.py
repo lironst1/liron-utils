@@ -4,8 +4,14 @@ from uncertainties import unumpy
 from uncertainties import ufloat
 from uncertainties import umath
 
+"""
+Prints:
+	f"{a:.2fP}" -> "a±0.01"  (P = pretty-print ±)
 
-# f"{a:.2fP}" -> "a±0.01"  (P = pretty-print ±)
+Math functions 
+	umath and unumpy has all the math functions that math has, but for arrays of ufloats
+
+"""
 
 def __repr__(self):
 	# Not putting spaces around "+/-" helps with arrays of
@@ -55,15 +61,15 @@ def to_numpy(x, xerr=None):
 	def unumpy_to_numpy(arr):
 		val = unumpy.nominal_values(arr)
 		dev = unumpy.std_devs(arr)
-		if not np.any(dev):
-			dev = None
+		# if not np.any(dev):
+		# 	dev = None
 		return val, dev
 
 	def ufloat_to_float(x):
 		val = uncertainties.nominal_value(x)
 		dev = uncertainties.std_dev(x)
-		if dev == 0:
-			dev = None
+		# if dev == 0:
+		# 	dev = None
 		return val, dev
 
 	if is_unumpy(x):
@@ -94,3 +100,23 @@ def make_independent(x, xerr=None):
 	x, xerr = to_numpy(x, xerr)
 
 	return unumpy.uarray(x, xerr)
+
+
+def histogram(x, xerr=None, **kwargs):
+	x, xerr = to_numpy(x, xerr)
+
+	density = kwargs.pop("density", False)
+
+	hist, bins = np.histogram(x, **kwargs)
+
+	hist_err = np.zeros(len(hist))
+	for i in range(len(hist)):
+		in_bin = (bins[i] <= x) & (x < bins[i + 1])
+		hist_err[i] = np.sqrt(np.sum(xerr[in_bin] ** 2))
+
+	hist = from_numpy(hist, hist_err)
+
+	if density:
+		hist /= np.sum(hist)
+
+	return hist, bins
