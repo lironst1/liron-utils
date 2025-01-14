@@ -59,6 +59,36 @@ class Axes(_Axes):
 
 		return _plot()
 
+	def plot_vlines(self,
+			x=0, ymin=0, ymax=1,
+			**plot_kw):
+
+		@self._merge_kwargs("plot_kw", **plot_kw)
+		@self._vectorize(cls=self, x=x, ymin=ymin, ymax=ymax)
+		def _plot_vlines(ax: Axes_plt,
+				x=0, ymin=0, ymax=1,
+				**plot_kw):
+			x = np.atleast_1d(x)
+			for xx in x:
+				ax.axvline(x=xx, ymin=ymin, ymax=ymax, **plot_kw)
+
+		return _plot_vlines()
+
+	def plot_hlines(self,
+			y=0, xmin=0, xmax=1,
+			**plot_kw):
+
+		@self._merge_kwargs("plot_kw", **plot_kw)
+		@self._vectorize(cls=self, y=y, xmin=xmin, xmax=xmax)
+		def _plot_hlines(ax: Axes_plt,
+				y=0, xmin=0, xmax=1,
+				**plot_kw):
+			y = np.atleast_1d(y)
+			for yy in y:
+				ax.axhline(y=yy, xmin=xmin, xmax=xmax, **plot_kw)
+
+		return _plot_hlines()
+
 	def plot_errorbar(self,
 			x, y=None, xerr=None, yerr=None,
 			**errorbar_kw):
