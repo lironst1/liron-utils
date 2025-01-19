@@ -13,6 +13,7 @@ Math functions
 
 """
 
+
 def __repr__(self):
 	# Not putting spaces around "+/-" helps with arrays of
 	# Variable, as each value with an uncertainty is a
@@ -94,6 +95,10 @@ def val(x, xerr=None):
 
 def dev(x, xerr=None):
 	return to_numpy(x, xerr)[1]
+
+
+def uncertainty(x, xerr=None):
+	return dev(x, xerr) / val(x, xerr)
 
 
 def make_independent(x, xerr=None):
