@@ -128,11 +128,7 @@ def curve_fit(fit_fcn,
 	# Curve-Fit
 	p_opt, p_cov = scipy.optimize.curve_fit(fit_fcn, x, y, p0=p0, sigma=yerr, **kwargs)
 
-	chi_squared, p_value = chi_squared_test(f_exp=fit_fcn(x, *p_opt), f_obs=y)
-	chi_squared = {
-		"statistic": chi_squared,
-		"pvalue":    p_value,
-	}
+	chi2_red = chi_squared_test(f_exp=fit_fcn(x, *p_opt), f_obs=y, f_obs_err=yerr, reduced=True)
 
 	p_opt = from_numpy(p_opt, np.sqrt(np.diag(p_cov)))
 
@@ -143,9 +139,9 @@ def curve_fit(fit_fcn,
 				p_opt=p_opt, p_cov=p_cov,
 				**plot_data_and_curve_fit_kw)
 
-		return p_opt, p_cov, chi_squared, Ax
+		return p_opt, p_cov, chi2_red, Ax
 
-	return p_opt, p_cov, chi_squared
+	return p_opt, p_cov, chi2_red
 
 
 def find_peaks(
