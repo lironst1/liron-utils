@@ -20,7 +20,7 @@ def chi_squared_test(f_exp, f_obs,
     ddof :      int, optional
         Degrees of freedom adjustment (e.g., number of fitted parameters). Default is 0.
     reduced :   bool, optional
-    	Return the reduced chi-squared statistic. Default is 'False'.
+    	Return the reduced chi-squared statistic. Default is False.
 
     Returns
     -------
@@ -36,6 +36,9 @@ def chi_squared_test(f_exp, f_obs,
 	chi2 = np.sum((f_obs - f_exp) ** 2 / f_exp)
 
 	dof = len(f_exp) - 1 - ddof
+	if dof <= 0:
+		raise ValueError("Degrees of freedom must be greater than 0.")
+
 	p_value = scipy.stats.chi2.sf(val(chi2), dof)
 
 	if reduced:
