@@ -894,11 +894,11 @@ def get_style_rcparams(style: str):
 
 
 STYLES = plt.style.core._base_library | {
-	"default":             mpl.rcParamsDefault,
+	"default":                mpl.rcParamsDefault,
 
-	"liron_utils-default": RC_PARAMS,
+	"liron_utils-default":    RC_PARAMS,
 
-	"liron_utils-article": {
+	"liron_utils-article":    {
 		# get_style_rcparams("seaborn-v0_8-talk")
 		'axes.labelsize':        14.3,  # font size of the x and y labels
 		'axes.titlesize':        15.6,  # font size of the axes title
@@ -929,6 +929,13 @@ STYLES = plt.style.core._base_library | {
 		'axes.spines.top':       True,
 		'axes.spines.right':     True,
 		'savefig.pad_inches':    0,  # Padding to be used when bbox is set to 'tight'
+	},
+
+	"liron_utils-text_color": lambda color: {
+		'axes.titlecolor': color,
+		'axes.labelcolor': color,
+		'xtick.color':     color,
+		'ytick.color':     color,
 	}
 }
 
@@ -988,7 +995,7 @@ def get_color_cycler(colors: (str, list) = "cycler", plot: (bool, str) = False):
 	return colors
 
 
-def update_rcParams(new_params: (str, dict) = "liron_utils-default"):
+def update_rcParams(new_params: (str, dict, callable) = "liron_utils-default", *args, **kwargs):
 	"""
 	Update the default MatPlotLib rcParams.
 
@@ -1006,6 +1013,8 @@ def update_rcParams(new_params: (str, dict) = "liron_utils-default"):
 	if type(new_params) is str:
 		if new_params in STYLES:
 			new_params = STYLES[new_params]
+			if callable(new_params):
+				new_params = new_params(*args, **kwargs)
 			mpl.rcParams.update(new_params)
 		else:  # new_rcParams in plt.style.available
 			plt.style.use(new_params)
