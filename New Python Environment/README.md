@@ -20,7 +20,10 @@ To install using pip, run:\
 To save the `requirements` file, run:\
 `pip freeze => "pip_requirements.txt"`
 
-### Clear Cache
+### Free up space
 To clear the cache, run:\
-`conda clean --all`\
+`conda clean --all -y`\
 `pip cache purge`
+
+To roll back an environment to its initial state, run:\
+`conda install --rev 0`
