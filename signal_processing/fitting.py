@@ -4,6 +4,7 @@ import scipy.optimize
 import scipy.odr as odr
 import scipy.signal
 from sklearn.metrics import r2_score
+from collections import namedtuple
 
 from .stats import chi_squared_test
 from ..uncertainties_math import ufloat, val, to_numpy, from_numpy
@@ -56,13 +57,11 @@ def linear_fit(x, y, xerr=None, yerr=None, beta0=None, **kwargs):
 	pred = lambda x: f([slope, intercept], x)
 
 	y_pred = pred(x)
-	r_squared = r2_score(y, val(y_pred))
+	r2 = r2_score(y, val(y_pred))
 
-	return {"h":     out,
-		"eval":      pred,
-		"slope":     slope,
-		"intercept": intercept,
-		"r_squared": r_squared}
+	Linear_regression = namedtuple("Linear_regression",
+			["h", "eval", "slope", "intercept", "r2"])
+	return Linear_regression(h=out, eval=pred, slope=slope, intercept=intercept, r2=r2)
 
 
 def curve_fit(fit_fcn,
