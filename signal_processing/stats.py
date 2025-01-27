@@ -50,13 +50,18 @@ def chi_squared_test(
     [2] https://en.wikipedia.org/wiki/Reduced_chi-squared_statistic
 	"""
 
-	f_exp, _ = to_numpy(f_exp)
+	f_exp, f_exp_err = to_numpy(f_exp)
 	f_obs, f_obs_err = to_numpy(f_obs, f_obs_err)
 
 	if reduced:
-		assert f_obs_err is not None, "f_obs_err must be provided."
-		chi2 = np.sum((f_obs - f_exp) ** 2 / f_obs_err ** 2)
+		assert f_obs_err is not None, "f_exp_err, f_obs_err must be provided."
+		if f_exp_err is None:
+			f_exp_err = 0
+		sigma2 = np.sqrt(f_exp_err ** 2 + f_obs_err ** 2)
+		chi2 = np.sum((f_obs - f_exp) ** 2 / sigma2 ** 2)
 	else:
+		f_exp /= f_exp.sum()
+		f_obs /= f_obs.sum()
 		chi2 = np.sum((f_obs - f_exp) ** 2 / f_exp)
 
 	dof = len(f_exp) - 1 - ddof

@@ -127,7 +127,7 @@ def curve_fit(fit_fcn,
 	# Curve-Fit
 	p_opt, p_cov = scipy.optimize.curve_fit(fit_fcn, x, y, p0=p0, sigma=yerr, **kwargs)
 
-	chi2_red = chi_squared_test(f_exp=fit_fcn(x, *p_opt), f_obs=y, f_obs_err=yerr, reduced=True)
+	chi2_red = chi_squared_test(f_exp=fit_fcn(x, *p_opt), f_obs=y, f_obs_err=yerr, ddof=len(p_opt), reduced=True)
 
 	p_opt = from_numpy(p_opt, np.sqrt(np.diag(p_cov)))
 
