@@ -1,6 +1,6 @@
 __all__ = ['BaseProgressBar', 'TextProgressBar',
 	'EnhancedTextProgressBar', 'TqdmProgressBar',
-	'HTMLProgressBar', 'progress_bars']
+	'HTMLProgressBar']
 
 import time
 import datetime
@@ -186,20 +186,3 @@ class HTMLProgressBar(BaseProgressBar):
 		js_code = ("$('div#%s').width('%i%%');" % (self.divid, 100.0) +
 		           "$('p#%s').text('%s');" % (self.textid, lbl))
 		self.display(self.Javascript(js_code))
-
-
-progress_bars = {
-	"Enhanced": EnhancedTextProgressBar,
-	"enhanced": EnhancedTextProgressBar,
-	"Text":     TextProgressBar,
-	"text":     TextProgressBar,
-	True:       TextProgressBar,
-	"Tqdm":     TqdmProgressBar,
-	"tqdm":     TqdmProgressBar,
-	"Html":     HTMLProgressBar,
-	"html":     HTMLProgressBar,
-	"base":     BaseProgressBar,
-	"":         BaseProgressBar,
-	False:      BaseProgressBar,
-	None:       BaseProgressBar,
-}

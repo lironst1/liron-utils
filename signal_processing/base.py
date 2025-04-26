@@ -4,7 +4,7 @@ import scipy.signal
 import scipy.interpolate
 
 norm_axis_idx = np.core.multiarray.normalize_axis_index
-meshgrid = np.lib.index_tricks.mgrid
+meshgrid = np.mgrid
 gamma = scipy.special.gamma
 windows = scipy.signal.windows
 

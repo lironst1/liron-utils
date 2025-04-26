@@ -18,23 +18,28 @@ class Logger:
 
 	def __init__(self,
 			file_name: str,
-			print_to_console: bool = True,
+			print_to_console_level: (None, int) = None,
 			default_level: int = logging.INFO,
 			log_message_format: str = '%(asctime)s | %(levelname)5s >> %(message)s'
 	):
 		"""
-		Start logger.
+		Initialize logger.
 
-		Args:
-			file_name ():               Path logger file (should end with .log)
-			print_to_console ():        Whether to print to console or not
-			default_level ():           Default logging level, if no level is provided. Default is INFO
-			log_message_format ():      Default string format of a message
+		Parameters
+		----------
+		file_name :                 str
+			Path logger file (should end with .log)
+		print_to_console_level :    int
+			Level of messages to print to console. Default is INFO
+		default_level :             int
+			Default logging level, if no level is provided. Default is INFO
+		log_message_format :        str
+			Default string format of a message
 		"""
-
 		with open(file_name, 'a'):
 			pass
 		self.logger = logging.getLogger(file_name)
+		self.default_level = default_level
 		self.logger.setLevel(default_level)
 
 		self.file_handler = logging.FileHandler(file_name)
@@ -43,7 +48,7 @@ class Logger:
 
 		self.logger.addHandler(self.file_handler)
 
-		self.print_to_console = print_to_console
+		self.print_to_console_level = print_to_console_level
 
 	def __enter__(self):
 		self.log("STARTING LOGGER...")
@@ -56,33 +61,56 @@ class Logger:
 
 	def log(self,
 			msg: str,
-			level: int = logging.INFO,
+			level: int = None,
 			exc_info: bool = False,
 			time_log: float = None,
 			f: str = ':.3f', *args, **kwargs):
 		"""
-		Send log message to log file
+		Send a log message to the log file.
 
-		Args:
-			msg:            Message string
-			level:          Logging level (one of self.LEVELS)
-			exc_info:       Error info
-			time_log:
-			f:
-			*args:          Passed to Logger.log
-			**kwargs:       Passed to Logger.log
+		Parameters
+		----------
+		msg :               str
+			Message string
+		level :             int
+			Logging level (one of self.LEVELS)
+		exc_info :          bool
+			Error info
+		time_log :          float
+			Time log
+		f :                 str
+			Format string for time log
+		*args, **kwargs :   Passed to Logger.log
 
-		Returns:
+		**kwargs :      dict
+			Passed to Logger.log
+
+		Returns
+		-------
 
 		"""
+
+		if level is None:
+			level = self.default_level
 
 		tm = time.time()
 		if time_log is not None:
 			msg = msg.replace('{}', '{' + f + '}')
 			msg = msg.format(tm - time_log)
 
-		if self.print_to_console:
-			print(msg)
-
 		self.logger.log(level, msg, exc_info=exc_info, *args, **kwargs)
+
+		# Print to console if level is above the threshold
+		if self.print_to_console_level is not None and level >= self.print_to_console_level:
+			record = self.logger.makeRecord(
+					name=self.logger.name,
+					level=level,
+					fn='', lno=0, msg=msg,
+					exc_info=exc_info,
+					args=args,
+					extra=kwargs
+			)
+			final_msg = self.logger.handlers[0].formatter.format(record)
+			print(final_msg)
+
 		return tm
