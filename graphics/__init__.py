@@ -1,3 +1,4 @@
+from .base import *
 from .axes import *
 from .plotting import *
 from .utils import *

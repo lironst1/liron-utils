@@ -1,6 +1,12 @@
 import pandas as pd
 
 
+class dict_(dict):
+	__getattr__ = dict.get
+	__setattr__ = dict.__setitem__
+	__delattr__ = dict.__delitem__
+
+
 def DL_to_LD(DL: dict) -> list:
 	"""
 	Convert dict of lists to list of dicts

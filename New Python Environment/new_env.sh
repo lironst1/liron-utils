@@ -24,13 +24,13 @@ conda create -y -n "$ENV_NAME" \
   matplotlib \
   notebook \
   numpy \
-  opencv \
   pandas \
   pip \
   plotly \
   pycairo \
   PyPDF2 \
   scikit-learn \
+  scikit-image \
   scipy \
   selenium \
   tensorboard \
@@ -44,7 +44,7 @@ conda activate "$ENV_NAME"
 #pip install --upgrade pip
 
 # Install pip-only packages
-pip install audioread latex pdflatex librosa manim pipdeptree python-docx pytube pystoi qiskit qutip resampy SoundFile tmm torch torchmetrics uncertainties
+pip install audioread latex pdflatex librosa manim opencv-python pipdeptree python-docx pytube pystoi qiskit qutip resampy SoundFile tmm torch torchmetrics uncertainties
 #qsharp qsharp-widgets azure-quantum
 
 echo "✅ Conda environment '$ENV_NAME' is ready!"
