@@ -15,6 +15,9 @@ from ..pure_python.dicts import DL_to_LD
 from ..pure_python.docstring import copy_docstring_and_deprecators
 
 
+# TODO: change Ax.axs to be 1D (top->down, left->right), enable custom shapes (large, small axes)
+
+
 class _Axes:
 	def __init__(self,
 			shape: tuple = (1, 1),
@@ -425,7 +428,7 @@ class _Axes:
 					d["ticks"][i] = []
 					if labels[i] is None:  # hide labels
 						d["labels"][i] = []
-						# d["offset"][i] = None
+				# d["offset"][i] = None
 
 				elif type(ticks[i]) is dict:  # custom ticks
 					assert labels[i] is None or labels[
@@ -436,7 +439,7 @@ class _Axes:
 				elif type(ticks[i]) is list or type(ticks[i]) is np.ndarray:  # custom ticks
 					d["ticks"][i] = ticks[i]
 					d["labels"][i] = ticks[i]
-					# d["offset"][i] = None  # todo: check
+				# d["offset"][i] = None  # todo: check
 
 				else:
 					raise ValueError("'ticks' must be given either as a boolean, list[list] or list[dict].")
@@ -446,12 +449,12 @@ class _Axes:
 
 				elif labels[i] is False or labels[i] is np.False_:  # hide labels
 					d["labels"][i] = []
-					# d["offset"][i] = None
+				# d["offset"][i] = None
 
 				elif type(labels[i]) is list or type(labels[i]) is np.ndarray:  # custom labels
 					assert len(labels[i]) == len(ticks[i]), "len(labels[i]) must be equal to len(ticks[i])."
 					d["labels"][i] = labels[i]
-					# d["offset"][i] = None  # todo: check
+				# d["offset"][i] = None  # todo: check
 
 				else:
 					raise ValueError("'labels' must be given either as a boolean or list[list].")
@@ -464,8 +467,8 @@ class _Axes:
 				ax.set_zticks(d["ticks"][2], d["labels"][2])
 				ax.zaxis.set_major_formatter(ScalarFormatter(useOffset=True))
 
-			# ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=True))  # todo: returns the tick labels for unknown reason
-			# ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+		# ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=True))  # todo: returns the tick labels for unknown reason
+		# ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
 
 		_ax_ticks()
 
@@ -701,8 +704,6 @@ class _Axes:
 		-------
 
 		"""
-
-		# TODO: fix: removes "x 10^y" from the tick labels
 
 		if colorbar_kw is None:
 			colorbar_kw = dict()
