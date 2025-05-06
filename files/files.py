@@ -2,6 +2,7 @@ import os
 import platform
 import subprocess
 import shutil
+import natsort
 
 import numpy as np
 
@@ -9,6 +10,7 @@ import numpy as np
 
 move_file = os.rename
 remove_file = os.remove
+natural_sort = natsort.natsorted
 
 
 def mkdirs(dirs, *args, **kwargs):
@@ -38,51 +40,72 @@ def rmdir(dir):
 		pass
 
 
-def copy(src, dst, *args, **kwargs):
+import os
+import shutil
+
+
+def mkdirs(path):
+	"""Create directory if it doesn't exist."""
+	os.makedirs(path, exist_ok=True)
+
+
+def copy(src, dst, overwrite=True, symlink=False):
 	"""
-	Copy file or an entire directory
+	Copy file(s) or directories, or create symbolic links.
 
 	Parameters
 	----------
-	src :       str | list
-				The source file(s) to be copied
-	dst :       str | list
-				- If 'src' is a string, 'dst' should be either the destination directory (and 'src' will preserve the
-				same name), or as a file name.
-				- If 'src' is an array, 'dst' is the destination directory and all files in 'src' will preserve the
-				same name into 'dst'.
-	args :      sent to shutil.copy2
-	kwargs : 
-
-	Returns
-	-------
-
+	src : str | list[str]
+		Source file(s) or directory(ies).
+	dst : str | list[str]
+		- If 'src' is a string, 'dst' can be a target path or directory.
+		- If 'src' is a list, 'dst' must be either a directory or a list of same length.
+	overwrite : bool, default=True
+		Overwrite destination if it exists.
+	symlink : bool, default=False
+		If True, create symbolic links instead of copying files/directories.
 	"""
 
-	isdir = lambda path: len(os.path.splitext(path)[-1]) == 0
+	# Normalize src and dst to lists
+	if isinstance(src, str):
+		src = [src]
+	if isinstance(dst, str):
+		if len(src) > 1 and not os.path.splitext(dst)[1]:
+			# If dst has no extension and src has multiple items, treat dst as a directory
+			dst = [os.path.join(dst, os.path.basename(s)) for s in src]
+		else:
+			dst = [dst]
 
-	if type(src) is str: src = [src]
-	if type(dst) is str: dst = [dst]
+	if len(dst) == 1 and len(src) > 1:  # convert dst from directory to list of filenames
+		dst = [os.path.join(dst[0], os.path.basename(s)) for s in src]
 
-	src_file_name = [os.path.split(src[i])[-1] for i in range(len(src))]
+	assert len(src) == len(dst), "dst must be a single path or a list of same length as src."
 
-	if len(dst) == 1 and len(src) > 1:  # copy multiple files/dirs into the same dir
-		assert len(os.path.splitext(dst[0])[-1]) == 0, "'dst' should be a directory."
-		dst *= len(src)
+	for s, d in zip(src, dst):
+		if not overwrite and os.path.exists(d):  # Skip if not overwriting and destination exists
+			continue
 
-	assert len(src) == len(dst), "len(dst) must be either 1 or len(src)."
+		if symlink:
+			if os.path.exists(d):  # Remove existing destination if exists
+				os.remove(d)
+			os.symlink(s, d, target_is_directory=True)  # Create symlink to source directory
+			continue
 
-	# copy multiple files/dirs into multiple files/dirs
-	for i in range(len(src)):
-		if os.path.isdir(src[i]):  # copy dir
-			dst[i] = os.path.join(dst[i], src_file_name[i])
-			shutil.copytree(src[i], dst[i], *args, **kwargs)
+		mkdirs(os.path.dirname(d))  # Ensure the parent directory exists
+
+		if os.path.isdir(s):  # copy directory
+			shutil.copytree(s, d)  # Copy directory recursively (todo: check)
+
+		elif os.path.islink(s):
+			if os.path.exists(d):  # Remove existing destination if exists
+				os.remove(d)
+			s = os.readlink(s).replace("\\\\?\\", "")  # Normalize Windows symlink path
+			os.symlink(s, d)  # Create symlink to source file
 
 		else:  # copy file
-			if isdir(dst[i]):  # into dir (preserve file name)
-				mkdirs(dst[i])
-				dst[i] = os.path.join(dst[i], src_file_name[i])
-			shutil.copy2(src[i], dst[i], *args, **kwargs)
+			if not os.path.splitext(d)[1]:  # If destination is a directory (i.e., has no extension), append filename
+				d = os.path.join(d, os.path.basename(s))
+			shutil.copy2(s, d)  # Copy file with metadata
 
 
 def open_file(file):

@@ -22,8 +22,10 @@ conda create -y -n "$ENV_NAME" \
   ipython \
   keras \
   matplotlib \
+  natsort \
   notebook \
   numpy \
+  openpyxl \
   pandas \
   pip \
   plotly \
