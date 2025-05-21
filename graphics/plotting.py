@@ -405,6 +405,7 @@ class Axes(_Axes):
 			"""
 
 			specgram_out = ax.specgram(y, Fs=fs, **specgram_kw)
+			spectrum, freqs, t, im = specgram_out
 
 			if ax.get_title() == '':
 				ax.set_title('Spectrogram')
@@ -412,7 +413,7 @@ class Axes(_Axes):
 				ax.set_xlabel('Time [sec]')
 				ax.set_ylabel('Frequency [Hz]')
 
-			ax.figure.colorbar(matplotlib.cm.ScalarMappable(), ax=ax)
+			ax.figure.colorbar(im, ax=ax)
 
 			return specgram_out
 

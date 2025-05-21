@@ -4,6 +4,7 @@ import scipy.signal
 import scipy.ndimage.filters
 import scipy.optimize
 import scipy.linalg
+from scipy.ndimage import uniform_filter1d
 
 # Fourier Transform
 fft = scipy.fft.fft
@@ -121,6 +122,22 @@ def movmean(x: np.ndarray, N: int, *args, **kwargs) -> np.ndarray:
 	"""
 
 	return movsum(x, N, *args, **kwargs) / N
+
+
+def movrms(x: np.ndarray, N: int, *args, **kwargs) -> np.ndarray:
+	"""
+	Moving RMS filter
+
+	Args:
+		x:          Input array
+		N:          Filter size
+		mode:       Mode
+
+	Returns:
+		Filtered array
+	"""
+
+	return np.sqrt(movmean(x ** 2, N, *args, **kwargs))
 
 
 def movvar(x: np.ndarray, N: int, ddof: int = 1, *args, **kwargs) -> np.ndarray:

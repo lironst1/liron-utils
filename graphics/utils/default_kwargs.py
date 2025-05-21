@@ -1,3 +1,6 @@
+import numpy as np
+from scipy.signal import windows
+
 from . import COLORS
 
 DEFAULT_KWARGS = {
@@ -53,7 +56,10 @@ DEFAULT_KWARGS = {
 	},
 
 	"SPECGRAM_KW":     {
-
+		"NFFT":     4096,
+		"window":   windows.blackmanharris(4096),
+		"noverlap": int(0.85 * 4096),
+		"cmap":     'inferno',
 	},
 
 	# 3D Plotting
