@@ -31,7 +31,10 @@ conda create -y -n "$ENV_NAME" -c conda-forge -c pytorch \
   pandas \
   pip \
   plotly \
+  prettytable \
+  pyautogui \
   pycairo \
+  pynput \
   PyPDF2 \
   pyqt \
   scikit-learn \
