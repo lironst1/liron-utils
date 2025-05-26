@@ -72,6 +72,14 @@ class NamedQueue:
 		with self._lock:
 			return self.queue.pop(name)
 
+	def update(self, name, item):
+		"""Update an item in the queue by its name. If the item does not exist, it is added."""
+		with self._lock:
+			if name in self.queue:
+				self.queue[name] = item
+			else:
+				self.enqueue(name, item)
+
 	def __contains__(self, name):
 		"""Check if an item with the given name is in the queue."""
 		with self._lock:
