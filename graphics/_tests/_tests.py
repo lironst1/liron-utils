@@ -16,7 +16,7 @@ def fit_fcn(x, a, b, c):
 
 fig, ax = gr.new_figure()
 gr.draw_xy_lines(ax)
-ax.plot(range(5))
+ax.plot_image_classification(range(5))
 # gr.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
 # ax.show_fig()
 fig.show()

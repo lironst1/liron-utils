@@ -772,6 +772,10 @@ class _Axes:
 			if set_props_kw["open_dir"]:
 				open_file(os.path.split(file_name)[0])
 
+		# Close Figure
+		if set_props_kw["close_fig"]:
+			plt.close(self.fig)
+
 		return file_name
 
 

@@ -900,6 +900,7 @@ STYLES = plt.style.core._base_library | {
 
 	"liron_utils-article":    {
 		# get_style_rcparams("seaborn-v0_8-talk")
+		'figure.titlesize': 15.6,  # size of the figure title (``Figure.suptitle()``)
 		'axes.labelsize':        14.3,  # font size of the x and y labels
 		'axes.titlesize':        15.6,  # font size of the axes title
 		'figure.figsize':        [10.4, 7.15],  # figure size in inches

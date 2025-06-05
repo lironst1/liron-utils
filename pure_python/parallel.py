@@ -3,7 +3,9 @@ import sys
 import functools
 import multiprocessing as mp
 import threading
+from collections.abc import Iterable
 from queue import Queue
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
 NUM_CPUS = mp.cpu_count()
@@ -11,12 +13,13 @@ NUM_PROCESSES_TO_USE = NUM_CPUS
 NUM_THREADS_TO_USE = 20
 
 
-def parallel_map(func,
-		iterable,
+def parallel_map(func: callable,
+		iterable: Iterable,
 		callback=None,
 		error_callback=None,
 		num_processes: int = NUM_PROCESSES_TO_USE,
 		desc: str = None,
+		tqdm_kw=None,
 		**kwargs) -> list:
 	"""
 	Run function 'func' in parallel.
@@ -69,6 +72,8 @@ def parallel_map(func,
 						number of processes to use
 	desc :              str
 						description for tqdm
+	tqdm_kw :           dict
+						kwargs for tqdm.
 	kwargs :            passed to func
 
 	Returns
@@ -76,6 +81,11 @@ def parallel_map(func,
 	list of 'func' outputs, organized by the order of 'iter'.
 
 	"""
+
+	if tqdm_kw is None:
+		tqdm_kw = dict()
+	tqdm_kw = dict(total=len(iterable), desc=desc) | tqdm_kw
+
 	if sys.platform == 'darwin':  # in UNIX 'fork' can be used (faster but more dangerous)
 		Pool = mp.get_context('fork').Pool
 	else:  # In Windows only 'spwan' is available
@@ -98,7 +108,7 @@ def parallel_map(func,
 		) for i in iterable]
 
 		out = []
-		for out_async_i in tqdm(out_async, total=len(iterable), desc=desc):
+		for out_async_i in tqdm(out_async, **tqdm_kw):
 			try:
 				out += [out_async_i.get()]
 
@@ -106,16 +116,17 @@ def parallel_map(func,
 				raise e
 
 			except Exception as e:
-				warnings.warn(str(e))
+				warnings.warn(f"Exception at index {out_async_i}: {e}")
 
 	return out
 
 
-def parallel_threading(func,
-		iterable,
+def parallel_threading_old(func: callable,
+		iterable: Iterable,
 		lock: bool = False,
 		num_threads: int = NUM_THREADS_TO_USE,
 		desc=None,
+		tqdm_kw=None,
 		**kwargs) -> list:
 	"""
 	Run function 'func' in parallel using threads.
@@ -132,6 +143,8 @@ def parallel_threading(func,
 					number of threads to use
 	desc :          str or callable
 					description for tqdm. If callable, should return a string.
+	tqdm_kw :       dict
+					kwargs for tqdm.
 	kwargs :        passed to func
 
 	Returns
@@ -144,6 +157,9 @@ def parallel_threading(func,
 	if not callable(desc):
 		desc_str = desc
 		desc = lambda i: desc_str
+	if tqdm_kw is None:
+		tqdm_kw = dict()
+	tqdm_kw = dict(total=len(iterable), desc=desc(0)) | tqdm_kw
 
 	out = [None] * len(iterable)
 
@@ -161,13 +177,13 @@ def parallel_threading(func,
 				pbar.update(1)
 
 			except Exception as e:
-				warnings.warn(str(e))
+				warnings.warn(f"Exception at index {index}: {e}")
 
 			queue.task_done()
 
 	queue = Queue()
 	threads = []
-	with tqdm(total=len(iterable), desc=desc(0)) as pbar:
+	with tqdm(**tqdm_kw) as pbar:
 		for _ in range(num_threads):
 			thread = threading.Thread(target=worker, args=(queue, pbar), daemon=True)
 			thread.start()
@@ -177,5 +193,71 @@ def parallel_threading(func,
 			queue.put((index, item))
 
 		queue.join()
+
+	return out
+
+
+def parallel_threading(func: callable,
+		iterable: Iterable,
+		lock: bool = False,
+		num_threads: int = NUM_THREADS_TO_USE,
+		desc=None,
+		tqdm_kw=None,
+		**kwargs) -> list:
+	"""
+	Run function 'func' in parallel using threads.
+
+	Parameters
+	----------
+	func :          callable
+					The function to evaluate using threads. The first argument is the changing value of each iteration.
+	iterable :      array_like
+					First input argument for 'func'
+	lock :          bool
+					Use a lock to prevent concurrent access to shared resources.
+	num_threads :   int
+					Number of threads to use.
+	desc :          str or callable
+					Description for tqdm. If callable, should return a string.
+	tqdm_kw :       dict
+					kwargs for tqdm.
+	kwargs :        Passed to func.
+
+	Returns
+	-------
+	List of 'func' outputs, organized by the order of 'iterable'.
+	"""
+	if lock:
+		lock = threading.Lock()
+
+	if not callable(desc):
+		desc_str = desc
+		desc = lambda i: desc_str
+
+	if tqdm_kw is None:
+		tqdm_kw = dict()
+	tqdm_kw = dict(total=len(iterable), desc=desc(0)) | tqdm_kw
+
+	def wrapped_func(index, item):
+		try:
+			if lock:
+				with lock:
+					result = func(item, **kwargs)
+			else:
+				result = func(item, **kwargs)
+			return index, result
+		except Exception as e:
+			warnings.warn(f"Exception at index {index}: {e}")
+			return index, None
+
+	out = [None] * len(iterable)
+	with ThreadPoolExecutor(max_workers=num_threads) as executor:
+		futures = [executor.submit(wrapped_func, i, item) for i, item in enumerate(iterable)]
+		with tqdm(**tqdm_kw) as pbar:
+			for future in as_completed(futures):
+				index, result = future.result()
+				out[index] = result
+				pbar.set_description(desc(index))
+				pbar.update(1)
 
 	return out

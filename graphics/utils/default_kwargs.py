@@ -29,6 +29,7 @@ DEFAULT_KWARGS = {
 		"face_color":  None,  # list(color)
 		"show_fig":    True,  # bool
 		"open_dir":    False,  # bool
+		"close_fig": False,  # bool
 	},
 
 	"XY_LINES_KW":     {

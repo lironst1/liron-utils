@@ -491,8 +491,10 @@ class Axes(_Axes):
 		return _plot_contour(*args, **kwargs)
 
 	def plot_animation(self, axs: (Axes_plt, np.ndarray[Axes_plt]),
-			data: list[np.ndarray],
-			data_instance: list,
+			func: callable = None,
+			n_frames: int = None,
+			data: list[np.ndarray] = None,
+			data_instance: list = None,
 			titles: list = None,
 			*args, **kwargs):
 		"""
@@ -513,11 +515,15 @@ class Axes(_Axes):
 		----------
 		axs :               Axes or list[Axes]
 							All axes should be of the same figure
-		data :              array_like
+		func :              callable, optional
+							Function to be called for each frame. If not given, will use update_data
+		n_frames :		    int, optional
+							Number of frames to be plotted. If not given, will use len(data[0])
+		data :              array_like, optional
 							The data to be plotted, given as list of size len(axs) of:
 								- (image) a 4D array of size [#n_frames, x, y]
 								- (plot)  a 4D array of size [#n_frames, 2, xy]
-		data_instance   :   array_like of matplotlib objects
+		data_instance   :   array_like of matplotlib objects, optional
 							Image/line/etc. handle to use in case user wants some pre-defined properties.
 							First axis should be of size 'len(axs)'
 		titles :            list or function handle, optional
@@ -530,16 +536,21 @@ class Axes(_Axes):
 		-------
 
 		"""
+		assert (func is not None and n_frames is not None) or \
+		       (data is not None and data_instance is not None), \
+			"Either (func, n_frames) or (data, data_instance) should be given."
+
 		if type(axs) is Axes_plt:  # convert to array
 			axs = [axs]
 			data = [data]
 			data_instance = [data_instance]
-		assert len(axs) == len(data) == len(data_instance), "Number of axes should be equal to number of data sets."
 
 		assert (axs[i].figure == axs[i + 1].figure
 			for i in range(len(axs) - 1)), "All axes should be of the same figure."
 
-		n_frames = len(data[0])
+		if func is None:
+			assert len(axs) == len(data) == len(data_instance), "Number of axes should be equal to number of data sets."
+			n_frames = len(data[0])
 
 		if titles is not None:
 			kwargs = {"blit": False} | kwargs
@@ -548,17 +559,29 @@ class Axes(_Axes):
 		# 	titles = [titles(i) for i in range(n_frames)]  # convert to list
 
 		def update_data(i):
+			"""
+			Update data for animation
+
+			Parameters
+			----------
+			i : Frame index
+			"""
 			for idx_ax, ax in enumerate(axs):
 				h = data_instance[idx_ax]
 				if type(h) is list:  # multiple objects
-					h = h[0]
+					for j, hh in enumerate(h):
+						hh.set_data(data[idx_ax][i][j])  # update images
+				else:
+					h.set_data(data[idx_ax][i])  # update image
 
-				h.set_data(data[idx_ax][i])  # update image
 				if titles is not None:
 					ax.set_title(titles[i])  # update title
 
 			return data_instance
 
+		if func is None:
+			func = update_data
+
 		self.func_animation = matplotlib.animation.FuncAnimation(fig=axs[0].figure,
-				func=update_data, frames=np.arange(n_frames),
+				func=func, frames=n_frames,
 				*args, **kwargs)
