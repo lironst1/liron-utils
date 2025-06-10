@@ -19,12 +19,14 @@ from ..signal_processing.base import interp1
 class Axes(_Axes):
 	def __init__(self,
 			shape: tuple = (1, 1),
+			grid_layout: list[list[tuple]] = None,
 			sharex: (bool, str) = False, sharey: (bool, str) = False,
 			projection: str = None,
 			layout: str = None,
-			fig: Figure = None, axs: Axes_plt = None,
+			fig: Figure = None, axs: (Axes_plt, list[Axes_plt]) = None,
 			subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
-		super().__init__(shape, sharex, sharey, projection, layout, fig, axs, subplot_kw, gridspec_kw, **fig_kw)
+		super().__init__(shape=shape, grid_layout=grid_layout, sharex=sharex, sharey=sharey, projection=projection,
+				layout=layout, fig=fig, axs=axs, subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
 
 	def plot(self,
 			x, y=None, z=None,

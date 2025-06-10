@@ -21,10 +21,11 @@ from ..pure_python.docstring import copy_docstring_and_deprecators
 class _Axes:
 	def __init__(self,
 			shape: tuple = (1, 1),
+			grid_layout: list[list[tuple]] = None,
 			sharex: (bool, str) = False, sharey: (bool, str) = False,
 			projection: str = None,
 			layout: str = None,
-			fig: Figure = None, axs: Axes_plt = None,
+			fig: Figure = None, axs: (Axes_plt, list[Axes_plt]) = None,
 			subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
 		"""
 		Create a new figure with (possibly) subplots using the plt.subplots() function.
@@ -33,6 +34,10 @@ class _Axes:
 		----------
 		shape :             tuple (int, int), default: (1, 1)
 							number of rows, columns (in case of subplots).
+
+		layout :            list[list[tuple]], optional
+					        ([<row_start>, <row_end>], [<col_start>, <col_end>]),
+					        e.g., [[(0, 2), (0, 2)], [(0, 1), (2, 4)]]
 
 		sharex, sharey :    bool or {'none', 'all', 'row', 'col'}, default: False
 							Share the x or y `~matplotlib.axis` with sharex and/or sharey.
@@ -190,20 +195,59 @@ class _Axes:
 
 			nrows, ncols = shape
 
-			self.fig, self.axs = plt.subplots(nrows=nrows, ncols=ncols,
-					sharex=sharex, sharey=sharey,
-					squeeze=False,
-					subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
+			if grid_layout is None:
+				self.fig, self.axs = plt.subplots(nrows=nrows, ncols=ncols,
+						sharex=sharex, sharey=sharey,
+						squeeze=False,
+						subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
+			else:
+				if gridspec_kw is None:
+					gridspec_kw = dict()
+				if sharex == "all":
+					sharex = True
+				elif sharex == "none":
+					sharex = False
+				if sharey == "all":
+					sharey = True
+				elif sharey == "none":
+					sharey = False
+				assert type(sharex) is bool and type(sharey) is bool, "'sharex' and 'sharey' must be bool."
+
+				self.fig = plt.figure(**fig_kw)
+				gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
+
+				ax_share = None
+				axs = np.ones(shape=shape, dtype=Axes_plt)
+				for i, (row_range, col_range) in enumerate(grid_layout):
+					if isinstance(row_range, int):
+						row_range = (row_range, row_range + 1)
+					if isinstance(col_range, int):
+						col_range = (col_range, col_range + 1)
+					r0, r1 = row_range
+					c0, c1 = col_range
+
+					axs[r0:r1, c0:c1] = 0
+					axs[r0, c0] = self.fig.add_subplot(gs[r0:r1, c0:c1],
+							sharex=ax_share if sharex else None,
+							sharey=ax_share if sharey else None,
+							**subplot_kw
+					)
+
+					if ax_share is None:
+						ax_share = axs[r0, c0]
+
+				for (r, c) in np.argwhere(axs == 1):
+					axs[r, c] = self.fig.add_subplot(gs[r, c],
+							sharex=ax_share if sharex else None,
+							sharey=ax_share if sharey else None,
+							**subplot_kw
+					)
+
+				self.axs = axs
 
 			if type(self.fig.get_layout_engine()) is matplotlib.layout_engine.ConstrainedLayoutEngine:
 				self.fig.get_layout_engine().set(w_pad=padding[0], h_pad=padding[1], hspace=padding[2],
 						wspace=padding[3])
-
-		# self.fig = plt.figure(**fig_kw)
-		# gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
-		# self.axs = gs.subplots(sharex=sharex, sharey=sharey,
-		# 		squeeze=False,
-		# 		subplot_kw=subplot_kw)
 
 		elif fig is not None:
 			self.axs = np.atleast_2d(self.fig.axes)
