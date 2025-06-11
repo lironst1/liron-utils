@@ -1,7 +1,6 @@
 import os
 import functools
 import numpy as np
-import matplotlib.layout_engine
 import matplotlib.pyplot as plt
 import matplotlib.cm
 from matplotlib.figure import Figure
@@ -12,7 +11,6 @@ from .utils.default_kwargs import merge_kwargs
 from ..time import TIME_STR, get_time_str
 from ..files import MAIN_FILE_DIR, open_file, mkdirs
 from ..pure_python.dicts import DL_to_LD
-from ..pure_python.docstring import copy_docstring_and_deprecators
 
 
 # TODO: change Ax.axs to be 1D (top->down, left->right), enable custom shapes (large, small axes)
@@ -245,7 +243,8 @@ class _Axes:
 
 				self.axs = axs
 
-			if type(self.fig.get_layout_engine()) is matplotlib.layout_engine.ConstrainedLayoutEngine:
+			from matplotlib.layout_engine import ConstrainedLayoutEngine
+			if type(self.fig.get_layout_engine()) is ConstrainedLayoutEngine:
 				self.fig.get_layout_engine().set(w_pad=padding[0], h_pad=padding[1], hspace=padding[2],
 						wspace=padding[3])
 

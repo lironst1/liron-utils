@@ -4,9 +4,9 @@ import functools
 import multiprocessing as mp
 import threading
 from collections.abc import Iterable
-from queue import Queue
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
+
+from .progress_bar import tqdm_
 
 NUM_CPUS = mp.cpu_count()
 NUM_PROCESSES_TO_USE = NUM_CPUS
@@ -18,7 +18,6 @@ def parallel_map(func: callable,
 		callback=None,
 		error_callback=None,
 		num_processes: int = NUM_PROCESSES_TO_USE,
-		desc: str = None,
 		tqdm_kw=None,
 		**kwargs) -> list:
 	"""
@@ -70,8 +69,12 @@ def parallel_map(func: callable,
 						function to call if an error occurs
 	num_processes :     int
 						number of processes to use
+	progress_bar :     bool
+						if True, show a progress bar using tqdm
 	desc :              str
 						description for tqdm
+	postfix :           callable
+						postfix for tqdm description. If callable, should return a dict.
 	tqdm_kw :           dict
 						kwargs for tqdm.
 	kwargs :            passed to func
@@ -81,11 +84,6 @@ def parallel_map(func: callable,
 	list of 'func' outputs, organized by the order of 'iter'.
 
 	"""
-
-	if tqdm_kw is None:
-		tqdm_kw = dict()
-	tqdm_kw = dict(total=len(iterable), desc=desc) | tqdm_kw
-
 	if sys.platform == 'darwin':  # in UNIX 'fork' can be used (faster but more dangerous)
 		Pool = mp.get_context('fork').Pool
 	else:  # In Windows only 'spwan' is available
@@ -108,7 +106,8 @@ def parallel_map(func: callable,
 		) for i in iterable]
 
 		out = []
-		for out_async_i in tqdm(out_async, **tqdm_kw):
+
+		for out_async_i in tqdm_(out_async, **tqdm_kw):
 			try:
 				out += [out_async_i.get()]
 
@@ -121,87 +120,10 @@ def parallel_map(func: callable,
 	return out
 
 
-def parallel_threading_old(func: callable,
-		iterable: Iterable,
-		lock: bool = False,
-		num_threads: int = NUM_THREADS_TO_USE,
-		desc=None,
-		tqdm_kw=None,
-		**kwargs) -> list:
-	"""
-	Run function 'func' in parallel using threads.
-
-	Parameters
-	----------
-	func :          callable
-					The function to evaluate using threads. The first argument is the changing value of each iteration
-	iterable :      array_like
-					First input argument for 'func'
-	lock :          bool
-					use a lock to prevent concurrent access to shared resources
-	num_threads :   int
-					number of threads to use
-	desc :          str or callable
-					description for tqdm. If callable, should return a string.
-	tqdm_kw :       dict
-					kwargs for tqdm.
-	kwargs :        passed to func
-
-	Returns
-	-------
-	list of 'func' outputs, organized by the order of 'iter'.
-	"""
-
-	if lock:
-		lock = threading.Lock()
-	if not callable(desc):
-		desc_str = desc
-		desc = lambda i: desc_str
-	if tqdm_kw is None:
-		tqdm_kw = dict()
-	tqdm_kw = dict(total=len(iterable), desc=desc(0)) | tqdm_kw
-
-	out = [None] * len(iterable)
-
-	def worker(queue: Queue, pbar: tqdm):
-		while True:
-			index, item = queue.get()
-
-			try:
-				if lock:
-					with lock:
-						out[index] = func(item, **kwargs)
-				else:
-					out[index] = func(item, **kwargs)
-				pbar.set_description(desc(index))
-				pbar.update(1)
-
-			except Exception as e:
-				warnings.warn(f"Exception at index {index}: {e}")
-
-			queue.task_done()
-
-	queue = Queue()
-	threads = []
-	with tqdm(**tqdm_kw) as pbar:
-		for _ in range(num_threads):
-			thread = threading.Thread(target=worker, args=(queue, pbar), daemon=True)
-			thread.start()
-			threads.append(thread)
-
-		for index, item in enumerate(iterable):
-			queue.put((index, item))
-
-		queue.join()
-
-	return out
-
-
 def parallel_threading(func: callable,
 		iterable: Iterable,
 		lock: bool = False,
 		num_threads: int = NUM_THREADS_TO_USE,
-		desc=None,
 		tqdm_kw=None,
 		**kwargs) -> list:
 	"""
@@ -217,8 +139,12 @@ def parallel_threading(func: callable,
 					Use a lock to prevent concurrent access to shared resources.
 	num_threads :   int
 					Number of threads to use.
+	progress_bar : bool
+					If True, show a progress bar using tqdm.
 	desc :          str or callable
 					Description for tqdm. If callable, should return a string.
+	postfix :       callable
+					Postfix for tqdm description. If callable, should return a dict.
 	tqdm_kw :       dict
 					kwargs for tqdm.
 	kwargs :        Passed to func.
@@ -229,14 +155,6 @@ def parallel_threading(func: callable,
 	"""
 	if lock:
 		lock = threading.Lock()
-
-	if not callable(desc):
-		desc_str = desc
-		desc = lambda i: desc_str
-
-	if tqdm_kw is None:
-		tqdm_kw = dict()
-	tqdm_kw = dict(total=len(iterable), desc=desc(0)) | tqdm_kw
 
 	def wrapped_func(index, item):
 		try:
@@ -253,11 +171,13 @@ def parallel_threading(func: callable,
 	out = [None] * len(iterable)
 	with ThreadPoolExecutor(max_workers=num_threads) as executor:
 		futures = [executor.submit(wrapped_func, i, item) for i, item in enumerate(iterable)]
-		with tqdm(**tqdm_kw) as pbar:
-			for future in as_completed(futures):
-				index, result = future.result()
-				out[index] = result
-				pbar.set_description(desc(index))
-				pbar.update(1)
+
+		if tqdm_kw is None:
+			tqdm_kw = dict()
+		tqdm_kw = dict(total=len(futures)) | tqdm_kw
+
+		for future in tqdm_(as_completed(futures), **tqdm_kw):
+			index, result = future.result()
+			out[index] = result
 
 	return out

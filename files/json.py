@@ -1,9 +1,10 @@
 import pandas as pd
-import json
 
 
 def load_json(file):
 	# TODO replace with pd.read_json
+	import json
+
 	with open(file) as f:
 		d = json.load(f)
 	return d

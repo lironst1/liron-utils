@@ -2,11 +2,63 @@ import os
 import platform
 import subprocess
 import shutil
-import natsort
 
 move_file = os.rename
 remove_file = os.remove
-natural_sort = natsort.natsorted
+
+
+def natural_sort(seq, key=None, reverse=False, alg=None):
+	"""
+	Sorts an iterable naturally.
+
+	Parameters
+	----------
+	seq : iterable
+	    The input to sort.
+
+	key : callable, optional
+	    A key used to determine how to sort each element of the iterable.
+	    It is **not** applied recursively.
+	    It should accept a single argument and return a single value.
+
+	reverse : {{True, False}}, optional
+	    Return the list in reversed sorted order. The default is
+	    `False`.
+
+	alg : ns enum, optional
+	    This option is used to control which algorithm `natsort`
+	    uses when sorting. For details into these options, please see
+	    the :class:`ns` class documentation. The default is `ns.INT`.
+
+	Returns
+	-------
+	out: list
+	    The sorted input.
+
+	See Also
+	--------
+	natsort_keygen : Generates the key that makes natural sorting possible.
+	realsorted : A wrapper for ``natsorted(seq, alg=ns.REAL)``.
+	humansorted : A wrapper for ``natsorted(seq, alg=ns.LOCALE)``.
+	index_natsorted : Returns the sorted indexes from `natsorted`.
+	os_sorted : Sort according to your operating system's rules.
+
+	Examples
+	--------
+	Use `natsorted` just like the builtin `sorted`::
+
+	    >>> a = ['num3', 'num5', 'num2']
+	    >>> natsorted(a)
+	    ['num2', 'num3', 'num5']
+
+	"""
+
+	import natsort
+
+	if alg is None:
+		alg = natsort.ns.DEFAULT
+
+	return natsort.natsorted(seq=seq, key=key, reverse=reverse, alg=alg)
 
 
 def mkdirs(dirs, *args, **kwargs):

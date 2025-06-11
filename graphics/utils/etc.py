@@ -1,9 +1,8 @@
-import pyautogui
-from pynput import mouse, keyboard
-from threading import Event
-
-
 def get_pixel_color(modal=True):
+	import pyautogui
+	from pynput import mouse, keyboard
+	from threading import Event
+	
 	done = Event()  # Event to block until user clicks or presses Esc
 
 	def on_click(x, y, button, pressed):

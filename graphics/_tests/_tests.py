@@ -1,26 +1,32 @@
-import numpy as np
-from liron_utils import graphics as gr
-import scipy.optimize
-import matplotlib.pyplot as plt
+from import_tracker import track_module
+from pprint import pprint
 
-N = 101
-x = np.linspace(0, 10, N)
-yerr = 5 * np.random.randn(N)
-y = 2 * x ** 2 + 4 * x + 5 + yerr
+x = track_module(module_name="liron_utils.graphics", track_import_stack=True, show_optional=True)
+pprint(x)
 
-
-def fit_fcn(x, a, b, c):
-    return a * x ** 2 + b * x + c
-
-(p_opt, p_cov) = scipy.optimize.curve_fit(fit_fcn, x, y)
-
-fig, ax = gr.new_figure()
-gr.draw_xy_lines(ax)
-ax.plot(range(5))
-# gr.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
-# ax.show_fig()
-fig.show()
-pass
+# import numpy as np
+# from liron_utils import graphics as gr
+# import scipy.optimize
+# import matplotlib.pyplot as plt
+#
+# N = 101
+# x = np.linspace(0, 10, N)
+# yerr = 5 * np.random.randn(N)
+# y = 2 * x ** 2 + 4 * x + 5 + yerr
+#
+#
+# def fit_fcn(x, a, b, c):
+#     return a * x ** 2 + b * x + c
+#
+# (p_opt, p_cov) = scipy.optimize.curve_fit(fit_fcn, x, y)
+#
+# fig, ax = gr.new_figure()
+# gr.draw_xy_lines(ax)
+# ax.plot(range(5))
+# # gr.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
+# # ax.show_fig()
+# fig.show()
+# pass
 
 # Ax = gr.AxesLiron(2, 1)
 # t = np.linspace(0, 10, 1001)

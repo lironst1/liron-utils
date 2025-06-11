@@ -1,8 +1,4 @@
 import numpy as np
-import uncertainties
-from uncertainties import unumpy
-from uncertainties import ufloat
-from uncertainties import umath
 
 """
 Prints:
@@ -34,10 +30,17 @@ def __repr__(self):
 	return "%r±%s" % (self.nominal_value, std_dev_str)
 
 
-uncertainties.core.AffineScalarFunc.__repr__ = __repr__
+try:
+	import uncertainties
+
+	uncertainties.core.AffineScalarFunc.__repr__ = __repr__
+except ImportError:
+	pass
 
 
 def is_unumpy(arr):
+	import uncertainties
+
 	try:
 		return any([isinstance(arr[i], uncertainties.core.AffineScalarFunc) for i in range(len(arr))])
 	except TypeError:
@@ -58,6 +61,8 @@ def to_numpy(x, xerr=None):
 	Returns:
 
 	"""
+	import uncertainties
+	from uncertainties import unumpy
 
 	def unumpy_to_numpy(arr):
 		val = unumpy.nominal_values(arr)
@@ -83,6 +88,8 @@ def to_numpy(x, xerr=None):
 
 
 def from_numpy(x, xerr=0):
+	from uncertainties import ufloat, unumpy
+
 	if type(x) is float:
 		return ufloat(x, xerr)
 	else:
@@ -102,6 +109,8 @@ def uncertainty(x, xerr=None):
 
 
 def make_independent(x, xerr=None):
+	from uncertainties import unumpy
+
 	x, xerr = to_numpy(x, xerr)
 
 	return unumpy.uarray(x, xerr)
