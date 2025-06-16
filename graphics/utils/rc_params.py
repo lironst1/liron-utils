@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from collections.abc import Iterable
 
 from . import COLORS
 from .COLORS import *
@@ -941,13 +942,13 @@ STYLES = plt.style.core._base_library | {
 }
 
 
-def get_color_cycler(colors: (str, list) = "cycler", plot: (bool, str) = False):
+def get_color_cycler(colors: (str, list, np.ndarray) = "cycler", plot: (bool, str) = False):
 	"""
 	Show all of a cycler colors in a graph
 
 	Parameters
 	----------
-	colors :        str or list, optional
+	colors :        str or array_like, optional
 					- "all" - return all colors given in COLORS.py
 					- "cycler" - return only cycler colors given in RC_PARAMS["axes.prop_cycle"]
 	plot :          bool, optional
@@ -968,7 +969,7 @@ def get_color_cycler(colors: (str, list) = "cycler", plot: (bool, str) = False):
 		else:
 			raise ValueError("Invalid value for 'colors'.")
 
-	elif type(colors) is list:
+	elif isinstance(colors, Iterable):
 		pass
 
 	else:
@@ -994,6 +995,29 @@ def get_color_cycler(colors: (str, list) = "cycler", plot: (bool, str) = False):
 		fig.show()
 
 	return colors
+
+
+def set_color_cycler(colors: (str, list, np.ndarray) = "cycler", plot: (bool, str) = False):
+	"""
+	Set the color cycler for MatPlotLib.
+
+	Parameters
+	----------
+	colors :        str or array_like, optional
+					- "all" - set all colors given in COLORS.py
+					- "cycler" - set only cycler colors given in RC_PARAMS["axes.prop_cycle"]
+	plot :          bool, optional
+					Plot the colors
+
+	Returns
+	-------
+	list of colors
+	"""
+
+	cycler_colors = get_color_cycler(colors=colors, plot=plot)
+	mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=cycler_colors)
+
+	return cycler_colors
 
 
 def update_rcParams(new_params: (str, dict, callable) = "liron_utils-default", *args, **kwargs):
