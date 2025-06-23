@@ -1,11 +1,21 @@
-from import_tracker import track_module
-from pprint import pprint
+# from import_tracker import track_module
+# from pprint import pprint
+#
+# x = track_module(module_name="liron_utils.graphics", track_import_stack=True, show_optional=True)
+# pprint(x)
 
-x = track_module(module_name="liron_utils.graphics", track_import_stack=True, show_optional=True)
-pprint(x)
+import numpy as np
+from scipy.signal import windows
+from liron_utils import graphics as gr
 
-# import numpy as np
-# from liron_utils import graphics as gr
+gr.update_rcParams("liron_utils-text_color", "white")
+
+Ax = gr.Axes(shape=(2, 1))
+gr.Axes(axs=Ax.axs[0, 0]).plot_fft(windows.hamming(1000), one_sided=False, dB=True, which="power")
+Ax.axs[0, 0].set_ylim([-100, 0])
+gr.Axes(axs=Ax.axs[1, 0]).plot_fft(windows.hamming(1000), one_sided=False, dB=True, which="phase")
+gr.set_props()
+
 # import scipy.optimize
 # import matplotlib.pyplot as plt
 #

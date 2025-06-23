@@ -384,6 +384,98 @@ class Axes(_Axes):
 
 		return _plot_line_collection(**LineCollection_kwargs)
 
+	def plot_fft(self,
+			x, fs=1.0, n=None,
+			one_sided=True,
+			dB=False,
+			which="power",
+			**plot_kw):
+
+		@self._merge_kwargs("plot_kw", **plot_kw)
+		@self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, dB=dB, which=which)
+		def _plot_fft(ax: Axes_plt,
+				x, fs=1.0, n=None,
+				one_sided=True,
+				dB=False,
+				which="power",
+				**plot_kw):
+			"""
+			Plot the magnitude spectrum of the FFT of a signal.
+
+			Parameters
+			----------
+			x : np.ndarray
+				Input signal (1D array).
+			fs : float, optional
+				Sampling frequency (Hz). Default is 1.0.
+			n : int, optional
+				Number of points for FFT. If None, uses len(y).
+			one_sided : bool, optional
+				If True, plots only the positive frequencies. Default is True.
+			dB : bool, optional
+				If True, plot in decibels. Default is False.
+			which : str, optional
+				Choose what to plot: "amp", "power", or "phase". Default is "power".
+			plot_kw : dict
+				Additional keyword arguments for the plot.
+
+			Returns
+			-------
+			Line2D
+				The line object for the FFT plot.
+			"""
+
+			x = np.asarray(x)
+			if n is None:
+				n = len(x)
+
+			X = np.fft.fft(x, n=n)
+			freqs = np.fft.fftfreq(n=n, d=1 / fs)
+
+			if one_sided:
+				X = X[:n // 2 + 1]
+				freqs = freqs[:n // 2 + 1]
+			else:
+				X = np.fft.fftshift(X)
+				freqs = np.fft.fftshift(freqs)
+
+			which = which.lower()
+			if which == "amp":
+				ydata = np.abs(X)
+				ylabel = "Amplitude"
+			elif which == "power":
+				ydata = np.abs(X) ** 2
+				ylabel = "Power"
+			elif which == "phase":
+				ydata = np.degrees(np.angle(X))
+				ylabel = "Phase [deg]"
+				ticks = np.arange(-180, 181, 45)
+				ax.set_yticks(ticks)
+				tick_labels = [f"${t}^\circ$" for t in ticks]
+				ax.set_yticklabels(tick_labels)
+
+			else:
+				raise ValueError(f"which must be one of 'amp', 'power', or 'phase'. Got: {which}")
+
+			if dB and which in ("amp", "power"):
+				ydata = 10 * np.log10(ydata + 1e-20)
+				ylabel += " [dB]"
+
+			line = ax.plot(freqs, ydata, **plot_kw)
+
+			if ax.get_title() == "":
+				ax.set_title(f"FFT ({which})")
+			if ax.get_xlabel() == "":
+				ax.set_xlabel("Frequency [Hz]")
+				if fs == 1.0:
+					ax.set_xlabel("Frequency [normalized]")
+			if ax.get_ylabel() == "":
+				ax.set_ylabel(ylabel)
+
+			return line
+
+		return _plot_fft()
+
 	def plot_specgram(self,
 			y: np.ndarray, fs: int,
 			**specgram_kw):
@@ -409,11 +501,12 @@ class Axes(_Axes):
 			specgram_out = ax.specgram(y, Fs=fs, **specgram_kw)
 			spectrum, freqs, t, im = specgram_out
 
-			if ax.get_title() == '':
-				ax.set_title('Spectrogram')
-			if ax.get_label() == '':
-				ax.set_xlabel('Time [sec]')
-				ax.set_ylabel('Frequency [Hz]')
+			if ax.get_title() == "":
+				ax.set_title("Spectrogram")
+			if ax.get_xlabel() == "":
+				ax.set_xlabel("Time [sec]")
+			if ax.get_ylabel() == "":
+				ax.set_ylabel("Frequency [Hz]")
 
 			ax.figure.colorbar(im, ax=ax)
 

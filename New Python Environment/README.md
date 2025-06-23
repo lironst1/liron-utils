@@ -13,6 +13,17 @@ Then, restart PyCharm and change the PyCharm Python interpreter in Settings > Pr
 Python Interpreter > Add Interpreter > Conda Environment > Use Existing Environment > "MYENV" > Apply.
 
 ### pip
+Get version requirements from `pip_requirements_in.txt` and save them to `pip_requirements.txt` using pip-tools:\
+`pip-compile pip_requirements_in.txt --max-rounds 100 --output-file pip_requirements.txt`
+
+Create a new virtual environment:\
+`python -m venv "myvenv"`
+
+Activate the virtual environment:\
+`source "myvenv/bin/activate"` (Linux/Mac)\
+`"myvenv\Scripts\activate.bat"` (Windows)
+
+
 To install using pip, run:\
 `pip install -r "pip_requirements.txt" -U --progress-bar on`
 
