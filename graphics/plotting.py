@@ -389,15 +389,17 @@ class Axes(_Axes):
 			one_sided=True,
 			dB=False,
 			which="power",
+			normalize=False,
 			**plot_kw):
 
 		@self._merge_kwargs("plot_kw", **plot_kw)
-		@self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, dB=dB, which=which)
+		@self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, dB=dB, which=which, normalize=normalize)
 		def _plot_fft(ax: Axes_plt,
 				x, fs=1.0, n=None,
 				one_sided=True,
 				dB=False,
 				which="power",
+				normalize=False,
 				**plot_kw):
 			"""
 			Plot the magnitude spectrum of the FFT of a signal.
@@ -416,6 +418,8 @@ class Axes(_Axes):
 				If True, plot in decibels. Default is False.
 			which : str, optional
 				Choose what to plot: "amp", "power", or "phase". Default is "power".
+			normalize : bool, optional
+				If True, normalize the transformed signal to have a maximal value of 1. Default is False.
 			plot_kw : dict
 				Additional keyword arguments for the plot.
 
@@ -427,16 +431,19 @@ class Axes(_Axes):
 
 			x = np.asarray(x)
 			if n is None:
-				n = len(x)
+				n = x.shape[0]
 
 			X = np.fft.fft(x, n=n)
+			if normalize:
+				X /= X.max(axis=0)
+
 			freqs = np.fft.fftfreq(n=n, d=1 / fs)
 
 			if one_sided:
 				X = X[:n // 2 + 1]
 				freqs = freqs[:n // 2 + 1]
 			else:
-				X = np.fft.fftshift(X)
+				X = np.fft.fftshift(X, axes=0)
 				freqs = np.fft.fftshift(freqs)
 
 			which = which.lower()
@@ -472,7 +479,7 @@ class Axes(_Axes):
 			if ax.get_ylabel() == "":
 				ax.set_ylabel(ylabel)
 
-			return line
+			return (X, freqs), line
 
 		return _plot_fft()
 
