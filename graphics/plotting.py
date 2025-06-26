@@ -71,8 +71,15 @@ class Axes(_Axes):
 				x=0, ymin=0, ymax=1,
 				**plot_kw):
 			x = np.atleast_1d(x)
-			for xx in x:
-				ax.axvline(x=xx, ymin=ymin, ymax=ymax, **plot_kw)
+
+			label = None
+			if "label" in plot_kw:
+				label = plot_kw.pop("label")
+
+			for i, xx in enumerate(x):
+				ax.axvline(x=xx, ymin=ymin, ymax=ymax,
+						label=label if i == x.shape[0] - 1 else "_nolabel_",
+						**plot_kw)
 
 		return _plot_vlines()
 
@@ -86,8 +93,15 @@ class Axes(_Axes):
 				y=0, xmin=0, xmax=1,
 				**plot_kw):
 			y = np.atleast_1d(y)
-			for yy in y:
-				ax.axhline(y=yy, xmin=xmin, xmax=xmax, **plot_kw)
+
+			label = None
+			if "label" in plot_kw:
+				label = plot_kw.pop("label")
+
+			for i, yy in enumerate(y):
+				ax.axvline(y=yy, xmin=xmin, xmax=xmax,
+						label=label if i == y.shape[0] - 1 else "_nolabel_",
+						**plot_kw)
 
 		return _plot_hlines()
 
@@ -388,16 +402,19 @@ class Axes(_Axes):
 			x, fs=1.0, n=None,
 			one_sided=True,
 			dB=False,
+			eps=1e-20,
 			which="power",
 			normalize=False,
 			**plot_kw):
 
 		@self._merge_kwargs("plot_kw", **plot_kw)
-		@self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, dB=dB, which=which, normalize=normalize)
+		@self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, dB=dB, eps=eps, which=which,
+				normalize=normalize)
 		def _plot_fft(ax: Axes_plt,
 				x, fs=1.0, n=None,
 				one_sided=True,
 				dB=False,
+				eps=1e-20,
 				which="power",
 				normalize=False,
 				**plot_kw):
@@ -416,6 +433,8 @@ class Axes(_Axes):
 				If True, plots only the positive frequencies. Default is True.
 			dB : bool, optional
 				If True, plot in decibels. Default is False.
+			eps : float, optional
+				Renormalization constant added to logarithmic plot
 			which : str, optional
 				Choose what to plot: "amp", "power", or "phase". Default is "power".
 			normalize : bool, optional
@@ -465,7 +484,7 @@ class Axes(_Axes):
 				raise ValueError(f"which must be one of 'amp', 'power', or 'phase'. Got: {which}")
 
 			if dB and which in ("amp", "power"):
-				ydata = 10 * np.log10(ydata + 1e-20)
+				ydata = 10 * np.log10(ydata + eps)
 				ylabel += " [dB]"
 
 			line = ax.plot(freqs, ydata, **plot_kw)
