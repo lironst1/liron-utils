@@ -7,6 +7,7 @@ norm_axis_idx = np.core.multiarray.normalize_axis_index
 meshgrid = np.mgrid
 gamma = scipy.special.gamma
 windows = scipy.signal.windows
+sliding_window = np.lib.stride_tricks.sliding_window_view
 
 
 def array(*args):
