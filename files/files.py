@@ -142,7 +142,9 @@ def copy(src, dst, overwrite=True, symlink=None):
 
 		if os.path.islink(s):  # If src is a symlink, resolve it
 			s = os.readlink(s).replace("\\\\?\\", "")
-			if lnk is None:
+			if lnk is True:
+				pass
+			elif lnk is None:
 				lnk = True
 			else:
 				lnk = False
