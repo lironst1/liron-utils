@@ -899,18 +899,29 @@ STYLES = plt.style.core._base_library | {
 
 	"liron_utils-default":    RC_PARAMS,
 
-	"liron_utils-article":    {
-		# get_style_rcparams("seaborn-v0_8-talk")
-		'figure.titlesize': 15.6,  # size of the figure title (``Figure.suptitle()``)
-		'axes.labelsize':        14.3,  # font size of the x and y labels
-		'axes.titlesize':        15.6,  # font size of the axes title
-		'figure.figsize':        [10.4, 7.15],  # figure size in inches
-		'grid.linewidth':        1.3,  # in points
-		'legend.fontsize':       13.0,
+	"liron_utils-article":    {  # get_style_rcparams("seaborn-v0_8-talk")
+		# BACKENDS
+		# LINES
 		'lines.linewidth':       2.275,  # line width in points
 		'lines.markeredgewidth': 0.0,  # the line width around the marker symbol
 		'lines.markersize':      9.1,  # marker size, in points
+		# PATCHES
 		'patch.linewidth':       0.39,  # edge width in points.
+		# HATCHES
+		# BOXPLOT
+		# FONT
+		# TEXT
+		# LaTeX
+		# AXES
+		'axes.labelsize':        14.3,  # font size of the x and y labels
+		'axes.titlesize':        15.6,  # font size of the axes title
+		'axes.grid':             False,  # display grid or not
+		'axes.spines.left':      True,  # display axis spines
+		'axes.spines.bottom':    True,
+		'axes.spines.top':       True,
+		'axes.spines.right':     True,
+		# DATES
+		# TICKS
 		'xtick.labelsize':       13.0,  # font size of the tick labels
 		'xtick.major.pad':       9.1,  # distance to major tick label in points
 		'xtick.major.width':     1.3,  # major tick width in points
@@ -919,30 +930,102 @@ STYLES = plt.style.core._base_library | {
 		'ytick.major.pad':       9.1,  # distance to major tick label in points
 		'ytick.major.width':     1.3,  # major tick width in points
 		'ytick.minor.width':     0.65,  # minor tick width in points
-
-		# Custom
 		'xtick.top':             True,  # draw ticks on the top side
 		'xtick.direction':       'in',  # direction: {in, out, inout}
 		'ytick.right':           True,  # draw ticks on the right side
 		'ytick.direction':       'in',  # direction: {in, out, inout}
-		'axes.grid':             False,  # display grid or not
-		'axes.spines.left':      True,  # display axis spines
-		'axes.spines.bottom':    True,
-		'axes.spines.top':       True,
-		'axes.spines.right':     True,
+		# GRIDS
+		'grid.linewidth':        1.3,  # in points
+		# LEGEND
+		'legend.fontsize':       13.0,
+		# FIGURE
+		'figure.figsize':        [10.4, 7.15],  # figure size in inches
+		'figure.titlesize': 15.6,  # size of the figure title (``Figure.suptitle()``)
+		# IMAGES
+		# CONTOUR PLOTS
+		# ERRORBAR PLOTS
+		# HISTOGRAM PLOTS
+		# SCATTER PLOTS
+		# AGG RENDERING
+		# PATHS
+		# SAVING FIGURES
 		'savefig.pad_inches':    0,  # Padding to be used when bbox is set to 'tight'
+		# INTERACTIVE KEYMAPS
+		# ANIMATION
 	},
 
 	"liron_utils-text_color": lambda color: {
+		# BACKENDS
+		# LINES
+		# PATCHES
+		# HATCHES
+		# BOXPLOT
+		# FONT
+		# TEXT
+		# LaTeX
+		# AXES
 		'axes.titlecolor': color,
 		'axes.labelcolor': color,
+		# DATES
+		# TICKS
 		'xtick.color':     color,
 		'ytick.color':     color,
+		# GRIDS
+		# LEGEND
+		# FIGURE
+		# IMAGES
+		# CONTOUR PLOTS
+		# ERRORBAR PLOTS
+		# HISTOGRAM PLOTS
+		# SCATTER PLOTS
+		# AGG RENDERING
+		# PATHS
+		# SAVING FIGURES
+		# INTERACTIVE KEYMAPS
+		# ANIMATION
+
+	},
+
+	"liron_utils-notebook":   {
+		# BACKENDS (need to run '%matplotlib Notebook')
+		'backend':          'nbAgg',
+		'interactive':      True,
+		# LINES
+		# PATCHES
+		# HATCHES
+		# BOXPLOT
+		# FONT
+		# TEXT
+		# LaTeX
+		# AXES
+		'axes.titlesize':   'small',  # font size of the axes title
+		'axes.labelsize':   'small',  # font size of the x and y labels
+		# DATES
+		# TICKS
+		'xtick.labelsize':  'x-small',  # font size of the tick labels
+		'ytick.labelsize':  'x-small',  # font size of the tick labels
+		# GRIDS
+		# LEGEND
+		'legend.fontsize':  'x-small',
+		# FIGURE
+		'figure.titlesize': 'small',  # size of the figure title (``Figure.suptitle()``)
+		'figure.figsize':   [6.4, 4.8],  # figure size in inches
+		# IMAGES
+		# CONTOUR PLOTS
+		# ERRORBAR PLOTS
+		# HISTOGRAM PLOTS
+		# SCATTER PLOTS
+		# AGG RENDERING
+		# PATHS
+		# SAVING FIGURES
+		# INTERACTIVE KEYMAPS
+		# ANIMATION
+
 	}
 }
 
 
-def get_color_cycler(colors: (str, list, np.ndarray) = "cycler", plot: (bool, str) = False):
+def get_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = False):
 	"""
 	Show all of a cycler colors in a graph
 
@@ -997,7 +1080,7 @@ def get_color_cycler(colors: (str, list, np.ndarray) = "cycler", plot: (bool, st
 	return colors
 
 
-def set_color_cycler(colors: (str, list, np.ndarray) = "cycler", plot: (bool, str) = False):
+def set_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = False):
 	"""
 	Set the color cycler for MatPlotLib.
 

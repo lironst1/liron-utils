@@ -5,6 +5,7 @@ import scipy.ndimage.filters
 import scipy.optimize
 import scipy.linalg
 from scipy.ndimage import uniform_filter1d
+from torch.fft import fftfreq
 
 # Fourier Transform
 fft = scipy.fft.fft
@@ -16,6 +17,7 @@ ifft2 = scipy.fft.ifft2
 ifftn = scipy.fft.ifftn
 ifftshift = scipy.fft.ifftshift
 dft_matrix = scipy.linalg.dft  # in 'scipy.linalg._special_matrices'
+fftfreq = scipy.fft.fftfreq
 
 
 def nextpow2(a):
