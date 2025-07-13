@@ -5,6 +5,7 @@ import matplotlib.collections
 import matplotlib.colors
 import matplotlib.style
 import matplotlib.animation
+import scipy.signal
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes as Axes_plt
 
@@ -13,7 +14,10 @@ from ..uncertainties_math import to_numpy
 from ..signal_processing.base import interp1
 
 
-# TODO add standalone functions out of class gr.plot
+# TODO: add option to call gr.Axes.plot(ax, x, y) with ax=plt.Axes (add decorator to outer plotting functions),
+#  and change class name to be Plot
+# TODO: add standalone functions out of class gr.plot
+# TODO: PyWavelet.dwt (wavelet transform) and plot_wavelet
 
 
 class Axes(_Axes):
@@ -459,8 +463,8 @@ class Axes(_Axes):
 			freqs = np.fft.fftfreq(n=n, d=1 / fs)
 
 			if one_sided:
-				X = X[:n // 2 + 1]
-				freqs = freqs[:n // 2 + 1]
+				X = X[:n // 2]
+				freqs = freqs[:n // 2]
 			else:
 				X = np.fft.fftshift(X, axes=0)
 				freqs = np.fft.fftshift(freqs)
@@ -473,12 +477,12 @@ class Axes(_Axes):
 				ydata = np.abs(X) ** 2
 				ylabel = "Power"
 			elif which == "phase":
-				ydata = np.degrees(np.angle(X))
+				ydata = np.degrees(np.unwrap(np.angle(X)))
 				ylabel = "Phase [deg]"
-				ticks = np.arange(-180, 181, 45)
-				ax.set_yticks(ticks)
-				tick_labels = [f"${t}^\circ$" for t in ticks]
-				ax.set_yticklabels(tick_labels)
+			# ticks = np.arange(-180, 181, 45)
+			# ax.set_yticks(ticks)
+			# tick_labels = [f"${t}^\circ$" for t in ticks]
+			# ax.set_yticklabels(tick_labels)
 
 			else:
 				raise ValueError(f"which must be one of 'amp', 'power', or 'phase'. Got: {which}")
@@ -524,7 +528,8 @@ class Axes(_Axes):
 
 			"""
 
-			specgram_out = ax.specgram(y, Fs=fs, **specgram_kw)
+			specgram_out = ax.specgram(y, Fs=fs,
+					**specgram_kw)  # todo: add option for log frequency mapping using librosa.feature.melspectrogram()
 			spectrum, freqs, t, im = specgram_out
 
 			if ax.get_title() == "":

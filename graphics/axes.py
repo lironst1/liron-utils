@@ -504,14 +504,15 @@ class _Axes:
 
 			# Set ticks and labels
 			ax.set_xticks(d["ticks"][0], d["labels"][0])
+			ax.xaxis.set_major_formatter(
+					ScalarFormatter(useOffset=True))  # todo: returns the tick labels for unknown reason
+
 			ax.set_yticks(d["ticks"][1], d["labels"][1])
+			ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
 
 			if ndim == 3:
 				ax.set_zticks(d["ticks"][2], d["labels"][2])
 				ax.zaxis.set_major_formatter(ScalarFormatter(useOffset=True))
-
-		# ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=True))  # todo: returns the tick labels for unknown reason
-		# ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
 
 		_ax_ticks()
 

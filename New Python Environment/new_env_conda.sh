@@ -37,6 +37,7 @@ conda create -y -n "$ENV_NAME" -c conda-forge -c pytorch \
   pynput \
   PyPDF2 \
   pyqt \
+  pywavelets \
   scikit-learn \
   scikit-image \
   scipy \

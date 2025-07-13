@@ -59,6 +59,7 @@ DEFAULT_KWARGS = {
 		"NFFT":     4096,
 		"window":   windows.blackmanharris(4096),
 		"noverlap": int(0.85 * 4096),
+		"pad_to": 4096 + int(1 * 4096),
 		"cmap":     'inferno',
 	},
 

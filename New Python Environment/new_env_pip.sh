@@ -38,6 +38,7 @@ pip install \
   pynput \
   PyPDF2 \
   pyqt5 \
+  PyWavelets \
   scikit-learn \
   scikit-image \
   scipy \
