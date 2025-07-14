@@ -215,8 +215,8 @@ def find_peaks(
 		if val(a) == 0:
 			raise ValueError("Quadratic fit failed: a=0")
 
-			x_peaks[i] = - b / (2 * a)  # Vertex of the parabola (peak location)
-			y_peaks[i] = quadratic(x_peaks[i], a, b, c)
+		x_peaks[i] = - b / (2 * a)  # Vertex of the parabola (peak location)
+		y_peaks[i] = quadratic(x_peaks[i], a, b, c)
 
 	if plot:
 		Ax = gr.Axes()

@@ -4,8 +4,6 @@ import scipy.signal
 import scipy.ndimage.filters
 import scipy.optimize
 import scipy.linalg
-from scipy.ndimage import uniform_filter1d
-from torch.fft import fftfreq
 
 # Fourier Transform
 fft = scipy.fft.fft
