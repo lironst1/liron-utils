@@ -51,6 +51,7 @@ pip install \
   pdflatex \
   librosa \
   manim \
+  mypy \
   opencv-python \
   pipdeptree \
   pyclesperanto-prototype \

@@ -311,7 +311,8 @@ class _Axes:
 
 			"""
 
-			if hasattr(ax, 'zaxis') or hasattr(ax, "axis_lines_drawn"):  # Don't draw axis lines for 3D plots
+            if hasattr(ax, "axis_lines_drawn") or hasattr(ax, 'zaxis') or len(
+                    ax.images) > 0:  # Don't draw axis lines for 3D plots and images
 				return
 
 			xlim = ax.get_xlim()
@@ -690,7 +691,7 @@ class _Axes:
 							'False' will remove all ticks and tick labels.
 							A list will set the ticks for the x,y,z axes
 
-		*ticks_labels :     bool/list, default: None
+		*tick_labels :     bool/list, default: None
 							axis tick labels
 							'False' will remove all tick labels.
 							A list will set the tick labels for the x,y,z axes
@@ -758,7 +759,10 @@ class _Axes:
 
 		set_props_kw = merge_kwargs(set_props_kw=set_props_kw)["set_props_kw"]
 
-		caller = lambda func, arg: func(arg) if arg is not None else None
+        def caller(func, *args, **kwargs):
+            if args[0] is None:
+                return None
+            return func(*args, **kwargs)
 
 		# Supreme Title
 		caller(self.sup_title, set_props_kw["sup_title"])
@@ -791,7 +795,7 @@ class _Axes:
 		caller(self.ax_limits, set_props_kw["limits"])
 
 		# Axis Ticks
-		self.ax_ticks(set_props_kw["ticks"], set_props_kw["tick_labels"])
+        caller(self.ax_ticks, set_props_kw["ticks"], set_props_kw["tick_labels"])
 
 		# x-y Lines (through the origin)
 		if set_props_kw["xy_lines"]:

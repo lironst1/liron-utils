@@ -532,12 +532,21 @@ class Axes(_Axes):
 					**specgram_kw)  # todo: add option for log frequency mapping using librosa.feature.melspectrogram()
 			spectrum, freqs, t, im = specgram_out
 
+            scaling = {0: "", 3: "K", 6: "M", 9: "G", 12: "T"}  # todo: use siprefix.si_format
+            scale = 0
+            if fs != 1:
+                scale = 3 * (int(np.log10(freqs[-1])) // 3)
+
+                extent = im.get_extent()
+                extent = (extent[0], extent[1], extent[2] / 10 ** scale, extent[3] / 10 ** scale)
+                im.set_extent(extent=extent)
+
 			if ax.get_title() == "":
 				ax.set_title("Spectrogram")
 			if ax.get_xlabel() == "":
 				ax.set_xlabel("Time [sec]")
 			if ax.get_ylabel() == "":
-				ax.set_ylabel("Frequency [Hz]")
+                ax.set_ylabel(f"Frequency [{scaling[scale]}Hz]")
 
 			ax.figure.colorbar(im, ax=ax)
 
