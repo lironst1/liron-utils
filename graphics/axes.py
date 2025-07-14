@@ -311,8 +311,8 @@ class _Axes:
 
 			"""
 
-            if hasattr(ax, "axis_lines_drawn") or hasattr(ax, 'zaxis') or len(
-                    ax.images) > 0:  # Don't draw axis lines for 3D plots and images
+			if hasattr(ax, "axis_lines_drawn") or hasattr(ax, 'zaxis') or len(
+					ax.images) > 0:  # Don't draw axis lines for 3D plots and images
 				return
 
 			xlim = ax.get_xlim()
@@ -759,10 +759,10 @@ class _Axes:
 
 		set_props_kw = merge_kwargs(set_props_kw=set_props_kw)["set_props_kw"]
 
-        def caller(func, *args, **kwargs):
-            if args[0] is None:
-                return None
-            return func(*args, **kwargs)
+		def caller(func, *args, **kwargs):
+			if args[0] is None:
+				return None
+			return func(*args, **kwargs)
 
 		# Supreme Title
 		caller(self.sup_title, set_props_kw["sup_title"])
@@ -795,7 +795,7 @@ class _Axes:
 		caller(self.ax_limits, set_props_kw["limits"])
 
 		# Axis Ticks
-        caller(self.ax_ticks, set_props_kw["ticks"], set_props_kw["tick_labels"])
+		caller(self.ax_ticks, set_props_kw["ticks"], set_props_kw["tick_labels"])
 
 		# x-y Lines (through the origin)
 		if set_props_kw["xy_lines"]:
