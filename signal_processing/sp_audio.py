@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import soundfile as sf
 import scipy.signal
 from .base import array
 
@@ -30,6 +29,8 @@ def audio_read(files: (str, list), fs_new: int = None, always_3d: bool = False, 
 	-------
 
 	"""
+    import soundfile as sf
+
 	files = np.atleast_1d(array(files))
 	assert files.ndim == 1
 	(channels, samplerate, frames) = [], [], []
@@ -93,6 +94,8 @@ def audio_write(files, M, fs, fs_save=None, mode='w', **kwargs):
 	-------
 
 	"""
+    import soundfile as sf
+
 	files = np.atleast_1d(array(files))
 	M = array(M)
 	if M.ndim == 1:
