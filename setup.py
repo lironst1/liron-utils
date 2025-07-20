@@ -1,9 +1,14 @@
 import setuptools
 
-from liron_utils import __ver__, __details__
+__ver__ = "1.0"
+__details__ = {
+	"author":       "Liron Stettiner",
+	"email":        "lironst1@gmail.com",
+	"url":          "https://github.com/lironst1/Home",
+	"requirements": ["numpy", "scipy", "matplotlib", "natsort", "pandas", "sympy", "scikit-learn", "audioread",
+		"soundfile", "manim", "uncertainties", "pytube", "PyPDF2"]
+}
 
-# export liron_utils as a standalone Python module
-# setup file must be located at the same parent directory as liron_utils (not inside it)
 setuptools.setup(
     include_package_data=True,
     name="liron_utils",

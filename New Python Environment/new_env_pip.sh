@@ -37,7 +37,7 @@ pip install \
   pycairo \
   pynput \
   PyPDF2 \
-  pyqt5 \
+  PyQt6 \
   PyWavelets \
   scikit-learn \
   scikit-image \

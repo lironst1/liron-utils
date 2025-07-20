@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from collections.abc import Iterable
 
 from . import COLORS
+from ..base import hex2rgb
 
 RC_PARAMS = {
     # ***************************************************************************
@@ -1025,7 +1026,7 @@ STYLES = plt.style.core._base_library | {
 }
 
 
-def get_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = False):
+def get_color_cycler(colors: (str, Iterable) = "cycler", rgb: bool = False, plot: (bool, str) = False):
     """
     Show all of a cycler colors in a graph
 
@@ -1034,12 +1035,15 @@ def get_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = Fal
     colors :        str or array_like, optional
                     - "all" - return all colors given in COLORS.py
                     - "cycler" - return only cycler colors given in RC_PARAMS["axes.prop_cycle"]
+                    - "<color>" - return all colors in COLORS.py that start with <color> (e.g. "blue")
+    rgb :           bool, optional
+                    If True, return RGB tuples instead of hex strings
     plot :          bool, optional
                     Plot the colors
 
     Returns
     -------
-    list of colors
+    list of colors (hex or RGB)
     """
 
     if type(colors) is str:
@@ -1050,7 +1054,10 @@ def get_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = Fal
             all_str = COLORS.__all__
             colors = [getattr(COLORS, all_str[i]) for i in range(len(all_str))]
         else:
-            raise ValueError("Invalid value for 'colors'.")
+            color_name = colors
+            colors = [getattr(COLORS, c) for c in COLORS.__all__ if color_name.lower() in c.lower()]
+            if len(colors) == 0:
+                raise ValueError(f"No colors found that match '{color_name}' in COLORS.py")
 
     elif isinstance(colors, Iterable):
         pass
@@ -1076,6 +1083,9 @@ def get_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = Fal
                 ax.legend()
 
         fig.show()
+
+    if rgb:
+        colors = hex2rgb(colors)
 
     return colors
 
