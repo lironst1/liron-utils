@@ -12,59 +12,7 @@ ENV_NAME="myenv"
 # Activate the environment
 source "$ENV_NAME/Scripts/activate"
 
-# Upgrade pip, setuptools, and wheel
-C:\\Users\\lironst\\myenv\\Scripts\\python.exe -m pip install --upgrade pip setuptools wheel
-
 # Install all packages via pip
-pip install \
-  Cython \
-  devbio-napari \
-  ffmpeg-python \
-  ipykernel \
-  ipympl \
-  ipython \
-  keras \
-  matplotlib \
-  napari \
-  natsort \
-  notebook \
-  numpy \
-  openpyxl \
-  pandas \
-  plotly \
-  prettytable \
-  pyautogui \
-  pycairo \
-  pynput \
-  PyPDF2 \
-  PyQt6 \
-  PyWavelets \
-  scikit-learn \
-  scikit-image \
-  scipy \
-  selenium \
-  tensorboard \
-  tensorflow \
-  tqdm \
-  audioread \
-  latex \
-  pdflatex \
-  librosa \
-  manim \
-  mypy \
-  opencv-python \
-  pipdeptree \
-  pyclesperanto-prototype \
-  python-docx \
-  pytube \
-  pystoi \
-  qiskit \
-  qutip \
-  resampy \
-  SoundFile \
-  tmm \
-  torch \
-  torchmetrics \
-  uncertainties
+python -m pip install -r "pip_requirements.txt" -U --progress-bar on
 
 echo "✅ Virtual environment '$ENV_NAME' is ready!"

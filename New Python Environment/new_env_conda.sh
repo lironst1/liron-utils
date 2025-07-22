@@ -16,14 +16,12 @@ conda config --set add_pip_as_python_dependency True
 
 conda create -y -n "$ENV_NAME" -c conda-forge -c pytorch \
   Cython \
-  devbio-napari \
   ffmpeg \
   ipykernel \
   ipympl \
   ipython \
   keras \
   matplotlib \
-  napari \
   natsort \
   notebook \
   numpy \
@@ -38,8 +36,8 @@ conda create -y -n "$ENV_NAME" -c conda-forge -c pytorch \
   PyPDF2 \
   pyqt \
   pywavelets \
-  scikit-learn \
   scikit-image \
+  scikit-learn \
   scipy \
   selenium \
   tensorboard \
@@ -53,7 +51,7 @@ conda activate "$ENV_NAME"
 #pip install --upgrade pip
 
 # Install pip-only packages
-pip install audioread latex pdflatex librosa manim mypy opencv-python pipdeptree pyclesperanto python-docx pytube pystoi qiskit qutip resampy SoundFile tmm torch torchmetrics uncertainties
+pip install audioread latex librosa manim mypy opencv-python pipdeptree pyclesperanto python-docx pytube pystoi qiskit qutip resampy SoundFile tmm torch torchmetrics uncertainties
 #qsharp qsharp-widgets azure-quantum
 
 echo "✅ Conda environment '$ENV_NAME' is ready!"
