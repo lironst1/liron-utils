@@ -366,12 +366,13 @@ class Axes(_Axes):
 
     def plot_line_collection(self,
             x: np.ndarray, y: np.ndarray, arr: np.ndarray,
-            **LineCollection_kwargs):
+            colorbar_kw=None, **LineCollection_kw):
 
         @self._vectorize(cls=self, x=x, y=y, arr=arr)
         def _plot_line_collection(ax: Axes_plt,
                 x: np.ndarray, y: np.ndarray, arr: np.ndarray,
-                **LineCollection_kwargs):
+                colorbar_kw=None,
+                **LineCollection_kw):
             """
 
             Args:
@@ -379,27 +380,31 @@ class Axes(_Axes):
                 x:
                 y:
                 arr:
-                **LineCollection_kwargs:
+                colorbar_kw:
+                **LineCollection_kw:
 
             Returns:
 
             """
+            if colorbar_kw is None:
+                colorbar_kw = dict()
+
             points = np.array([x, y]).T.reshape(-1, 1, 2)
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
             norm = plt.Normalize(vmin=np.min(arr), vmax=np.max(arr))
 
             # cmap = matplotlib.colors.ListedColormap(['r', 'g', 'b'])
-            lc = matplotlib.collections.LineCollection(segments, norm=norm, **LineCollection_kwargs)
+            lc = matplotlib.collections.LineCollection(segments, norm=norm, **LineCollection_kw)
             lc.set_array(arr)
 
             line = ax.add_collection(lc)
 
-            ax.figure.colorbar(line, ax=ax)
+            cbar = ax.figure.colorbar(line, ax=ax, **colorbar_kw)
 
-            return line
+            return line, cbar
 
-        return _plot_line_collection(**LineCollection_kwargs)
+        return _plot_line_collection(colorbar_kw=colorbar_kw, **LineCollection_kw)
 
     def plot_fft(self,
             x, fs=1.0, n=None,

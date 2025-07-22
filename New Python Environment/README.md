@@ -35,7 +35,7 @@ Activate the virtual environment:\
 
 
 To install using pip, run:\
-`python -m pip install -r "pip_requirements.txt" -U --progress-bar on`
+`python -m pip install -r "requirements.txt" -U --progress-bar on`
 
 
 To save the `requirements` file, run:\
