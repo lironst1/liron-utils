@@ -16,6 +16,7 @@ ifftn = scipy.fft.ifftn
 ifftshift = scipy.fft.ifftshift
 dft_matrix = scipy.linalg.dft  # in 'scipy.linalg._special_matrices'
 fftfreq = scipy.fft.fftfreq
+# todo: Fractional Fourier Transform: pip install git+ssh://git@github.com/audiolabs/python_frft.git#egg=frft
 
 
 def nextpow2(a):
