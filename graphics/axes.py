@@ -430,6 +430,8 @@ class _Axes:
 				labels = [True] * ndim
 			elif labels is False:  # hide labels for all axes
 				labels = [False] * ndim
+			elif labels is None:
+				labels = [None] * ndim
 
 			# ticks = np.atleast_1d(ticks)
 			# labels = np.atleast_1d(labels)
@@ -458,9 +460,10 @@ class _Axes:
 			funcs = [ax.get_xlim, ax.get_ylim]
 			if ndim == 3:
 				funcs += [ax.get_zlim]
+
 			for i, func in enumerate(funcs):
 				lim = func()
-				idx = np.logical_and(lim[0] <= d["ticks"][i], d["ticks"][i] <= lim[1])
+				idx = np.logical_and(min(lim) <= d["ticks"][i], d["ticks"][i] <= max(lim))
 				d["ticks"][i] = d["ticks"][i][idx]
 				d["labels"][i] = np.array(d["labels"][i])[idx]
 

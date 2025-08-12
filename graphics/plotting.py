@@ -371,8 +371,7 @@ class Axes(_Axes):
         @self._vectorize(cls=self, x=x, y=y, arr=arr)
         def _plot_line_collection(ax: Axes_plt,
                 x: np.ndarray, y: np.ndarray, arr: np.ndarray,
-                colorbar_kw=None,
-                **LineCollection_kw):
+                colorbar_kw=None, **LineCollection_kw):
             """
 
             Args:
