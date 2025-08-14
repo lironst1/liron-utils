@@ -1,5 +1,7 @@
 import os
 import functools
+import warnings
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm
@@ -411,6 +413,9 @@ class _Axes:
 		@self._vectorize(cls=self, ticks=ticks, labels=labels)
 		def _ax_ticks(ax: Axes_plt, ticks: (bool, list[list], dict, list[dict]), labels: (bool, list[list])):
 			# todo: if labels is False
+            if len(ax.get_shared_x_axes().get_siblings(ax)) > 1 or len(ax.get_shared_y_axes().get_siblings(ax)) > 1:
+                warnings.warn(
+                        f"Axis shares x or y axis with siblings. Changing ticks would affect all siblings.")  # todo: fix in future
 
 			ndim = 3 if hasattr(ax, "get_zticks") else 2
 
@@ -442,18 +447,18 @@ class _Axes:
 				"ticks":  {
 					0: ax.get_xticks(),
 					1: ax.get_yticks(),
-					2: ax.get_zticks() if ndim == 3 else None,
+                    2: ax.get_zticks() if ndim == 3 else [],
 				},
 
 				"labels": {
 					0: ax.get_xticklabels(),
 					1: ax.get_yticklabels(),
-					2: ax.get_zticklabels() if ndim == 3 else None,
+                    2: ax.get_zticklabels() if ndim == 3 else [],
 				},
 				# "offset": {
 				# 	0: ax.xaxis.get_offset_text(),
 				# 	1: ax.yaxis.get_offset_text(),
-				# 	2: ax.zaxis.get_offset_text() if ndim == 3 else None,
+                # 	2: ax.zaxis.get_offset_text() if ndim == 3 else [],
 				# },
 			}
 
@@ -464,8 +469,10 @@ class _Axes:
 			for i, func in enumerate(funcs):
 				lim = func()
 				idx = np.logical_and(min(lim) <= d["ticks"][i], d["ticks"][i] <= max(lim))
-				d["ticks"][i] = d["ticks"][i][idx]
-				d["labels"][i] = np.array(d["labels"][i])[idx]
+                if len(d["ticks"][i]) > 0:
+                    d["ticks"][i] = d["ticks"][i][idx]
+                if len(d["labels"][i]) > 0:
+                    d["labels"][i] = np.array(d["labels"][i])[idx]
 
 			for i in range(len(ticks)):  # x,y,z axes
 				if ticks[i] is None or ticks[i] is True or ticks[i] is np.True_:  # show ticks
