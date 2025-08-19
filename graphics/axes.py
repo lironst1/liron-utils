@@ -331,7 +331,8 @@ class _Axes:
 		_draw_xy_lines()
 
 	def sup_title(self, title: str):
-		self.fig.suptitle(title)
+		self.fig.suptitle(title, color=plt.rcParams[
+			"axes.titlecolor"])  # for unknown reason, color is not automatically inherited from axes.titlecolor
 
 	def ax_axis(self, axis: (bool, str)):
 		"""
