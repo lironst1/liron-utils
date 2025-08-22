@@ -8,6 +8,7 @@ import shutil
 import stat
 from pathlib import Path
 
+
 def setup_git_hooks():
     """Copy git hooks from git_hooks/ to .git/hooks/ and make them executable."""
 
@@ -57,6 +58,7 @@ def setup_git_hooks():
         print("Example: git add . && git commit -m 'Test automatic version update'")
     else:
         print("❌ No hooks were installed")
+
 
 if __name__ == "__main__":
     print("Setting up git hooks for liron_utils package...")
