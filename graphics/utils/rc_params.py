@@ -82,7 +82,7 @@ RC_PARAMS = {
     # ***************************************************************************
     'figure.autolayout':           True,  # When True, automatically adjust subplot
     'figure.figsize':              [8, 8],  # figure size in inches
-    'figure.dpi':                  200,
+    'figure.dpi':                  100,
     'figure.facecolor':            'none',  # figure face color
     'figure.edgecolor':            'none',  # figure edge color
 
@@ -118,6 +118,7 @@ RC_PARAMS = {
     # ***************************************************************************
     # * SAVING FIGURES                                                          *
     # ***************************************************************************
+    'savefig.dpi':                 200,  # figure dots per inch or 'figure'
     'savefig.format':              'svg',  # {png, ps, pdf, svg}
     'savefig.bbox':                'tight',  # {tight, standard}
 
