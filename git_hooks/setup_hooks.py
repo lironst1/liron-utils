@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Setup script for git hooks that automatically update version and license.
-Run this script from the liron_utils directory to install or update the git hooks.
+Run this script from the liron-utils directory to install or update the git hooks.
 """
 
 import shutil
@@ -12,8 +12,8 @@ from pathlib import Path
 def setup_git_hooks():
     """Copy git hooks from git_hooks/ to .git/hooks/ and make them executable."""
 
-    # Define paths - working from liron_utils directory
-    project_root = Path(__file__).parent.parent  # liron_utils directory
+    # Define paths - working from liron-utils directory
+    project_root = Path(__file__).parent.parent  # liron-utils directory
     git_hooks_source = project_root / "git_hooks"
     git_hooks_dest = project_root / ".git" / "hooks"
 
@@ -54,12 +54,12 @@ def setup_git_hooks():
         print("   - Update copyright year in LICENSE to current year")
         print("   - Stage the updated files for commit")
 
-        print("\nTo test the hooks, make a commit in the liron_utils directory!")
+        print("\nTo test the hooks, make a commit in the liron-utils directory!")
         print("Example: git add . && git commit -m 'Test automatic version update'")
     else:
         print("❌ No hooks were installed")
 
 
 if __name__ == "__main__":
-    print("Setting up git hooks for liron_utils package...")
+    print("Setting up git hooks for liron-utils package...")
     setup_git_hooks()

@@ -8,7 +8,7 @@ import numpy as np
 from scipy.signal import windows
 from liron_utils import graphics as gr
 
-gr.update_rcParams("liron_utils-text_color", "white")
+gr.update_rcParams("liron-utils-text_color", "white")
 
 Ax = gr.Axes(shape=(2, 1))
 gr.Axes(axs=Ax.axs[0, 0]).plot_fft(windows.hamming(1000), one_sided=False, dB=True, which="power")

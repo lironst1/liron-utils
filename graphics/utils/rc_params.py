@@ -899,9 +899,9 @@ def get_style_rcparams(style: str):
 STYLES = plt.style.core._base_library | {
     "default":                matplotlib.rcParamsDefault,
 
-    "liron_utils-default":    RC_PARAMS,
+    "liron-utils-default":    RC_PARAMS,
 
-    "liron_utils-article":    {  # get_style_rcparams("seaborn-v0_8-talk")
+    "liron-utils-article":    {  # get_style_rcparams("seaborn-v0_8-talk")
         # BACKENDS
         # LINES
         'lines.linewidth':       2.275,  # line width in points
@@ -956,7 +956,7 @@ STYLES = plt.style.core._base_library | {
         # ANIMATION
     },
 
-    "liron_utils-text_color": lambda color: {
+    "liron-utils-text_color": lambda color: {
         # BACKENDS
         # LINES
         # PATCHES
@@ -988,7 +988,7 @@ STYLES = plt.style.core._base_library | {
 
     },
 
-    "liron_utils-notebook":   {
+    "liron-utils-notebook":   {
         # BACKENDS (need to run '%matplotlib Notebook')
         'backend':          'nbAgg',
         'interactive':      True,
@@ -1114,7 +1114,7 @@ def set_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = Fal
     return cycler_colors
 
 
-def update_rcParams(new_params: (str, dict, callable) = "liron_utils-default", *args, **kwargs):
+def update_rcParams(new_params: (str, dict, callable) = "liron-utils-default", *args, **kwargs):
     """
     Update the default MatPlotLib rcParams.
 
@@ -1130,8 +1130,8 @@ def update_rcParams(new_params: (str, dict, callable) = "liron_utils-default", *
     """
 
     if type(new_params) is str:
-        if new_params in STYLES:
-            new_params = STYLES[new_params]
+        if new_params.replace("_", "-") in STYLES:
+            new_params = STYLES[new_params.replace("_", "-")]
             if callable(new_params):
                 new_params = new_params(*args, **kwargs)
             matplotlib.rcParams.update(new_params)

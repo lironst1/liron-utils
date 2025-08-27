@@ -1,8 +1,10 @@
 ### Clone Submodules
-To clone a submodule (e.g, `liron_utils`) into your repository, run:\
-`git submodule add https://github.com/lironst1/liron_utils.git`
+
+To clone a submodule (e.g, `liron-utils`) into your repository, run:\
+`git submodule add https://github.com/lironst1/liron-utils.git`
 
 You will be asked to input your username and password to GitHub.
+
 - username: `lironst1`
 - password: my personal access token (saved in iCloud Drive)
 
@@ -16,6 +18,7 @@ When pulling updates from GitHub, git does NOT automatically update the submodul
 In order to update the submodules, you will need to run:\
 `git submodule update --remote`
 
-For further information, see these links: 
+For further information, see these links:
+
 - [Working with submodules](https://github.blog/2016-02-01-working-with-submodules/)
 - [Git Tools - Submodules](https://git-scm.com/book/en/v2/Git-Tools-Submodules)

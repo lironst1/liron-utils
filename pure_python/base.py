@@ -19,3 +19,13 @@ def class_vars(cls):
         except Exception:
             pass
     return all_vars
+
+
+def is_notebook():
+    try:
+        from IPython import get_ipython
+        if get_ipython() is not None:
+            return get_ipython().__class__.__name__ == 'ZMQInteractiveShell'
+        return False
+    except ImportError:
+        return False
