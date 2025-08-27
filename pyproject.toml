@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liron-utils"
-version = "2025.08.22"
+version = "2025.08.27"
 description = "Utilities module"
 authors = [
     { name = "Liron Stettiner", email = "lironst1@gmail.com" }
@@ -21,10 +21,17 @@ dependencies = [
     "scikit-learn",
     "audioread",
     "soundfile",
-    "manim",
     "uncertainties",
+]
+
+[project.optional-dependencies]
+extra = [
+    "manim",
     "pytube",
-    "PyPDF2"
+    "PyPDF2",
+]
+all = [
+    "liron-utils[extra]",
 ]
 
 [project.urls]
@@ -32,3 +39,4 @@ Homepage = "https://github.com/lironst1/liron-utils"
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["liron_utils*"]
