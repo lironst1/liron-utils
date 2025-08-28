@@ -1,5 +1,7 @@
 """Liron Utils - A collection of utility modules."""
 
+__version__ = "2025.08.29"
+
 # Import all submodules
 from . import graphics
 from . import signal_processing
@@ -13,6 +15,7 @@ from . import web
 from . import manim_animations
 
 __all__ = [
+    '__version__',
     'graphics',
     'signal_processing',
     'machine_learning',
