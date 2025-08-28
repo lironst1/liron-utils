@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liron-utils"
-version = "2025.08.27"
+version = "2025.09.02"
 description = "Utilities module"
 authors = [
     { name = "Liron Stettiner", email = "lironst1@gmail.com" }
@@ -23,6 +23,7 @@ dependencies = [
     "soundfile",
     "uncertainties",
 ]
+license = "MIT"
 
 [project.optional-dependencies]
 extra = [
