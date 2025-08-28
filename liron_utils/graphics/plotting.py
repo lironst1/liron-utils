@@ -102,7 +102,7 @@ class Axes(_Axes):
                 label = plot_kw.pop("label")
 
             for i, yy in enumerate(y):
-                ax.axvline(y=yy, xmin=xmin, xmax=xmax,
+                ax.axhline(y=yy, xmin=xmin, xmax=xmax,
                         label=label if i == y.shape[0] - 1 else "_nolabel_",
                         **plot_kw)
 
