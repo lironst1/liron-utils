@@ -956,7 +956,7 @@ STYLES = plt.style.core._base_library | {
         # ANIMATION
     },
 
-    "liron-utils-text_color": lambda color: {
+    "liron-utils-text-color": lambda color: {
         # BACKENDS
         # LINES
         # PATCHES
