@@ -1,6 +1,7 @@
 import sys
 import atexit
 import logging
+from logging.handlers import RotatingFileHandler
 import time
 import inspect
 from colorama import Fore, Back, Style
@@ -29,7 +30,9 @@ class Logger:
             min_level_file: int = logging.INFO,
             min_level_console: int = None,
             default_level: int = logging.INFO,
-            log_message_format: str = '%(asctime)s | %(levelname)-14s | %(filename)-15s:%(lineno)4d | %(class_func)-30s >> %(message)s',
+            log_message_format: str = "%(asctime)s | %(levelname)-14s | %(filename)-15s:%(lineno)4d | %(class_func)-30s >> %(message)s",
+            max_file_size: int = 10 * 1024 * 1024,
+            backup_count: int = 5,
     ):
         """
         Initialize logger.
@@ -58,6 +61,10 @@ class Logger:
             Default logging level, if no level is provided. Default is INFO
         log_message_format :        str, optional
             Default string format of a message
+        max_file_size :             int, optional
+            Maximum size of log file in bytes before rotation. Default is 10MB
+        backup_count :              int, optional
+            Number of backup files to keep. Default is 5
         """
         if not file_name.endswith(".log"):
             file_name += ".log"
@@ -91,7 +98,12 @@ class Logger:
                     frame = frame.f_back
                 return record.funcName  # Fallback
 
-        self.file_handler = logging.FileHandler(file_name)
+        # Use RotatingFileHandler instead of FileHandler for file size rotation
+        self.file_handler = RotatingFileHandler(
+                file_name,
+                maxBytes=max_file_size,
+                backupCount=backup_count
+        )
         if min_level_file is not None:
             self.file_handler.setLevel(min_level_file)
             formatter = _Formatter(log_message_format)
