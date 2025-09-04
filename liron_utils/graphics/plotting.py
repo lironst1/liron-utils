@@ -177,8 +177,8 @@ class Axes(_Axes):
 
             Parameters
             ----------
-            ax :   		    Axes
-            x :  		    array_like
+            ax :   		        Axes
+            x :  		        array_like
             y, yerr :  		    array_like, optional
             n_std :  		    int, optional
                                 Number of standard deviations to fill.
@@ -529,14 +529,39 @@ class Axes(_Axes):
 
     def plot_impulse_response(self,
             b, a=1,
-            dt=True, t=None, n=None,
+            dt=1, t=None, n=None,
             **plot_kw):
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(cls=self, b=b, a=a, dt=dt, t=t, n=n)
         def _plot_impulse_response(ax: Axes_plt,
                 b, a=1,
-                dt=True, t=None, n=None,
+                dt=1, t=None, n=None,
                 **plot_kw):
+            """
+            Plot the impulse response of a linear time-invariant (LTI) system defined by its numerator (b) and
+            denominator (a) coefficients.
+
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            b : array_like
+                Numerator coefficients of the LTI system.
+            a : array_like, optional, default 1
+                Denominator coefficients of the LTI system.
+            dt : float, optional, default 1
+                Sampling time interval. If None, the system is treated as continuous-time.
+            t : array_like, optional
+                Time values at which to compute the impulse response. If None, uses n and dt to generate time values.
+            n : int, optional
+                Number of samples for discrete-time systems. Required if t is None and dt is not None.
+            **plot_kw : dict
+                Additional keyword arguments for the plot.
+
+            Returns
+            -------
+
+            """
 
             b, a = np.atleast_1d(b), np.atleast_1d(a)
             if len(b) > len(a):
@@ -549,6 +574,7 @@ class Axes(_Axes):
                 if t is None:
                     raise ValueError("t should be given for continuous-time system.")
                 t, h = scipy.signal.impulse(system, T=t)
+                line = ax.plot(t, h, **plot_kw)
 
             else:  # Discrete-time system
                 system = scipy.signal.dlti(b, a, dt=dt)
@@ -558,10 +584,7 @@ class Axes(_Axes):
                     t = np.arange(0, n * dt, dt)
                 t, h = scipy.signal.dimpulse(system, n=len(t))
                 h = np.squeeze(h)
-
-            line = Axes(axs=ax).plot(
-                    x=t, y=h,
-                    **plot_kw)
+                line = ax.stem(t, h, **plot_kw)
 
             return (h, t), line
 
@@ -588,6 +611,39 @@ class Axes(_Axes):
                 which="amp",
                 normalize=False,
                 **plot_kw):
+            """
+            Plot the frequency response of a linear time-invariant (LTI) system defined by its numerator (b) and
+            denominator (a) coefficients.
+
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            b :             array_like
+                Numerator coefficients of the LTI system.
+            a :             array_like, optional, default 1
+                Denominator coefficients of the LTI system.
+            fs :            float, optional, default 1.0
+                Sampling frequency (Hz). If None, the system is treated as continuous-time.
+            worN :          int, optional, default 512
+                Number of frequency points to compute.
+            one_sided :     bool, optional, default True
+                If True, plots only the positive frequencies.
+            dB :            bool, optional, default False
+                If True, plot in decibels.
+            eps :           float, optional, default 1e-20
+                Renormalization constant added to logarithmic plot
+            which :         str, optional, default "amp"
+                Choose what to plot: "amp", "power", or "phase".
+            normalize :     bool, optional, default False
+                If True, normalize the transformed signal to have a maximal value of 1.
+            **plot_kw : dict
+                Additional keyword arguments for the plot.
+
+            Returns
+            -------
+
+            """
 
             if fs is None:  # Continuous-time system
                 w, h = scipy.signal.freqs(b=b, a=a,
@@ -758,7 +814,7 @@ class Axes(_Axes):
                             All axes should be of the same figure
         func :              callable, optional
                             Function to be called for each frame. If not given, will use update_data
-        n_frames :	    int, optional
+        n_frames :		    int, optional
                             Number of frames to be plotted. If not given, will use len(data[0])
         data :              array_like, optional
                             The data to be plotted, given as list of size len(axs) of:
