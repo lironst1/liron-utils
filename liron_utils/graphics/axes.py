@@ -1,10 +1,10 @@
 import os
 import functools
 import warnings
-
+import copy
+from typing import Iterable
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.cm
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes as Axes_plt
 from matplotlib.ticker import ScalarFormatter
@@ -20,19 +20,19 @@ from ..pure_python.dicts import DL_to_LD
 
 class _Axes:
     def __init__(self,
-            shape: tuple = (1, 1),
+            shape: tuple[int] = (1, 1),
             grid_layout: list[list[tuple]] = None,
-            sharex: (bool, str) = False, sharey: (bool, str) = False,
+            sharex: bool | str = False, sharey: bool | str = False,
             projection: str = None,
             layout: str = None,
-            fig: Figure = None, axs: (Axes_plt, list[Axes_plt]) = None,
+            fig: Figure = None, axs: Axes_plt | Iterable[Axes_plt] = None,
             subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
         """
         Create a new figure with (possibly) subplots using the plt.subplots() function.
 
         Parameters
         ----------
-        shape :             tuple (int, int), default: (1, 1)
+        shape :             tuple[int], default: (1, 1)
                             number of rows, columns (in case of subplots).
 
         layout :            list[list[tuple]], optional
@@ -258,6 +258,11 @@ class _Axes:
 
         self.func_animation = None
 
+    def __getitem__(self, item):
+        out = copy.deepcopy(self)
+        out.axs = np.atleast_2d(self.axs[item])
+        return out
+
     @staticmethod
     def _vectorize(cls, ax: Axes_plt = None, **vec_params):
         def decorator(func):
@@ -331,10 +336,10 @@ class _Axes:
         _draw_xy_lines()
 
     def sup_title(self, title: str):
-        self.fig.suptitle(title, color=plt.rcParams[
-            "axes.titlecolor"])  # for unknown reason, color is not automatically inherited from axes.titlecolor
+        # todo: for unknown reason, color is not automatically inherited from axes.titlecolor
+        self.fig.suptitle(title, color=plt.rcParams["axes.titlecolor"])
 
-    def ax_axis(self, axis: (bool, str)):
+    def ax_axis(self, axis: bool | str):
         """
 
             Parameters
@@ -371,23 +376,23 @@ class _Axes:
             """
 
         @self._vectorize(cls=self, axis=axis)
-        def _ax_axis(ax: Axes_plt, axis: (bool, str)):
+        def _ax_axis(ax: Axes_plt, axis: bool | str):
             ax.axis(axis)
 
         _ax_axis()
 
-    def ax_spines(self, spines: bool):
+    def ax_spines(self, spines: str | list | bool):
         """
         Show axis spines (boundaries)
 
         Parameters
         ----------
-        spines :        bool
+        spines :        str | list | bool
 
         """
 
         @self._vectorize(cls=self, spines=spines)
-        def _ax_spines(ax: Axes_plt, spines: (str, list, bool)):
+        def _ax_spines(ax: Axes_plt, spines: str | list | bool):
             locs = np.array(["left", "bottom", "top", "right"])
 
             if type(spines) is str:
@@ -410,9 +415,9 @@ class _Axes:
 
         _ax_spines()
 
-    def ax_ticks(self, ticks: (bool, list[list], dict, list[dict]), labels: (bool, list[list])):
+    def ax_ticks(self, ticks: bool | list[list] | dict | list[dict], labels: bool | list[list]):
         @self._vectorize(cls=self, ticks=ticks, labels=labels)
-        def _ax_ticks(ax: Axes_plt, ticks: (bool, list[list], dict, list[dict]), labels: (bool, list[list])):
+        def _ax_ticks(ax: Axes_plt, ticks: bool | list[list] | dict | list[dict], labels: bool | list[list]):
             # todo: if labels is False
             if len(ax.get_shared_x_axes().get_siblings(ax)) > 1 or len(ax.get_shared_y_axes().get_siblings(ax)) > 1:
                 warnings.warn(
@@ -575,9 +580,9 @@ class _Axes:
 
         _ax_grid()
 
-    def ax_legend(self, legend: (bool, list), legend_loc: str):
+    def ax_legend(self, legend: bool | list, legend_loc: str):
         @self._vectorize(cls=self, legend=legend, legend_loc=legend_loc)
-        def _ax_legend(ax: Axes_plt, legend: (bool, list), legend_loc: str):
+        def _ax_legend(ax: Axes_plt, legend: bool | list, legend_loc: str):
             if legend is False:
                 legend = ax.get_legend()
                 if legend is not None:
@@ -593,7 +598,7 @@ class _Axes:
 
         _ax_legend()
 
-    def ax_colorbar(self, axs: (bool, list[list[Axes_plt], Axes_plt]), **colorbar_kw):
+    def ax_colorbar(self, axs: bool | list[Axes_plt] | list[list[Axes_plt]], **colorbar_kw):
         if axs is False:
             return
         elif axs is True:
@@ -655,7 +660,7 @@ class _Axes:
         self.show_fig()
 
     def set_props(self,
-            save_file_name: (str, bool) = False,
+            save_file_name: str | bool = False,
             colorbar_kw: dict = None,
             xy_lines_kw: dict = None,
             save_fig_kw: dict = None,
@@ -843,24 +848,6 @@ def new_figure(nrows=1, ncols=1,
         projection=None,
         squeeze=True,
         subplot_kw=None, gridspec_kw=None, **figure_kw) -> (Figure, Axes_plt):
-    """
-    Create new figure with (possibly) subplots
-
-    Args:
-        nrows:              number of rows (in case of subplots)
-        ncols:              number of columns (in case of subplots)
-        sharex:             Link x-axis (zoom together)
-        sharey:             Link y-axis (zoom together)
-        squeeze:            Extra dimensions are squeezed out
-        projection:         ['3d', 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear']
-        subplot_kw:
-        gridspec_kw:
-        **figure_kw
-
-    Returns:
-
-    """
-
     if subplot_kw is None:
         subplot_kw = dict()
     subplot_kw = {'projection': projection} | subplot_kw
@@ -880,18 +867,6 @@ def draw_xy_lines(ax: Axes_plt, **axis_lines_kw):
 
 # @copy_docstring_and_deprecators(_AxesLiron.save_fig)
 def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
-    """
-    Save figure as file
-
-    Args:
-        fig:                    Figure to be saved
-        file_name:              File name
-        **savefig_kw:           kwargs for function fig.savefig
-
-    Returns:
-
-    """
-
     if fig is None:
         fig = plt.gcf()
 
@@ -900,7 +875,7 @@ def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 
 # @copy_docstring_and_deprecators(_AxesLiron.set_props)
 def set_props(ax: Axes_plt = None,
-        save_file_name: (str, bool) = False, save_fig_kw: dict = None,
+        save_file_name: str | bool = False, save_fig_kw: dict = None,
         **set_props_kw):
     if ax is None:
         ax = plt.gca()

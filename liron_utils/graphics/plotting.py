@@ -1,4 +1,6 @@
+from typing import Iterable
 import numpy as np
+import scipy.signal
 import matplotlib.pyplot as plt
 import matplotlib.cm
 import matplotlib.collections
@@ -21,12 +23,12 @@ from ..signal_processing.base import interp1
 
 class Axes(_Axes):
     def __init__(self,
-            shape: tuple = (1, 1),
+            shape: tuple[int] = (1, 1),
             grid_layout: list[list[tuple]] = None,
-            sharex: (bool, str) = False, sharey: (bool, str) = False,
+            sharex: bool | str = False, sharey: bool | str = False,
             projection: str = None,
             layout: str = None,
-            fig: Figure = None, axs: (Axes_plt, list[Axes_plt]) = None,
+            fig: Figure = None, axs: Axes_plt | Iterable[Axes_plt] = None,
             subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
         super().__init__(shape=shape, grid_layout=grid_layout, sharex=sharex, sharey=sharey, projection=projection,
                 layout=layout, fig=fig, axs=axs, subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
@@ -60,7 +62,7 @@ class Axes(_Axes):
             if z is not None:
                 args += [z]
 
-            ax.plot(*args, **plot_kw)
+            return ax.plot(*args, **plot_kw)
 
         return _plot()
 
@@ -79,10 +81,14 @@ class Axes(_Axes):
             if "label" in plot_kw:
                 label = plot_kw.pop("label")
 
+            lines = []
             for i, xx in enumerate(x):
-                ax.axvline(x=xx, ymin=ymin, ymax=ymax,
+                line = ax.axvline(x=xx, ymin=ymin, ymax=ymax,
                         label=label if i == x.shape[0] - 1 else "_nolabel_",
                         **plot_kw)
+                lines.append(line)
+
+            return lines
 
         return _plot_vlines()
 
@@ -101,10 +107,14 @@ class Axes(_Axes):
             if "label" in plot_kw:
                 label = plot_kw.pop("label")
 
+            lines = []
             for i, yy in enumerate(y):
-                ax.axhline(y=yy, xmin=xmin, xmax=xmax,
+                line = ax.axhline(y=yy, xmin=xmin, xmax=xmax,
                         label=label if i == y.shape[0] - 1 else "_nolabel_",
                         **plot_kw)
+                lines.append(line)
+
+            return lines
 
         return _plot_hlines()
 
@@ -142,7 +152,7 @@ class Axes(_Axes):
             x, xerr = to_numpy(x, xerr)
             y, yerr = to_numpy(y, yerr)
 
-            ax.errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
+            return ax.errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
 
         return _plot_errorbar()
 
@@ -167,8 +177,8 @@ class Axes(_Axes):
 
             Parameters
             ----------
-            ax :   		        Axes
-            x :  		        array_like
+            ax :   		    Axes
+            x :  		    array_like
             y, yerr :  		    array_like, optional
             n_std :  		    int, optional
                                 Number of standard deviations to fill.
@@ -194,7 +204,7 @@ class Axes(_Axes):
                 y_low = y - n_std * yerr
                 y_high = y + n_std * yerr
 
-            ax.fill_between(x, y_low, y_high,
+            return ax.fill_between(x, y_low, y_high,
                     **fill_between_kw)
 
         return _plot_filled_error()
@@ -407,23 +417,27 @@ class Axes(_Axes):
 
     def plot_fft(self,
             x, fs=1.0, n=None,
+            *,
             one_sided=True,
             dB=False,
             eps=1e-20,
             which="power",
             normalize=False,
+            input_time=True,
             **plot_kw):
 
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, dB=dB, eps=eps, which=which,
-                normalize=normalize)
+                normalize=normalize, input_time=input_time)
         def _plot_fft(ax: Axes_plt,
                 x, fs=1.0, n=None,
+                *,
                 one_sided=True,
                 dB=False,
                 eps=1e-20,
                 which="power",
                 normalize=False,
+                input_time=True,
                 **plot_kw):
             """
             Plot the magnitude spectrum of the FFT of a signal.
@@ -446,6 +460,8 @@ class Axes(_Axes):
                 Choose what to plot: "amp", "power", or "phase". Default is "power".
             normalize : bool, optional
                 If True, normalize the transformed signal to have a maximal value of 1. Default is False.
+            input_time : bool, optional
+                If True, assumes the input signal is in the time domain. If False, assumes frequency
             plot_kw : dict
                 Additional keyword arguments for the plot.
 
@@ -459,7 +475,11 @@ class Axes(_Axes):
             if n is None:
                 n = x.shape[0]
 
-            X = np.fft.fft(x, n=n)
+            if input_time:
+                X = np.fft.fft(x, n=n)
+            else:
+                X = x.copy()
+
             if normalize:
                 X /= X.max(axis=0)
 
@@ -484,7 +504,7 @@ class Axes(_Axes):
                 ylabel = "Phase [deg]"
             # ticks = np.arange(-180, 181, 45)
             # ax.set_yticks(ticks)
-            # tick_labels = [f"${t}^\circ$" for t in ticks]
+            # tick_labels = [rf"${t}^\circ$" for t in ticks]
             # ax.set_yticklabels(tick_labels)
 
             else:
@@ -496,8 +516,6 @@ class Axes(_Axes):
 
             line = ax.plot(freqs, ydata, **plot_kw)
 
-            if ax.get_title() == "":
-                ax.set_title(f"FFT ({which})")
             if ax.get_xlabel() == "":
                 ax.set_xlabel("Frequency [Hz]")
                 if fs == 1.0:
@@ -508,6 +526,91 @@ class Axes(_Axes):
             return (X, freqs), line
 
         return _plot_fft()
+
+    def plot_impulse_response(self,
+            b, a=1,
+            dt=True, t=None, n=None,
+            **plot_kw):
+        @self._merge_kwargs("plot_kw", **plot_kw)
+        @self._vectorize(cls=self, b=b, a=a, dt=dt, t=t, n=n)
+        def _plot_impulse_response(ax: Axes_plt,
+                b, a=1,
+                dt=True, t=None, n=None,
+                **plot_kw):
+
+            b, a = np.atleast_1d(b), np.atleast_1d(a)
+            if len(b) > len(a):
+                a = np.pad(a, (0, len(b) - len(a)), 'constant', constant_values=0)
+            elif len(a) > len(b):
+                b = np.pad(b, (0, len(a) - len(b)), 'constant', constant_values=0)
+
+            if dt is None:  # Continuous-time system
+                system = scipy.signal.lti(b, a)
+                if t is None:
+                    raise ValueError("t should be given for continuous-time system.")
+                t, h = scipy.signal.impulse(system, T=t)
+
+            else:  # Discrete-time system
+                system = scipy.signal.dlti(b, a, dt=dt)
+                if t is None:
+                    if n is None:
+                        raise ValueError("Either t or n should be given.")
+                    t = np.arange(0, n * dt, dt)
+                t, h = scipy.signal.dimpulse(system, n=len(t))
+                h = np.squeeze(h)
+
+            line = Axes(axs=ax).plot(
+                    x=t, y=h,
+                    **plot_kw)
+
+            return (h, t), line
+
+        return _plot_impulse_response()
+
+    def plot_frequency_response(self,
+            b, a=1, fs=1.0, worN=512,
+            *,
+            one_sided=True,
+            dB=False,
+            eps=1e-20,
+            which="amp",
+            normalize=False,
+            **plot_kw):
+        @self._merge_kwargs("plot_kw", **plot_kw)
+        @self._vectorize(cls=self, b=b, a=a, fs=fs, worN=worN,
+                one_sided=one_sided, dB=dB, eps=eps, which=which, normalize=normalize)
+        def _plot_frequency_response(ax: Axes_plt,
+                b, a=1, fs=1.0, worN=512,
+                *,
+                one_sided=True,
+                dB=False,
+                eps=1e-20,
+                which="amp",
+                normalize=False,
+                **plot_kw):
+
+            if fs is None:  # Continuous-time system
+                w, h = scipy.signal.freqs(b=b, a=a,
+                        worN=worN)
+
+            else:  # Discrete-time system
+                w, h = scipy.signal.freqz(b=b, a=a,
+                        fs=2 * np.pi * fs,
+                        worN=worN,
+                        whole=not one_sided)
+
+            freqs = w / (2 * np.pi) - 0.5
+
+            _, line = Axes(axs=ax).plot_fft(
+                    x=h, fs=fs,
+                    n=2 * worN if one_sided else worN,
+                    one_sided=one_sided, dB=dB, eps=eps, which=which, normalize=normalize,
+                    input_time=False,
+                    **plot_kw)[0, 0]
+
+            return (h, freqs), line
+
+        return _plot_frequency_response()
 
     def plot_specgram(self,
             y: np.ndarray, fs: int,
@@ -655,7 +758,7 @@ class Axes(_Axes):
                             All axes should be of the same figure
         func :              callable, optional
                             Function to be called for each frame. If not given, will use update_data
-        n_frames :		    int, optional
+        n_frames :	    int, optional
                             Number of frames to be plotted. If not given, will use len(data[0])
         data :              array_like, optional
                             The data to be plotted, given as list of size len(axs) of:
