@@ -45,15 +45,23 @@ class Axes(_Axes):
             """
             2D plot of y=f(x)
 
-            Args:
-                ax:
-                x:
-                y:
-                z:
-                **plot_kw:
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            x : array_like
+                X-axis data values.
+            y : array_like, optional
+                Y-axis data values. If None, x is treated as y and x becomes range(len(y)).
+            z : array_like, optional
+                Z-axis data values for 3D plots.
+            **plot_kw : dict
+                Additional keyword arguments passed to matplotlib.pyplot.plot.
 
-            Returns:
-
+            Returns
+            -------
+            list of Line2D
+                A list of Line2D objects representing the plotted data.
             """
 
             args = [x]
@@ -75,6 +83,27 @@ class Axes(_Axes):
         def _plot_vlines(ax: Axes_plt,
                 x=0, ymin=0, ymax=1,
                 **plot_kw):
+            """
+            Plot vertical lines.
+
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            x : array_like or scalar, default 0
+                x positions of the vertical lines.
+            ymin : float, default 0
+                Minimum y position of the lines (in data coordinates).
+            ymax : float, default 1
+                Maximum y position of the lines (in data coordinates).
+            **plot_kw : dict
+                Additional keyword arguments passed to matplotlib.axes.Axes.axvline.
+
+            Returns
+            -------
+            list of Line2D
+                A list of Line2D objects representing the plotted vertical lines.
+            """
             x = np.atleast_1d(x)
 
             label = None
@@ -101,6 +130,27 @@ class Axes(_Axes):
         def _plot_hlines(ax: Axes_plt,
                 y=0, xmin=0, xmax=1,
                 **plot_kw):
+            """
+            Plot horizontal lines.
+
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            y : array_like or scalar, default 0
+                y positions of the horizontal lines.
+            xmin : float, default 0
+                Minimum x position of the lines (in data coordinates).
+            xmax : float, default 1
+                Maximum x position of the lines (in data coordinates).
+            **plot_kw : dict
+                Additional keyword arguments passed to matplotlib.axes.Axes.axhline.
+
+            Returns
+            -------
+            list of Line2D
+                A list of Line2D objects representing the plotted horizontal lines.
+            """
             y = np.atleast_1d(y)
 
             label = None
@@ -132,16 +182,21 @@ class Axes(_Axes):
 
             Parameters
             ----------
-            ax :
-            x :
-            y :
-            xerr, yerr :        array_like, optional
-                Deviations in 'x','y'. 'x','y' may also be sent as 'uncertainties' arrays, then 'xerr','yerr' are disregarded
-            errorbar_kw :
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            x : array_like
+                x-axis data values.
+            y : array_like, optional
+                y-axis data values. If None, x is treated as y and x becomes range(len(x)).
+            xerr, yerr : array_like, optional
+                Error bars in the x, y direction.
+            **errorbar_kw : dict
+                Additional keyword arguments passed to matplotlib.axes.Axes.errorbar.
 
             Returns
             -------
-
+            ErrorbarContainer
+                Container with the errorbar plot elements.
             """
 
             if y is None:
@@ -177,19 +232,27 @@ class Axes(_Axes):
 
             Parameters
             ----------
-            ax :   		        Axes
-            x :  		        array_like
-            y, yerr :  		    array_like, optional
-            n_std :  		    int, optional
-                                Number of standard deviations to fill.
-            y_low, y_high :     array_like, optional
-                                Lower and upper bounds of the filled area.
-                                If not given, will be calculated as y-n_std*yerr, y+n_std*yerr
-            fill_between_kw :
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            x : array_like
+                x-axis data values.
+            y : array_like, optional
+                y-axis data values.
+            yerr : array_like, optional
+                Error values in the y direction.
+            n_std : int, default 2
+                Number of standard deviations to fill.
+            y_low : array_like, optional
+                Lower bounds of the filled area. If not given, will be calculated as y-n_std*yerr.
+            y_high : array_like, optional
+                Upper bounds of the filled area. If not given, will be calculated as y+n_std*yerr.
+            **fill_between_kw : dict
+                Additional keyword arguments passed to matplotlib.axes.Axes.fill_between.
 
             Returns
             -------
-
+            PolyCollection
+                The filled area between the curves.
             """
 
             # Data
@@ -224,21 +287,25 @@ class Axes(_Axes):
                 p_opt=None, p_cov=None, n_std=2, interp_factor=20,
                 curve_fit_plot_kw=None, **errorbar_kw):
             """
-            2D scatter plot y=f(x) + curve fit
+            2D scatter plot y=f(x) and curve fit.
 
             Parameters
             ----------
             ax :
-            x, y :
-            fit_fcn :
-            xerr, yerr :        array_like, optional
+            x, y : array_like
+                Data points to be plotted.
+            fit_fcn : callable
+                Function to be fitted. The first argument of fit_fcn should be the independent variable (x).
+            xerr, yerr : array_like, optional
                 Deviations in 'x','y'. 'x','y' may also be sent as 'uncertainties' arrays, then 'xerr','yerr' are disregarded
             p_opt : Output parameter of scipy.optimize.curve_fit
             p_cov : Output parameter of scipy.optimize.curve_fit
-            n_std : Number of standard deviations of confidence to be plotted with the fitted curve
-            interp_factor :
-            curve_fit_plot_kw :
-            errorbar_kw :
+            n_std : int, optional, default 2
+                Number of standard deviations of confidence to be plotted with the fitted curve
+            interp_factor : int, optional, default 20
+                Interpolation factor for the fitted curve.
+            curve_fit_plot_kw : dict, optional
+            **errorbar_kw : dict, optional
 
             Returns
             -------
@@ -338,17 +405,19 @@ class Axes(_Axes):
                 >>> ax.plot_data_and_lin_reg(x, y, reg)
                 >>> ax.show_fig()
 
-            Args:
-                ax:
-                x:
-                y:                      f(x)
-                reg:                    Output of scipy.stats.linregress
-                xerr:                   Error in x
-                yerr:                   Error in y
-                reg_plot_kw:
-                **errorbar_kw:
+            Parameters
+            ----------
+            ax :
+            x :
+            y :                      f(x)
+            reg :                    Output of scipy.stats.linregress
+            xerr :                   Error in x
+            yerr :                   Error in y
+            reg_plot_kw :
+            **errorbar_kw :
 
-            Returns:
+            Returns
+            -------
 
             """
 
@@ -383,17 +452,25 @@ class Axes(_Axes):
                 x: np.ndarray, y: np.ndarray, arr: np.ndarray,
                 colorbar_kw=None, **LineCollection_kw):
             """
+            Create a line collection with colors mapped to array values.
 
-            Args:
-                ax:
-                x:
-                y:
-                arr:
-                colorbar_kw:
-                **LineCollection_kw:
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            x, y : np.ndarray
+                x- and y-coordinates of the line segments.
+            arr : np.ndarray
+                Array of values to map to colors for each segment.
+            colorbar_kw : dict, optional
+                Additional keyword arguments passed to colorbar.
+            **LineCollection_kw : dict
+                Additional keyword arguments passed to matplotlib.collections.LineCollection.
 
-            Returns:
-
+            Returns
+            -------
+            tuple
+                A tuple containing (LineCollection, colorbar) objects.
             """
             if colorbar_kw is None:
                 colorbar_kw = dict()
@@ -446,23 +523,23 @@ class Axes(_Axes):
             ----------
             x : np.ndarray
                 Input signal (1D array).
-            fs : float, optional
-                Sampling frequency (Hz). Default is 1.0.
+            fs : float, optional, default 1.0
+                Sampling frequency (Hz).
             n : int, optional
                 Number of points for FFT. If None, uses len(y).
-            one_sided : bool, optional
-                If True, plots only the positive frequencies. Default is True.
-            dB : bool, optional
-                If True, plot in decibels. Default is False.
+            one_sided : bool, optional, default True
+                If True, plots only the positive frequencies.
+            dB : bool, optional, default False
+                If True, plot in decibels.
             eps : float, optional
                 Renormalization constant added to logarithmic plot
-            which : str, optional
-                Choose what to plot: "amp", "power", or "phase". Default is "power".
-            normalize : bool, optional
-                If True, normalize the transformed signal to have a maximal value of 1. Default is False.
-            input_time : bool, optional
-                If True, assumes the input signal is in the time domain. If False, assumes frequency
-            plot_kw : dict
+            which : str, optional, default "power"
+                Choose what to plot: "amp", "power", or "phase".
+            normalize : bool, optional, default False
+                If True, normalize the transformed signal to have a maximal value of 1.
+            input_time : bool, optional, default True
+                If True, assumes the input signal is in the time domain (otherwise assumes frequency domain).
+            **plot_kw : dict
                 Additional keyword arguments for the plot.
 
             Returns
@@ -680,14 +757,21 @@ class Axes(_Axes):
             """
             Plot spectrogram
 
-            Args:
-                ax:
-                y:                      Data, given as 1D array with respect to time
-                fs:                     Sample rate
-                **specgram_kw:
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on.
+            y : np.ndarray
+                Data, given as 1D array with respect to time.
+            fs : int
+                Sample rate.
+            **specgram_kw : dict
+                Additional keyword arguments passed to matplotlib.axes.Axes.specgram.
 
-            Returns:
-
+            Returns
+            -------
+            tuple
+                A tuple containing (spectrum, freqs, t, im) from ax.specgram.
             """
 
             specgram_out = ax.specgram(y, Fs=fs,
@@ -726,16 +810,25 @@ class Axes(_Axes):
                 x, y, z,
                 **plot_surface_kw):
             """
-            3D surf plot of z=f(x,y)
+            3D surface plot of z=f(x,y)
 
-            Args:
-                ax:
-                x:          1D or 2D. If given as 1D, will automatically apply meshgrid and treat z as a lambda function
-                y:          1D or 2D. If given as 1D, will automatically apply meshgrid and treat z as a lambda function
-                z:          2D or lambda function
+            Parameters
+            ----------
+            ax : matplotlib.axes.Axes
+                The axes to plot on (must have 3D projection).
+            x : array_like
+                X-coordinates. Can be 1D or 2D. If 1D, will automatically apply meshgrid.
+            y : array_like
+                Y-coordinates. Can be 1D or 2D. If 1D, will automatically apply meshgrid.
+            z : array_like or callable
+                Z-coordinates as 2D array or function z=f(x,y).
+            **plot_surface_kw : dict
+                Additional keyword arguments passed to matplotlib.axes.Axes.plot_surface.
 
-            Returns:
-
+            Returns
+            -------
+            Poly3DCollection
+                The 3D surface plot object.
             """
 
             assert hasattr(ax, "plot_surface"), "Axes does not have a plot_surface attribute. " \
@@ -814,7 +907,7 @@ class Axes(_Axes):
                             All axes should be of the same figure
         func :              callable, optional
                             Function to be called for each frame. If not given, will use update_data
-        n_frames :		    int, optional
+        n_frames :	    int, optional
                             Number of frames to be plotted. If not given, will use len(data[0])
         data :              array_like, optional
                             The data to be plotted, given as list of size len(axs) of:
