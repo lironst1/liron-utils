@@ -95,7 +95,7 @@ def filter2(h, x, shape="full"):
     return out
 
 
-def movsum(x: np.ndarray, N: int, mode: str = 'same') -> np.ndarray:
+def movsum(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
     """
     Moving sum filter
 
@@ -103,77 +103,39 @@ def movsum(x: np.ndarray, N: int, mode: str = 'same') -> np.ndarray:
         x:          Input array
         N:          Filter size
         mode:       Mode
+        axis:       Axis to filter along
 
     Returns:
         Filtered array
     """
+    kernel = np.ones(N)
 
-    return np.correlate(x, np.ones(N), mode=mode)
-
-
-def movmean(x: np.ndarray, N: int, *args, **kwargs) -> np.ndarray:
-    """
-    Moving average filter
-
-    Args:
-        x:          Input array
-        N:          Filter size
-        mode:       Mode
-
-    Returns:
-        Filtered array
-    """
-
-    return movsum(x, N, *args, **kwargs) / N
+    return np.apply_along_axis(lambda m: np.convolve(x, kernel, mode=mode), axis=axis, arr=x)
 
 
-def movrms(x: np.ndarray, N: int, *args, **kwargs) -> np.ndarray:
-    """
-    Moving RMS filter
+def movmean(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
+    """Moving average filter"""
 
-    Args:
-        x:          Input array
-        N:          Filter size
-        mode:       Mode
-
-    Returns:
-        Filtered array
-    """
-
-    return np.sqrt(movmean(x ** 2, N, *args, **kwargs))
+    return movsum(x, N, mode=mode, axis=axis) / N
 
 
-def movvar(x: np.ndarray, N: int, ddof: int = 1, *args, **kwargs) -> np.ndarray:
-    """
-    Moving variance filter
+def movrms(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
+    """Moving RMS filter"""
 
-    Args:
-        x:          Input array
-        N:          Filter size
-        ddof:
+    return np.sqrt(movmean(x ** 2, N, mode=mode, axis=axis))
 
-    Returns:
-        Filtered array
-    """
 
-    out = movmean(x ** 2, N, *args, **kwargs) - movmean(x, N, *args, **kwargs) ** 2
+def movvar(x: np.ndarray, N: int, ddof: int = 1, mode: str = 'same', axis: int = -1) -> np.ndarray:
+    """Moving variance filter"""
+
+    out = movmean(x ** 2, N, mode=mode, axis=axis) - movmean(x, N, mode=mode, axis=axis) ** 2
     out *= N / (N - ddof)
     return out
 
 
-def movstd(x: np.ndarray, N: int, *args, **kwargs) -> np.ndarray:
-    """
-    Moving std filter
-
-    Args:
-        x:          Input array
-        N:          Filter size
-        mode:       Mode
-
-    Returns:
-        Filtered array
-    """
-    out = np.sqrt(movvar(x, N, *args, **kwargs))
+def movstd(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
+    """Moving std filter"""
+    out = np.sqrt(movvar(x, N, mode=mode, axis=axis))
     return out
 
 
