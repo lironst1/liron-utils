@@ -118,8 +118,8 @@ RC_PARAMS = {
     # ***************************************************************************
     # * SAVING FIGURES                                                          *
     # ***************************************************************************
-    'savefig.dpi':                 200,  # figure dots per inch or 'figure'
-    'savefig.format':              'svg',  # {png, ps, pdf, svg}
+    'savefig.dpi':                 'figure',  # figure dots per inch or 'figure'
+    'savefig.format':              'png',  # {png, ps, pdf, svg}
     'savefig.bbox':                'tight',  # {tight, standard}
 
     # ***************************************************************************
