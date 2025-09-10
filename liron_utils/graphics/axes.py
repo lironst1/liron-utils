@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes as Axes_plt
 from matplotlib.ticker import ScalarFormatter
+import matplotlib.animation
 
 from .utils.default_kwargs import merge_kwargs
 from ..time import TIME_STR, get_time_str
@@ -646,7 +647,8 @@ class _Axes:
         format = os.path.splitext(file_name)[-1]
 
         if format == ".gif":
-            assert self.func_animation is not None, "Call plot_animation() before saving gif."
+            assert isinstance(self.func_animation, matplotlib.animation.FuncAnimation), \
+                "Call plot_animation() before saving gif."
             self.func_animation.save(file_name, **savefig_kw)
         else:
             self.fig.savefig(file_name, **savefig_kw)
