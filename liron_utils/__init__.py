@@ -1,6 +1,6 @@
 """Liron Utils - A collection of utility modules."""
 
-__version__ = "2025.09.09"
+__version__ = "2025.09.11"
 
 # Import all submodules
 from . import graphics

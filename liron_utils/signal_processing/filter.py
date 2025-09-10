@@ -187,7 +187,7 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
     if isinstance(window, (str, tuple)):
         w = scipy.signal.get_window(window, N, fftbins=fftbins)
     else:
-        w = np.asarray(window)
+        w = np.asarray(window, dtype=float)
         w /= w.max()  # normalize to unity gain
         N = w.size
 
@@ -363,15 +363,21 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
     return out
 
 
-def analyze_filter(b, a=1, fs=None, worN=2 ** 14,
-        passband_tol=3.0, stopband_tol=60.0, plot=False):
+def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 14,
+        passband_tol=3.0, stopband_tol=60.0, eps=1e-20, plot=False):
     """
     Analyze key characteristics of a digital filter.
 
     Parameters
     ----------
-    b, a : array_like
+    b, a : array_like, optional
         Numerator (b) and denominator (a) coefficients of the filter.
+        Ignored if sos is provided.
+    sos : array_like, optional
+        Second-order sections representation of the IIR filter.
+        Should be an array of shape (n_sections, 6) where each row
+        represents one second-order section in the format [b0, b1, b2, a0, a1, a2].
+        If provided, b and a parameters are ignored.
     fs : float, optional
         Sampling rate [Hz]. If None, frequencies are normalized to Nyquist (0..1).
     worN : int, optional
@@ -399,22 +405,53 @@ def analyze_filter(b, a=1, fs=None, worN=2 ** 14,
             - 'stability'    : Stable (all poles inside unit circle)
             - 'f'            : Frequency axis
             - 'H'            : Frequency response (complex)
+            - 'n_sections'   : Number of sections (only for SOS)
     """
-    b, a = np.atleast_1d(b), np.atleast_1d(a)
 
-    # Order and type
-    order = max(len(b), len(a)) - 1
-    ftype = "FIR" if np.allclose(a, [1]) else "IIR"
+    # Determine filter representation and convert if necessary
+    if not ((b is None) ^ (sos is None)):
+        raise ValueError("Either `b` or `sos` must be provided.")
 
-    # Frequency response
+    is_sos = b is None
+
+    if is_sos:  # sos
+        sos = np.asarray(sos)
+        if sos.ndim != 2 or sos.shape[1] != 6:
+            raise ValueError("`sos` must have shape (n_sections, 6)")
+
+        n_sections = sos.shape[0]
+
+        # Convert SOS to transfer function for some calculations
+        b, a = scipy.signal.sos2tf(sos)
+        b, a = np.atleast_1d(b), np.atleast_1d(a)
+
+        # Order calculation for SOS
+        order = n_sections * 2  # Each section is 2nd order
+        ftype = "IIR"  # SOS is always IIR
+
+    else:  # b, a
+        b, a = np.atleast_1d(b), np.atleast_1d(a)
+        n_sections = None
+
+        # Order and type
+        order = max(len(b), len(a)) - 1
+        ftype = "FIR" if np.allclose(a, [1]) else "IIR"
+
+    # Frequency response - use appropriate function for SOS vs b,a
     if fs is None:  # Normalized frequency [0..1], with Nyquist=1
-        w, H = scipy.signal.freqz(b, a, worN=worN, whole=False)
+        if is_sos:
+            w, H = scipy.signal.sosfreqz(sos, worN=worN, whole=False)
+        else:
+            w, H = scipy.signal.freqz(b, a, worN=worN, whole=False)
         f = w / np.pi
     else:
-        w, H = scipy.signal.freqz(b, a, worN=worN, fs=fs)
-        f = w
+        if is_sos:
+            f, H = scipy.signal.sosfreqz(sos, worN=worN, fs=fs)
+        else:
+            f, H = scipy.signal.freqz(b, a, worN=worN, fs=fs)
+
     H_mag = np.abs(H)
-    H_dB = 20 * np.log10(np.maximum(H_mag, 1e-300))
+    H_dB = 20 * np.log10(H_mag + eps)
 
     # --- Passband edge (first -3 dB crossing)
     idx_pass = np.argmax(H_dB <= -passband_tol)
@@ -436,15 +473,41 @@ def analyze_filter(b, a=1, fs=None, worN=2 ** 14,
 
     # --- Group delay
     try:
-        w_gd, gd = scipy.signal.group_delay((b, a), worN=worN, fs=(fs if fs else 2 * np.pi))
+        system = sos if is_sos else (b, a)
+        w_gd, gd = scipy.signal.group_delay(system, worN=worN, fs=(fs if fs else 2 * np.pi))
         group_delay_mean = np.mean(gd[np.isfinite(gd)])
         group_delay_var = np.var(gd[np.isfinite(gd)])
     except Exception:
         group_delay_mean = group_delay_var = np.nan
 
     # --- Stability
-    zeros, poles = np.roots(b), np.roots(a)
-    stability = np.all(np.abs(poles) < 1)
+    if is_sos:
+        # Check stability for each section in SOS
+        stability = True
+        all_zeros, all_poles = [], []
+        for section in sos:
+            b_sec = section[:3]  # [b0, b1, b2]
+            a_sec = section[3:]  # [a0, a1, a2]
+            # Normalize by a0
+            if a_sec[0] != 0:
+                a_sec = a_sec / a_sec[0]
+                b_sec = b_sec / section[3]
+
+            zeros_sec = np.roots(b_sec)
+            poles_sec = np.roots(a_sec)
+
+            all_zeros.extend(zeros_sec)
+            all_poles.extend(poles_sec)
+
+            # Check if any pole is outside unit circle
+            if np.any(np.abs(poles_sec) >= 1):
+                stability = False
+
+        zeros = np.array(all_zeros)
+        poles = np.array(all_poles)
+    else:
+        zeros, poles = np.roots(b), np.roots(a)
+        stability = np.all(np.abs(poles) < 1)
 
     out = dict(
             order=order,
@@ -460,6 +523,8 @@ def analyze_filter(b, a=1, fs=None, worN=2 ** 14,
             f=f,
             H=H
     )
+    if is_sos:
+        out['n_sections'] = n_sections
 
     if plot:
         import matplotlib.pyplot as plt
@@ -474,10 +539,16 @@ def analyze_filter(b, a=1, fs=None, worN=2 ** 14,
             n_imp = max(200, order * 4)
             x = np.zeros(n_imp)
             x[0] = 1
-            h = scipy.signal.lfilter(b, a, x)
+            if is_sos:
+                h = scipy.signal.sosfilt(sos, x)
+            else:
+                h = scipy.signal.lfilter(b, a, x)
         ax = next(axs)
         ax.stem(np.arange(len(h)), h)
-        ax.set_title("Impulse Response")
+        title = f"Impulse Response"
+        if is_sos:
+            title += f" (SOS: {n_sections} sections)"
+        ax.set_title(title)
         ax.set_xlabel("Samples")
         ax.set_ylabel("Amplitude")
         ax.grid(True)

@@ -906,7 +906,8 @@ class Axes(_Axes):
         axs :               Axes or list[Axes]
                             All axes should be of the same figure
         func :              callable, optional
-                            Function to be called for each frame. If not given, will use update_data
+                            Function to be called for each frame. If not given, will use the default `update_data`.
+                            `func` should return a list of artists to draw in the new frame (same as `data_instance`).
         n_frames :	    int, optional
                             Number of frames to be plotted. If not given, will use len(data[0])
         data :              array_like, optional
