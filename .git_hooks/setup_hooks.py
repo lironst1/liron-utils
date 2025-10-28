@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Setup script for git hooks.
-Run this script from the liron-utils directory to install or update the git hooks.
+Run this script from the parent directory to install or update the git hooks:
+`python .git_hooks/setup_hooks.py`
 """
 
 import shutil
@@ -17,8 +18,8 @@ hooks_to_install = {
 def setup_git_hooks():
     """Copy git hooks from git_hooks/ to .git/hooks/ and make them executable."""
 
-    # Define paths - working from liron-utils directory
-    project_root = Path(__file__).parent.parent  # liron-utils directory
+    # Define paths - working from parent directory
+    project_root = Path(__file__).parent.parent  # parent directory
     src = project_root / ".git_hooks"
     dest = project_root / ".git" / "hooks"
 
