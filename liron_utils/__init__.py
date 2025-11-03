@@ -1,4 +1,4 @@
-__version__ = "2025.10.28"
+__version__ = "2025.11.03"
 
 # Import all submodules
 from . import graphics

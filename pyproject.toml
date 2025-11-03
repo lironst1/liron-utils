@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "liron-utils"
-version = "2025.10.28"
+version = "2025.11.03"
 description = "Utilities module"
 authors = [
     { name = "Liron Stettiner", email = "lironst1@gmail.com" }

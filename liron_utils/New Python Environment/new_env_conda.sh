@@ -15,6 +15,7 @@ conda config --set add_pip_as_python_dependency True
 #conda config --add channels conda-forge
 
 conda create -y -n "$ENV_NAME" -c conda-forge -c pytorch \
+  python=3.14 \
   Cython \
   ffmpeg \
   ipykernel \
@@ -51,7 +52,7 @@ conda activate "$ENV_NAME"
 #pip install --upgrade pip
 
 # Install pip-only packages
-pip install audioread latex librosa manim mypy opencv-python pipdeptree pyclesperanto python-docx pytube pystoi qiskit qutip resampy SoundFile tmm torch torchmetrics uncertainties
+python -m pip install audioread latex librosa manim mypy opencv-python pipdeptree pyclesperanto python-docx pytube pystoi qiskit qutip resampy SoundFile tmm torch torchmetrics uncertainties -U --progress-bar on
 #qsharp qsharp-widgets azure-quantum
 
 echo "✅ Conda environment '$ENV_NAME' is ready!"
