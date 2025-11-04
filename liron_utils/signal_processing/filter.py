@@ -363,8 +363,8 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
     return out
 
 
-def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 14,
-        passband_tol=3.0, stopband_tol=60.0, eps=1e-20, plot=False):
+def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 17,
+        passband_tol=3.0, stopband_tol=60.0, eps=1e-20, plot=False, xscale="log"):
     """
     Analyze key characteristics of a digital filter.
 
@@ -530,7 +530,8 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 14,
         import matplotlib.pyplot as plt
 
         fig, axs = plt.subplots(2, 2, figsize=(12, 8))
-        axs = iter(axs.flatten())
+        axs = axs.flatten()
+        axs_iter = iter(axs)
 
         # Impulse response
         if ftype == "FIR":
@@ -543,7 +544,8 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 14,
                 h = scipy.signal.sosfilt(sos, x)
             else:
                 h = scipy.signal.lfilter(b, a, x)
-        ax = next(axs)
+
+        ax = next(axs_iter)
         ax.stem(np.arange(len(h)), h)
         title = f"Impulse Response"
         if is_sos:
@@ -554,9 +556,9 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 14,
         ax.grid(True)
 
         # Pole-zero plot
-        ax = next(axs)
-        ax.scatter(np.real(zeros), np.imag(zeros), marker='o', label='Zeros')
-        ax.scatter(np.real(poles), np.imag(poles), marker='x', label='Poles')
+        ax = next(axs_iter)
+        ax.scatter(np.real(zeros), np.imag(zeros), marker='o', label=f'{len(zeros)} Zeros')
+        ax.scatter(np.real(poles), np.imag(poles), marker='x', label=f'{len(poles)} Poles')
         circ = plt.Circle((0, 0), 1, color='black', fill=False, ls='--')
         ax.add_patch(circ)
         ax.set_title("Pole-Zero Plot")
@@ -567,15 +569,16 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 14,
         ax.grid(True)
 
         # Magnitude response
-        ax = next(axs)
+        ax = next(axs_iter)
         ax.plot(f, H_dB)
         ax.set_title("Magnitude Response")
+        ax.set_xscale(xscale)
         if fs is None:
             ax.set_xlabel("Normalized Frequency (× Nyquist)")
-            ax.set_xlim(0, 1)
+            # ax.set_xlim(0, 1)
         else:
             ax.set_xlabel("Frequency [Hz]")
-            ax.set_xlim(0, fs / 2)
+            # ax.set_xlim(0, fs / 2)
         ax.set_ylabel("Magnitude [dB]")
         ax.grid(True)
         if np.isfinite(f_pass):
@@ -585,16 +588,16 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 14,
         ax.legend()
 
         # Phase response
-        ax = next(axs)
+        ax = next(axs_iter)
         ax.plot(f, np.rad2deg(np.unwrap(np.angle(H))))
         ax.set_title("Phase Response")
         ax.set_ylabel("Phase [deg]")
+        ax.set_xscale(xscale)
+        ax.sharex(axs[2])
         if fs is None:
             ax.set_xlabel("Normalized Frequency (× Nyquist)")
-            ax.set_xlim(0, 1)
         else:
             ax.set_xlabel("Frequency [Hz]")
-            ax.set_xlim(0, fs / 2)
         ax.grid(True)
 
         plt.tight_layout()

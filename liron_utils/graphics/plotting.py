@@ -23,7 +23,7 @@ from ..signal_processing.base import interp1
 
 class Axes(_Axes):
     def __init__(self,
-            shape: tuple[int] = (1, 1),
+            shape: tuple[int, int] = (1, 1),
             grid_layout: list[list[tuple]] = None,
             sharex: bool | str = False, sharey: bool | str = False,
             projection: str = None,
@@ -746,13 +746,13 @@ class Axes(_Axes):
         return _plot_frequency_response()
 
     def plot_specgram(self,
-            y: np.ndarray, fs: int,
+            y: np.ndarray, fs: float,
             **specgram_kw):
 
         @self._merge_kwargs("specgram_kw", **specgram_kw)
         @self._vectorize(cls=self, y=y, fs=fs)
         def _plot_specgram(ax: Axes_plt,
-                y: np.ndarray, fs: int,
+                y: np.ndarray, fs: float,
                 **specgram_kw):
             """
             Plot spectrogram
@@ -794,7 +794,8 @@ class Axes(_Axes):
             if ax.get_ylabel() == "":
                 ax.set_ylabel(f"Frequency [{scaling[scale]}Hz]")
 
-            ax.figure.colorbar(im, ax=ax)
+            ax.figure.colorbar(im, ax=ax, label="Power [dB]")
+            ax.grid(False)
 
             return specgram_out
 

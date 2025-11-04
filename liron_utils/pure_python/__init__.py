@@ -1,4 +1,5 @@
 from .base import *
+from .decorators import *
 from .dicts import *
 from .docstring import *
 from .imports import *

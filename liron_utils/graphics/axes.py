@@ -283,7 +283,8 @@ class _Axes:
 
                 for i in range(m):
                     for j in range(n):
-                        out[i, j] = func(cls.axs[i, j], *args, **params_list[j * m + i], **kwargs)
+                        if isinstance(cls.axs[i, j], Axes_plt):
+                            out[i, j] = func(cls.axs[i, j], *args, **params_list[j * m + i], **kwargs)
 
                 return out
 
