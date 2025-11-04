@@ -5,6 +5,7 @@ Run this script from the parent directory to install or update the git hooks:
 `python .git_hooks/setup_hooks.py`
 """
 
+import platform
 import shutil
 import stat
 from pathlib import Path
@@ -26,17 +27,25 @@ def setup_git_hooks():
     # Ensure .git/hooks directory exists
     dest.mkdir(parents=True, exist_ok=True)
 
+    is_windows = platform.system() == "Windows"
+
     for hook_name, file_src in hooks_to_install.items():
         path_src = src / file_src
         path_dest = dest / hook_name
 
         if path_src.exists():
-            # Copy the file
-            shutil.copy2(path_src, path_dest)
+            # Read and convert line endings to Unix format
+            content = path_src.read_text(encoding='utf-8')
+            content = content.replace('\r\n', '\n')
 
-            # Make it executable
-            current_permissions = path_dest.stat().st_mode
-            path_dest.chmod(current_permissions | stat.S_IEXEC)
+            # Write with Unix line endings
+            path_dest.write_text(content, encoding='utf-8', newline='\n')
+
+            # Make it executable (Unix/Linux/macOS)
+            if not is_windows:
+                current_permissions = path_dest.stat().st_mode
+                path_dest.chmod(current_permissions | stat.S_IEXEC)
+
             print(f"✅ Installed {hook_name} hook")
         else:
             print(f"❌ Source file not found: {path_src}")
