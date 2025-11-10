@@ -24,6 +24,12 @@ pyenv virtualenv 3.11.14 myvenv  # Change to desired version
 pyenv global 3.11.14/envs/myvenv
 ```
 
+In Windows, just install [Python](https://www.python.org/downloads/windows/), then create a virtual environment:
+
+```powershell
+python -m venv C:\Users\liron\.virtualenvs\myvenv
+```
+
 Then, choose one of the following package management tools to create a new environment and install dependencies.
 
 ## Poetry
@@ -36,9 +42,6 @@ Then, choose one of the following package management tools to create a new envir
 
 ```bash
 curl -sSL https://install.python-poetry.org | python -  # (Linux/Mac) 
-```
-
-```powershell
 (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -  # (Windows PowerShell)
 ```
 
@@ -49,28 +52,26 @@ curl -sSL https://install.python-poetry.org | python -  # (Linux/Mac)
     ```
    In Windows, it installs to: `%APPDATA%\Python\Scripts`.
 
-3. Add the `export` plugin:\
-   `poetry self add poetry-plugin-export`
-
-
-4. To create new `pyproject.toml` and `poetry.lock` files, run:
+3. Add plugins:
     ```bash
-   poetry init
-    ```
-   Specify dependencies and versions in the `[projecet]` section, or use `poetry add <package>`.
-
-5. To update dependencies, run:
-    ```bash
-    poetry update
+    poetry self add poetry-plugin-export
+    poetry self add poetry-plugin-shell
     ```
 
-6. To export the dependencies to a `requirements.txt` file, run:
+4. Create new environment:
+    ```bash
+    cd "./liron_utils/New Python Environment"
+   poetry env use python
+   poetry update
+    ```
+
+5. To export the dependencies to a `requirements.txt` file, run:
     ```bash
     poetry export -f requirements.txt --output requirements.txt --without-hashes
     ```
    You can then install the dependencies using pip.
 
-7. To clear the cache, run:
+6. To clear the cache, run:
     ```bash
     poetry cache list
     poetry cache clear --all [pypi, _default_cache, ...]
