@@ -551,6 +551,8 @@ class Axes(_Axes):
             x = np.asarray(x)
             if n is None:
                 n = x.shape[0]
+            if np.iscomplexobj(x):
+                one_sided = False
 
             if input_time:
                 X = np.fft.fft(x, n=n)
