@@ -3,9 +3,9 @@ from scipy.signal import periodogram, windows
 import matplotlib.pyplot as plt
 
 
-def powerbw(x, fs=1.0, rolloff_db=3.01, plot=False):
+def powerbw(x, fs=1.0, f=None, r=3.01, freq_lims=None, input="time", plot=False, **periodogram_kw):
     """
-    Compute the -3 dB power bandwidth of signal x, mimicking MATLAB's powerbw(x, fs).
+    Compute the `-r` dB power bandwidth of signal x, mimicking MATLAB's powerbw(x, fs, [], r).
 
     Parameters
     ----------
@@ -13,8 +13,18 @@ def powerbw(x, fs=1.0, rolloff_db=3.01, plot=False):
         Input signal (1-D).
     fs : float, optional
         Sampling frequency in Hz. Default = 1.0.
-    rolloff_db : float, optional
+    f : array_like, optional
+        Frequency vector (1-D). If None, it will be computed from the input signal.
+        Must be provided if input is 'pxx' and ignored otherwise.
+    r : float, optional
         Power drop defining the bandwidth (default 3.01 dB).
+    freq_lims : (float, float) or None, optional
+        Two-element tuple/list [fmin, fmax] defining the frequency range
+        over which to compute the reference level. Default = None (use global max).
+    input : {'time', 'pxx'}, optional
+        Specify the input type: 'time' for time-domain signal, 'pxx' for power spectral density.
+    plot : bool, optional
+        If True, plot the PSD and shaded bandwidth region.
 
     Returns
     -------
@@ -29,13 +39,41 @@ def powerbw(x, fs=1.0, rolloff_db=3.01, plot=False):
     """
 
     # --- Step 1: Periodogram with Kaiser(β=0) == rectangular window
-    f, Pxx = periodogram(x, fs=fs, window=windows.kaiser(len(x), 0), scaling='density', return_onesided=False)
-    f = np.fft.fftshift(f)
-    Pxx = np.fft.fftshift(Pxx)
+    input = input.lower()
+    if input == "time":
+        if f is not None:
+            raise ValueError("`f` must be None if input is 'time'.")
+        periodogram_kw = dict(
+                window=windows.kaiser(len(x), beta=0)
+        ) | periodogram_kw
+        f, Pxx = periodogram(x, fs=fs, detrend=False, scaling='density', return_onesided=False, **periodogram_kw)
+        f = np.fft.fftshift(f)
+        Pxx = np.fft.fftshift(Pxx)
 
-    # --- Step 2: reference (peak) and -3 dB level
-    i_max = np.argmax(Pxx)
-    pref = Pxx[i_max] * 10 ** (-abs(rolloff_db) / 10)
+    elif input == "pxx":
+        if f is None:
+            raise ValueError("`f` must be provided if input is 'pxx'.")
+        elif len(f) != len(x):
+            raise ValueError("`f` and `x` must have the same length.")
+        Pxx = x
+
+    else:
+        raise ValueError(f"Invalid input type: {input}.")
+
+    # --- Step 2: reference level
+    if freq_lims is None:
+        i_max = np.argmax(Pxx)
+        meanP = Pxx[i_max]
+    else:
+        f1, f2 = freq_lims
+        i_max = np.argmin(np.abs(f - np.mean([f1, f2])))
+
+        idx = (f1 <= f) & (f <= f2)
+        if not np.any(idx):
+            raise ValueError("`freq_lims` outside PSD frequency range.")
+        meanP = np.mean(Pxx[idx])
+
+    pref = meanP * 10 ** (-abs(r) / 10)
 
     # --- Step 3: find crossings on each side
     left = np.where(Pxx[:i_max] <= pref)[0]
@@ -65,17 +103,20 @@ def powerbw(x, fs=1.0, rolloff_db=3.01, plot=False):
 
     if plot:
         plt.figure()
-        plt.plot(f, 10 * np.log10(Pxx), label="PSD (dB/Hz)")
-        # plt.axhline(10 * np.log10(pref), xmin=f_lo, xmax=f_hi, color="gray", linestyle="--", label="-3 dB level")
+        plt.plot(f, 10 * np.log10(Pxx), label="PSD")
         plt.axvline(f_lo, color="black", linestyle="--", label="_none")
-        plt.axvline(f_hi, color="black", linestyle="--", label=f"bandwidth {bw:.2f} Hz")
-        # ylim = plt.ylim()
-        # plt.fill_between(f[inside], *ylim, color="gray", alpha=0.4, label="_none")
-        plt.title('Power Spectral Density and -3 dB Bandwidth')
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Power/Frequency (dB/Hz)')
+        plt.axvline(f_hi, color="black", linestyle="--", label=f"bandwidth {bw:.3f} Hz")
+        plt.title(f"{r}-dB Bandwidth: {bw:.3f} Hz")
+        plt.xlabel("Frequency (Hz)")
+        plt.ylabel("Power/Frequency (dB/Hz)")
         plt.legend()
-        # plt.ylim(*ylim)
         plt.grid(True)
 
-    return bw, f_lo, f_hi, pwr, f, Pxx
+    return dict(
+            bw=bw,
+            f_lo=f_lo,
+            f_hi=f_hi,
+            pwr=pwr,
+            f=f,
+            Pxx=Pxx,
+    )
