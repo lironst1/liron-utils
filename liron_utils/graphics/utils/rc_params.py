@@ -56,6 +56,10 @@ RC_PARAMS = {
             color=[COLORS.DARK_BLUE, COLORS.ORANGE_B, COLORS.PURPLE_D, COLORS.GREEN, COLORS.GREY_BROWN,
                 COLORS.GOLD, COLORS.MAROON_D, COLORS.BLUE_C, COLORS.BLACK, COLORS.PINK]),
 
+    'axes.formatter.limits':       [-4, 4],  # use scientific notation if log10
+    # of the axis range is smaller than the
+    # first or larger than the second
+
     'axes.spines.left':            True,  # display axis spines
     'axes.spines.bottom':          True,
     'axes.spines.top':             False,
