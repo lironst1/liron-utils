@@ -492,29 +492,69 @@ class Axes(_Axes):
 
         return _plot_line_collection(colorbar_kw=colorbar_kw, **LineCollection_kw)
 
+    def _plot_spectrum(self,
+            ax: Axes_plt,
+            X, freqs, fs=1.0,
+            dB=False,
+            eps=1e-20,
+            which="power",
+            **plot_kw
+    ):
+        X = X.copy()
+
+        which = which.lower()
+        if which == "amp":
+            ydata = np.abs(X)
+            ylabel = "Amplitude"
+        elif which == "power":
+            ydata = np.abs(X) ** 2
+            ylabel = "Power"
+        elif which == "phase":
+            ydata = np.degrees(np.unwrap(np.angle(X)))
+            ylabel = "Phase [deg]"
+        # ticks = np.arange(-180, 181, 45)
+        # ax.set_yticks(ticks)
+        # tick_labels = [rf"${t}^\circ$" for t in ticks]
+        # ax.set_yticklabels(tick_labels)
+
+        else:
+            raise ValueError(f"which must be one of 'amp', 'power', or 'phase'. Got: {which}")
+
+        if dB and which in ("amp", "power"):
+            ydata = 10 * np.log10(ydata + eps)
+            ylabel += " [dB]"
+
+        line = ax.plot(freqs, ydata, **plot_kw)
+
+        if ax.get_xlabel() == "":
+            if fs == 1.0:
+                ax.set_xlabel("Frequency [normalized]")
+            else:
+                ax.set_xlabel("Frequency [Hz]")
+        if ax.get_ylabel() == "":
+            ax.set_ylabel(ylabel)
+
+        return line
+
     def plot_fft(self,
             x, fs=1.0, n=None,
             *,
             one_sided=True,
-            dB=False,
-            eps=1e-20,
-            which="power",
             normalize=False,
             input_time=True,
+            plot_spectrum_kw=None,
             **plot_kw):
 
         @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, dB=dB, eps=eps, which=which,
-                normalize=normalize, input_time=input_time)
+        @self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, normalize=normalize, input_time=input_time,
+                plot_spectrum_kw=plot_spectrum_kw)
         def _plot_fft(ax: Axes_plt,
                 x, fs=1.0, n=None,
                 *,
                 one_sided=True,
-                dB=False,
-                eps=1e-20,
-                which="power",
                 normalize=False,
                 input_time=True,
+                plot_spectrum_kw=None,
                 **plot_kw):
             """
             Plot the magnitude spectrum of the FFT of a signal.
@@ -555,7 +595,7 @@ class Axes(_Axes):
                 one_sided = False
 
             if input_time:
-                X = np.fft.fft(x, n=n)
+                X = np.fft.fft(x, n=n, axis=0)
             else:
                 X = x.copy()
 
@@ -571,40 +611,61 @@ class Axes(_Axes):
                 X = np.fft.fftshift(X, axes=0)
                 freqs = np.fft.fftshift(freqs)
 
-            which = which.lower()
-            if which == "amp":
-                ydata = np.abs(X)
-                ylabel = "Amplitude"
-            elif which == "power":
-                ydata = np.abs(X) ** 2
-                ylabel = "Power"
-            elif which == "phase":
-                ydata = np.degrees(np.unwrap(np.angle(X)))
-                ylabel = "Phase [deg]"
-            # ticks = np.arange(-180, 181, 45)
-            # ax.set_yticks(ticks)
-            # tick_labels = [rf"${t}^\circ$" for t in ticks]
-            # ax.set_yticklabels(tick_labels)
+            if plot_spectrum_kw is None:
+                plot_spectrum_kw = dict()
 
-            else:
-                raise ValueError(f"which must be one of 'amp', 'power', or 'phase'. Got: {which}")
-
-            if dB and which in ("amp", "power"):
-                ydata = 10 * np.log10(ydata + eps)
-                ylabel += " [dB]"
-
-            line = ax.plot(freqs, ydata, **plot_kw)
-
-            if ax.get_xlabel() == "":
-                ax.set_xlabel("Frequency [Hz]")
-                if fs == 1.0:
-                    ax.set_xlabel("Frequency [normalized]")
-            if ax.get_ylabel() == "":
-                ax.set_ylabel(ylabel)
+            line = self._plot_spectrum(ax=ax, X=X, freqs=freqs, fs=fs, **plot_spectrum_kw, **plot_kw)
 
             return (X, freqs), line
 
         return _plot_fft()
+
+    def plot_periodogram(self,
+            x, fs=1.0, n=None,
+            *,
+            window="boxcar",
+            one_sided=True,
+            normalize=False,
+            plot_spectrum_kw=None,
+            **plot_kw):
+
+        @self._merge_kwargs("plot_kw", **plot_kw)
+        @self._vectorize(cls=self, x=x, fs=fs, n=n, window=window, one_sided=one_sided, normalize=normalize,
+                plot_spectrum_kw=plot_spectrum_kw)
+        def _plot_periodogram(ax: Axes_plt,
+                x, fs=1.0, n=None,
+                *,
+                window="boxcar",
+                one_sided=True,
+                normalize=False,
+                plot_spectrum_kw=None,
+                **plot_kw):
+
+            x = np.asarray(x)
+            if n is None:
+                n = x.shape[0]
+            if np.iscomplexobj(x):
+                one_sided = False
+
+            freqs, Pxx = scipy.signal.periodogram(x, fs=fs,
+                    window=window, nfft=n, detrend=False,
+                    return_onesided=one_sided, scaling="density", axis=0)
+
+            if normalize:
+                Pxx = Pxx / Pxx.max(axis=0)
+
+            if not one_sided:
+                Pxx = np.fft.fftshift(Pxx, axes=0)
+                freqs = np.fft.fftshift(freqs)
+
+            if plot_spectrum_kw is None:
+                plot_spectrum_kw = dict()
+
+            line = self._plot_spectrum(ax=ax, X=np.sqrt(Pxx), freqs=freqs, fs=fs, **plot_spectrum_kw, **plot_kw)
+
+            return (Pxx, freqs), line
+
+        return _plot_periodogram()
 
     def plot_impulse_response(self,
             b, a=1,
