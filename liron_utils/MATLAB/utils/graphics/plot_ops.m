@@ -17,7 +17,7 @@ arguments
     options.filename        string  = []
     options.format  (1,1)   string  = ".png"
     options.closefig        logical = false
-    
+
     options.title_kwargs    cell    = {"FontSize", 18}
     options.label_kwargs    cell    = {"FontSize", 14}
 end

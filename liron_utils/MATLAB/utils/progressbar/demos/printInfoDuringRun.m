@@ -18,12 +18,11 @@ b = ProgressBar(numIterations, ...
 
 for iIteration = 1:numIterations
     b(1, [], []);
-    
+
     if iIteration == 30 || iIteration == 50 || iIteration == 70
         b.printMessage(sprintf('Hello! @Iteration %i', iIteration));
     end
-    
+
     pause(0.1);
 end
 b.release();
-

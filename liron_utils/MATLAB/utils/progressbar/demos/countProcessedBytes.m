@@ -23,7 +23,7 @@ b = ProgressBar([], ...
 
 for iFile = 1:length(dummyFile)
     buffer = dummyFile{iFile};
-    
+
     pause(filePause(iFile));
     b(length(buffer), [], []);
 end
@@ -39,12 +39,8 @@ b = ProgressBar(numTotalBytes, ...
 
 for iFile = 1:length(dummyFile)
     buffer = dummyFile{iFile};
-        
+
     pause(filePause(iFile));
     b.step(length(buffer), [], []);
 end
 b.release();
-
-
-
-

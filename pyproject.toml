@@ -1,43 +1,142 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [
+    "setuptools",
+    "wheel"
+]
 build-backend = "setuptools.build_meta"
 
+# Project
 [project]
 name = "liron-utils"
-version = "2025.11.13"
+dynamic = [
+    "version"
+]
 description = "Utilities module"
 authors = [
     { name = "Liron Stettiner", email = "lironst1@gmail.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
+
 dependencies = [
-    "numpy",
-    "scipy",
+    "audioread",
+    "colorama",
+    "ipython",
     "matplotlib",
     "natsort",
+    "numpy",
     "pandas",
-    "sympy",
     "scikit-learn",
-    "audioread",
+    "scipy",
     "soundfile",
+    "sympy",
+    "tqdm",
     "uncertainties",
 ]
 license = "MIT"
 
 [project.optional-dependencies]
 extra = [
+    "docx",
     "manim",
     "pytube",
     "PyPDF2",
 ]
+dev = [
+    "black",
+    "isort",
+    "mypy",
+    "pylint",
+    "types-tqdm",
+    "tox",
+]
+tests = [
+    "pytest",
+    "pytest-cov",
+    "pytest-html",
+    "pytest-xdist[psutil]",
+]
 all = [
     "liron-utils[extra]",
+    "liron-utils[dev]",
+    "liron-utils[tests]",
 ]
 
 [project.urls]
 Homepage = "https://github.com/lironst1/liron-utils"
 
+# Setuptools
+[tool.setuptools.dynamic]
+version = { attr = "liron_utils.__version__" }
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["liron_utils*"]
+
+# Tox
+[tool.tox]
+env_list = [
+    "style",
+    "lint"
+]
+
+[tool.tox.env.style]
+description = "Run style checks"
+deps = [
+    "pre-commit"
+]
+commands = [
+    #    ["pre-commit", "autoupdate"],
+    ["pre-commit", "run", "--all-files"]
+]
+
+[tool.tox.env.lint]
+description = "Run pylint"
+deps = [
+    "pylint"
+]
+commands = [
+    ["pylint", "liron_utils/", "tests/", ".git_hooks/"]
+]
+
+# Black
+[tool.black]
+line-length = 120
+
+# isort
+[tool.isort]
+profile = "black"
+
+# PyLint
+[tool.pylint.FORMAT]
+max-line-length = 128
+
+[tool.pylint.BASIC]
+const-naming-style = "UPPER_CASE"
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = [
+    "C0103", # invalid-name
+    "C0114", # missing-module-docstring
+    "C0115", # missing-class-docstring
+    "C0116", # missing-function-docstring
+    "C0302", # too-many-lines
+    "C0415", # import-outside-toplevel
+    "C3001", # unnecessary-lambda-assignment
+
+    "E1121", # too-many-function-args
+
+    "R0902", # too-many-instance-attributes
+    "R0903", # too-few-public-methods
+    "R0912", # too-many-branches
+    "R0913", # too-many-arguments
+    "R0914", # too-many-locals
+    "R0915", # too-many-statements
+    "R0917", # too-many-positional-arguments
+    "R1735", # use-dict-literal
+
+    "W0511", # _fixme
+    "W0613", # unused-argument
+    "W1113", # keyword-arg-before-vararg
+    "W1514", # unspecified-encoding
+]

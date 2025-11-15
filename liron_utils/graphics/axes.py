@@ -1,33 +1,42 @@
-import os
-import functools
-import warnings
+# pylint: disable=no-value-for-parameter
+
 import copy
-from typing import Iterable
-import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure
-from matplotlib.axes import Axes as Axes_plt
-from matplotlib.ticker import ScalarFormatter
+import functools
+import os
+import warnings
+from collections.abc import Iterable
+
 import matplotlib.animation
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.axes import Axes as Axes_plt
+from matplotlib.figure import Figure
+from matplotlib.ticker import ScalarFormatter
 
-from .utils.default_kwargs import merge_kwargs
-from ..time import TIME_STR, get_time_str
-from ..files import MAIN_FILE_DIR, open_file, mkdirs
+from ..files import MAIN_FILE_DIR, mkdirs, open_file
 from ..pure_python.dicts import DL_to_LD
-
+from ..time import TIME_STR, get_time_str
+from .utils.default_kwargs import merge_kwargs
 
 # TODO: change Ax.axs to be 1D (top->down, left->right), enable custom shapes (large, small axes)
 
 
 class _Axes:
-    def __init__(self,
-            shape: tuple[int] = (1, 1),
-            grid_layout: list[list[tuple]] = None,
-            sharex: bool | str = False, sharey: bool | str = False,
-            projection: str = None,
-            layout: str = None,
-            fig: Figure = None, axs: Axes_plt | Iterable[Axes_plt] = None,
-            subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
+
+    def __init__(
+        self,
+        shape: tuple[int] = (1, 1),
+        grid_layout: list[list[tuple]] = None,
+        sharex: bool | str = False,
+        sharey: bool | str = False,
+        projection: str = None,
+        layout: str = None,
+        fig: Figure = None,
+        axs: Axes_plt | Iterable[Axes_plt] = None,
+        subplot_kw: dict = None,
+        gridspec_kw: dict = None,
+        **fig_kw,
+    ):
         """
         Create a new figure with (possibly) subplots using the plt.subplots() function.
 
@@ -45,7 +54,8 @@ class _Axes:
                             The axis will have the same limits, ticks, and scale as the axis
                             of the shared axes.
 
-        projection :        {None, 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear', str}, default: None
+        projection :        {None, 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear', str},
+                                default: None
                             The projection type of the subplot (`~.axes.Axes`). *str* is the
                             name of a custom projection, see `~matplotlib.projections`. The
                             default None results in a 'rectilinear' projection.
@@ -176,7 +186,8 @@ class _Axes:
             >> plot(Ax.axs[0,2], t, np.sqrt(t))
             >> plot(Ax.axs[1,2], t, np.square(t))
 
-            >> Ax.set_props(sup_title="abc", ax_title=[1, 2, 3, 4, 5, 6], grid=[True, True, False, True, False, True], show_fig=True)
+            >> Ax.set_props(sup_title="abc", ax_title=[1, 2, 3, 4, 5, 6], grid=[True, True, False, True, False, True],
+                show_fig=True)
 
         """
 
@@ -197,10 +208,16 @@ class _Axes:
             nrows, ncols = shape
 
             if grid_layout is None:
-                self.fig, self.axs = plt.subplots(nrows=nrows, ncols=ncols,
-                        sharex=sharex, sharey=sharey,
-                        squeeze=False,
-                        subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
+                self.fig, self.axs = plt.subplots(
+                    nrows=nrows,
+                    ncols=ncols,
+                    sharex=sharex,
+                    sharey=sharey,
+                    squeeze=False,
+                    subplot_kw=subplot_kw,
+                    gridspec_kw=gridspec_kw,
+                    **fig_kw,
+                )
             else:
                 if gridspec_kw is None:
                     gridspec_kw = dict()
@@ -212,7 +229,7 @@ class _Axes:
                     sharey = True
                 elif sharey == "none":
                     sharey = False
-                assert type(sharex) is bool and type(sharey) is bool, "'sharex' and 'sharey' must be bool."
+                assert isinstance(sharex, bool) and isinstance(sharey, bool), "'sharex' and 'sharey' must be bool."
 
                 self.fig = plt.figure(**fig_kw)
                 gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
@@ -228,28 +245,35 @@ class _Axes:
                     c0, c1 = col_range
 
                     axs[r0:r1, c0:c1] = 0
-                    axs[r0, c0] = self.fig.add_subplot(gs[r0:r1, c0:c1],
-                            sharex=ax_share if sharex else None,
-                            sharey=ax_share if sharey else None,
-                            **subplot_kw
+                    axs[r0, c0] = self.fig.add_subplot(
+                        gs[r0:r1, c0:c1],
+                        sharex=ax_share if sharex else None,
+                        sharey=ax_share if sharey else None,
+                        **subplot_kw,
                     )
 
                     if ax_share is None:
                         ax_share = axs[r0, c0]
 
-                for (r, c) in np.argwhere(axs == 1):
-                    axs[r, c] = self.fig.add_subplot(gs[r, c],
-                            sharex=ax_share if sharex else None,
-                            sharey=ax_share if sharey else None,
-                            **subplot_kw
+                for r, c in np.argwhere(axs == 1):
+                    axs[r, c] = self.fig.add_subplot(
+                        gs[r, c],
+                        sharex=ax_share if sharex else None,
+                        sharey=ax_share if sharey else None,
+                        **subplot_kw,
                     )
 
                 self.axs = axs
 
             from matplotlib.layout_engine import ConstrainedLayoutEngine
-            if type(self.fig.get_layout_engine()) is ConstrainedLayoutEngine:
-                self.fig.get_layout_engine().set(w_pad=padding[0], h_pad=padding[1], hspace=padding[2],
-                        wspace=padding[3])
+
+            if isinstance(self.fig.get_layout_engine(), ConstrainedLayoutEngine):
+                self.fig.get_layout_engine().set(
+                    w_pad=padding[0],
+                    h_pad=padding[1],
+                    hspace=padding[2],
+                    wspace=padding[3],
+                )
 
         elif fig is not None:
             self.axs = np.atleast_2d(self.fig.axes)
@@ -265,7 +289,7 @@ class _Axes:
         return out
 
     @staticmethod
-    def _vectorize(cls, ax: Axes_plt = None, **vec_params):
+    def _vectorize(cls, ax: Axes_plt = None, **vec_params):  # pylint: disable=bad-staticmethod-argument
         def decorator(func):
             @functools.wraps(func)
             def wrapper(*args, **kwargs):
@@ -320,8 +344,8 @@ class _Axes:
 
             """
 
-            if hasattr(ax, "axis_lines_drawn") or hasattr(ax, 'zaxis') or len(
-                    ax.images) > 0:  # Don't draw axis lines for 3D plots and images
+            if hasattr(ax, "axis_lines_drawn") or hasattr(ax, "zaxis") or len(ax.images) > 0:
+                # Don't draw axis lines for 3D plots and images
                 return
 
             xlim = ax.get_xlim()
@@ -344,38 +368,38 @@ class _Axes:
     def ax_axis(self, axis: bool | str):
         """
 
-            Parameters
-            ----------
-            ax :
-            axis :  ================ ===========================================================
-                    Value            Description
-                    ================ ===========================================================
-                    'off' or `False` Hide all axis decorations, i.e. axis labels, spines,
-                                     tick marks, tick labels, and grid lines.
-                                     This is the same as `~.Axes.set_axis_off()`.
-                    'on' or `True`   Do not hide all axis decorations, i.e. axis labels, spines,
-                                     tick marks, tick labels, and grid lines.
-                                     This is the same as `~.Axes.set_axis_on()`.
-                    'equal'          Set equal scaling (i.e., make circles circular) by
-                                     changing the axis limits. This is the same as
-                                     ``ax.set_aspect('equal', adjustable='datalim')``.
-                                     Explicit data limits may not be respected in this case.
-                    'scaled'         Set equal scaling (i.e., make circles circular) by
-                                     changing dimensions of the plot box. This is the same as
-                                     ``ax.set_aspect('equal', adjustable='box', anchor='C')``.
-                                     Additionally, further autoscaling will be disabled.
-                    'tight'          Set limits just large enough to show all data, then
-                                     disable further autoscaling.
-                    'auto'           Automatic scaling (fill plot box with data).
-                    'image'          'scaled' with axis limits equal to data limits.
-                    'square'         Square plot; similar to 'scaled', but initially forcing
-                                     ``xmax-xmin == ymax-ymin``.
-                    ================ ===========================================================
+        Parameters
+        ----------
+        ax :
+        axis :  ================ ===========================================================
+                Value            Description
+                ================ ===========================================================
+                'off' or `False` Hide all axis decorations, i.e. axis labels, spines,
+                                 tick marks, tick labels, and grid lines.
+                                 This is the same as `~.Axes.set_axis_off()`.
+                'on' or `True`   Do not hide all axis decorations, i.e. axis labels, spines,
+                                 tick marks, tick labels, and grid lines.
+                                 This is the same as `~.Axes.set_axis_on()`.
+                'equal'          Set equal scaling (i.e., make circles circular) by
+                                 changing the axis limits. This is the same as
+                                 ``ax.set_aspect('equal', adjustable='datalim')``.
+                                 Explicit data limits may not be respected in this case.
+                'scaled'         Set equal scaling (i.e., make circles circular) by
+                                 changing dimensions of the plot box. This is the same as
+                                 ``ax.set_aspect('equal', adjustable='box', anchor='C')``.
+                                 Additionally, further autoscaling will be disabled.
+                'tight'          Set limits just large enough to show all data, then
+                                 disable further autoscaling.
+                'auto'           Automatic scaling (fill plot box with data).
+                'image'          'scaled' with axis limits equal to data limits.
+                'square'         Square plot; similar to 'scaled', but initially forcing
+                                 ``xmax-xmin == ymax-ymin``.
+                ================ ===========================================================
 
-            Returns
-            -------
+        Returns
+        -------
 
-            """
+        """
 
         @self._vectorize(cls=self, axis=axis)
         def _ax_axis(ax: Axes_plt, axis: bool | str):
@@ -397,13 +421,13 @@ class _Axes:
         def _ax_spines(ax: Axes_plt, spines: str | list | bool):
             locs = np.array(["left", "bottom", "top", "right"])
 
-            if type(spines) is str:
+            if isinstance(spines, str):
                 spines = [spines]
 
-            if type(spines) is list:
+            if isinstance(spines, Iterable):
                 locs = np.array(spines)
                 idx = [True] * locs.size
-            elif type(spines) is bool:
+            elif isinstance(spines, bool):
                 idx = [False] * locs.size
                 if spines:
                     idx = [True] * locs.size
@@ -419,11 +443,15 @@ class _Axes:
 
     def ax_ticks(self, ticks: bool | list[list] | dict | list[dict], labels: bool | list[list]):
         @self._vectorize(cls=self, ticks=ticks, labels=labels)
-        def _ax_ticks(ax: Axes_plt, ticks: bool | list[list] | dict | list[dict], labels: bool | list[list]):
+        def _ax_ticks(
+            ax: Axes_plt,
+            ticks: bool | list[list] | dict | list[dict],
+            labels: bool | list[list],
+        ):
             # todo: if labels is False
             if len(ax.get_shared_x_axes().get_siblings(ax)) > 1 or len(ax.get_shared_y_axes().get_siblings(ax)) > 1:
-                warnings.warn(
-                        f"Axis shares x or y axis with siblings. Changing ticks would affect all siblings.")  # todo: fix in future
+                # todo: fix in future
+                warnings.warn("Axis shares x or y axis with siblings. Changing ticks would affect all siblings.")
 
             ndim = 3 if hasattr(ax, "get_zticks") else 2
 
@@ -435,7 +463,7 @@ class _Axes:
                 ticks = [False] * ndim
                 if labels is None:  # hide labels for all axes
                     labels = [False] * ndim
-            elif type(ticks) is dict:  # only x-axis
+            elif isinstance(ticks, dict):  # only x-axis
                 ticks = [ticks] + [True] * (ndim - 1)
             # labels check is done later
 
@@ -452,21 +480,20 @@ class _Axes:
             assert len(labels) <= ndim, "len(labels) must be <= graph dimensionality."
 
             d = {
-                "ticks":  {
+                "ticks": {
                     0: ax.get_xticks(),
                     1: ax.get_yticks(),
                     2: ax.get_zticks() if ndim == 3 else [],
                 },
-
                 "labels": {
                     0: ax.get_xticklabels(),
                     1: ax.get_yticklabels(),
                     2: ax.get_zticklabels() if ndim == 3 else [],
                 },
                 # "offset": {
-                # 	0: ax.xaxis.get_offset_text(),
-                # 	1: ax.yaxis.get_offset_text(),
-                # 	2: ax.zaxis.get_offset_text() if ndim == 3 else [],
+                #     0: ax.xaxis.get_offset_text(),
+                #     1: ax.yaxis.get_offset_text(),
+                #     2: ax.zaxis.get_offset_text() if ndim == 3 else [],
                 # },
             }
 
@@ -482,7 +509,7 @@ class _Axes:
                 if len(d["labels"][i]) > 0:
                     d["labels"][i] = np.array(d["labels"][i])[idx]
 
-            for i in range(len(ticks)):  # x,y,z axes
+            for i in range(len(ticks)):  # x,y,z axes, pylint: disable=consider-using-enumerate
                 if ticks[i] is None or ticks[i] is True or ticks[i] is np.True_:  # show ticks
                     pass
 
@@ -492,13 +519,14 @@ class _Axes:
                         d["labels"][i] = []
                 # d["offset"][i] = None
 
-                elif type(ticks[i]) is dict:  # custom ticks
-                    assert labels[i] is None or labels[
-                        i] is np.True_, "When 'ticks' is a dict, 'labels' must not be given."
+                elif isinstance(ticks[i], dict):  # custom ticks
+                    assert (
+                        labels[i] is None or labels[i] is np.True_
+                    ), "When 'ticks' is a dict, 'labels' must not be given."
                     d["ticks"][i] = ticks[i].keys()
                     d["labels"][i] = ticks[i].values()
 
-                elif type(ticks[i]) is list or type(ticks[i]) is np.ndarray:  # custom ticks
+                elif isinstance(ticks[i], Iterable):  # custom ticks
                     d["ticks"][i] = ticks[i]
                     d["labels"][i] = ticks[i]
                 # d["offset"][i] = None  # todo: check
@@ -513,7 +541,7 @@ class _Axes:
                     d["labels"][i] = []
                 # d["offset"][i] = None
 
-                elif type(labels[i]) is list or type(labels[i]) is np.ndarray:  # custom labels
+                elif isinstance(labels[i], Iterable):  # custom labels
                     assert len(labels[i]) == len(ticks[i]), "len(labels[i]) must be equal to len(ticks[i])."
                     d["labels"][i] = labels[i]
                 # d["offset"][i] = None  # todo: check
@@ -524,7 +552,8 @@ class _Axes:
             # Set ticks and labels
             ax.set_xticks(d["ticks"][0], d["labels"][0])
             ax.xaxis.set_major_formatter(
-                    ScalarFormatter(useOffset=True))  # todo: returns the tick labels for unknown reason
+                ScalarFormatter(useOffset=True),
+            )  # todo: returns the tick labels for unknown reason
 
             ax.set_yticks(d["ticks"][1], d["labels"][1])
             ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
@@ -603,19 +632,19 @@ class _Axes:
     def ax_colorbar(self, axs: bool | list[Axes_plt] | list[list[Axes_plt]], **colorbar_kw):
         if axs is False:
             return
-        elif axs is True:
+        if axs is True:
             axs = [[ax] for ax in self.fig.axes if len(ax.images) > 0]
-        elif type(axs) is Axes_plt:
+        elif isinstance(axs, Axes_plt):
             axs = [axs]
-        elif type(axs) is np.ndarray:
+        elif isinstance(axs, np.ndarray):
             axs = axs.tolist()
 
         # convert to a list of lists
-        for i in range(len(axs)):  # run through common axes
-            if type(axs[i]) is Axes_plt:  # if not a list, convert to a list
+        for i in range(len(axs)):  # run through common axes, pylint: disable=consider-using-enumerate
+            if isinstance(axs[i], Axes_plt):  # if not a list, convert to a list
                 axs[i] = [axs[i]]
 
-            assert type(axs[i]) is list, "'axs' must be a list of lists."
+            assert isinstance(axs[i], Iterable), "'axs' must be a list of lists."
             for j in range(len(axs[i])):
                 assert len(axs[i][j].images) > 0, "At least one of the axes provided doesn't have an image plotted."
 
@@ -645,11 +674,13 @@ class _Axes:
 
         file_name = get_savefig_file_name(file_name, mkdir=True)
 
-        format = os.path.splitext(file_name)[-1]
+        ext = os.path.splitext(file_name)[-1]
 
-        if format == ".gif":
-            assert isinstance(self.func_animation, matplotlib.animation.FuncAnimation), \
-                "Call plot_animation() before saving gif."
+        if ext == ".gif":
+            assert isinstance(
+                self.func_animation,
+                matplotlib.animation.FuncAnimation,
+            ), "Call plot_animation() before saving gif."
             self.func_animation.save(file_name, **savefig_kw)
         else:
             self.fig.savefig(file_name, **savefig_kw)
@@ -662,12 +693,14 @@ class _Axes:
     def show(self):
         self.show_fig()
 
-    def set_props(self,
-            save_file_name: str | bool = False,
-            colorbar_kw: dict = None,
-            xy_lines_kw: dict = None,
-            save_fig_kw: dict = None,
-            **set_props_kw):
+    def set_props(
+        self,
+        save_file_name: str | bool = False,
+        colorbar_kw: dict = None,
+        xy_lines_kw: dict = None,
+        save_fig_kw: dict = None,
+        **set_props_kw,
+    ):
         """
         Set figure properties after plotting.
 
@@ -846,19 +879,31 @@ class _Axes:
         return file_name
 
 
-def new_figure(nrows=1, ncols=1,
-        sharex=False, sharey=False,
-        projection=None,
-        squeeze=True,
-        subplot_kw=None, gridspec_kw=None, **figure_kw) -> (Figure, Axes_plt):
+def new_figure(
+    nrows=1,
+    ncols=1,
+    sharex=False,
+    sharey=False,
+    projection=None,
+    squeeze=True,
+    subplot_kw=None,
+    gridspec_kw=None,
+    **figure_kw,
+) -> (Figure, Axes_plt):
     if subplot_kw is None:
         subplot_kw = dict()
-    subplot_kw = {'projection': projection} | subplot_kw
+    subplot_kw = {"projection": projection} | subplot_kw
 
-    fig, axs = plt.subplots(nrows=nrows, ncols=ncols,
-            sharex=sharex, sharey=sharey,
-            squeeze=squeeze,
-            subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **figure_kw)
+    fig, axs = plt.subplots(
+        nrows=nrows,
+        ncols=ncols,
+        sharex=sharex,
+        sharey=sharey,
+        squeeze=squeeze,
+        subplot_kw=subplot_kw,
+        gridspec_kw=gridspec_kw,
+        **figure_kw,
+    )
 
     return fig, axs
 
@@ -877,15 +922,16 @@ def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
 
 
 # @copy_docstring_and_deprecators(_AxesLiron.set_props)
-def set_props(ax: Axes_plt = None,
-        save_file_name: str | bool = False, save_fig_kw: dict = None,
-        **set_props_kw):
+def set_props(
+    ax: Axes_plt = None,
+    save_file_name: str | bool = False,
+    save_fig_kw: dict = None,
+    **set_props_kw,
+):
     if ax is None:
         ax = plt.gca()
 
-    _Axes(axs=ax).set_props(save_file_name=save_file_name,
-            save_fig_kw=save_fig_kw,
-            **set_props_kw)
+    _Axes(axs=ax).set_props(save_file_name=save_file_name, save_fig_kw=save_fig_kw, **set_props_kw)
 
 
 def get_savefig_file_name(file_name: str = None, time_dir: bool = False, mkdir: bool = False):

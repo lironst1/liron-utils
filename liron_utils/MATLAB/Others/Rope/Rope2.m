@@ -68,29 +68,27 @@ sineSum = sum(tmp, 3);
 
 
 
-% getValue('slider1') 
-% 
+% getValue('slider1')
+%
 % sliderHandle=findall(0,'Tag','slider1');
-% if ~empty(sliderHandle) 
-%     while 0 
-%     
-%     get(sliderHandle,'Value') 
-%     
-%     drawnow, pause(0.4) 
-%     
-%     end 
+% if ~empty(sliderHandle)
+%     while 0
+%
+%     get(sliderHandle,'Value')
+%
+%     drawnow, pause(0.4)
+%
+%     end
 % end
-    
 
 
- 
+
+
 % % Find amplitude of m-th mode
-% 
+%
 % % Represent the shape as a sum of sines (curve-fitting)
 % sineSum_example = M * A';
-% 
+%
 % plot (x, sineSum_example, '--')
 % title('Sum of sines (t=0)')
 % legend('y - Original Shape', '\psi - Sum of sines', 'location', 'northeast')
-
-

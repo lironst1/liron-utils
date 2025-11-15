@@ -22,10 +22,7 @@ b = ProgressBar(numIterations, ...
 wasSuccessful = logical(binornd(1, 0.95, numIterations, 1));
 for iIteration = 1:numIterations
     pause(0.1);
-    
+
     b([], wasSuccessful(iIteration), []);
 end
 b.release();
-
-
-

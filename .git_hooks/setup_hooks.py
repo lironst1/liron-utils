@@ -6,14 +6,11 @@ Run this script from the parent directory to install or update the git hooks:
 """
 
 import platform
-import shutil
 import stat
 from pathlib import Path
 
 # Map of source files to destination hook names
-hooks_to_install = {
-    "pre-commit": "pre_commit.py"
-}  # {hook_name: source_file}
+hooks_to_install = {"pre-commit": "pre_commit.py"}  # {hook_name: source_file}
 
 
 def setup_git_hooks():
@@ -35,11 +32,11 @@ def setup_git_hooks():
 
         if path_src.exists():
             # Read and convert line endings to Unix format
-            content = path_src.read_text(encoding='utf-8')
-            content = content.replace('\r\n', '\n')
+            content = path_src.read_text(encoding="utf-8")
+            content = content.replace("\r\n", "\n")
 
             # Write with Unix line endings
-            path_dest.write_text(content, encoding='utf-8', newline='\n')
+            path_dest.write_text(content, encoding="utf-8", newline="\n")
 
             # Make it executable (Unix/Linux/macOS)
             if not is_windows:

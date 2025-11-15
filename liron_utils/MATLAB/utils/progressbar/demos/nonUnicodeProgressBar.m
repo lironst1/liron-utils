@@ -19,8 +19,7 @@ b = ProgressBar(numIterations, ...
 
 for iIteration = 1:numIterations
     pause(0.1);
-    
+
     b([], [], []);
 end
 b.release();
-

@@ -5,7 +5,7 @@
 % output variables include u(t) amd t on which u is defined
 
 tb=1;
-  
+
 if (acode==1)*(pcode==1),
    u_basic=u_amp.*exp(j*u_phase*pi);
 elseif (acode==1)*(pcode==0),
@@ -15,7 +15,7 @@ elseif (acode==0)*(pcode==1),
 else
    u_basic=ones(size(u_amp));
 end
-  
+
 m_basic=length(u_basic);
 
 if r==1

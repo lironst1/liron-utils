@@ -1,9 +1,18 @@
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import periodogram, windows
-import matplotlib.pyplot as plt
 
 
-def powerbw(x, fs=1.0, f=None, r=3.01, freq_lims=None, input="time", plot=False, **periodogram_kw):
+def powerbw(
+    x,
+    fs=1.0,
+    f=None,
+    r=3.01,
+    freq_lims=None,
+    input_domain="time",
+    plot=False,
+    **periodogram_kw,
+):
     """
     Compute the `-r` dB power bandwidth of signal x, mimicking MATLAB's powerbw(x, fs, [], r).
 
@@ -21,7 +30,7 @@ def powerbw(x, fs=1.0, f=None, r=3.01, freq_lims=None, input="time", plot=False,
     freq_lims : (float, float) or None, optional
         Two-element tuple/list [fmin, fmax] defining the frequency range
         over which to compute the reference level. Default = None (use global max).
-    input : {'time', 'pxx'}, optional
+    input_domain : {'time', 'pxx'}, optional
         Specify the input type: 'time' for time-domain signal, 'pxx' for power spectral density.
     plot : bool, optional
         If True, plot the PSD and shaded bandwidth region.
@@ -39,26 +48,31 @@ def powerbw(x, fs=1.0, f=None, r=3.01, freq_lims=None, input="time", plot=False,
     """
 
     # --- Step 1: Periodogram with Kaiser(β=0) == rectangular window
-    input = input.lower()
-    if input == "time":
+    input_domain = input_domain.lower()
+    if input_domain == "time":
         if f is not None:
             raise ValueError("`f` must be None if input is 'time'.")
-        periodogram_kw = dict(
-                window=windows.kaiser(len(x), beta=0)
-        ) | periodogram_kw
-        f, Pxx = periodogram(x, fs=fs, detrend=False, scaling='density', return_onesided=False, **periodogram_kw)
+        periodogram_kw = dict(window=windows.kaiser(len(x), beta=0)) | periodogram_kw
+        f, Pxx = periodogram(
+            x,
+            fs=fs,
+            detrend=False,
+            scaling="density",
+            return_onesided=False,
+            **periodogram_kw,
+        )
         f = np.fft.fftshift(f)
         Pxx = np.fft.fftshift(Pxx)
 
-    elif input == "pxx":
+    elif input_domain == "pxx":
         if f is None:
             raise ValueError("`f` must be provided if input is 'pxx'.")
-        elif len(f) != len(x):
+        if len(f) != len(x):
             raise ValueError("`f` and `x` must have the same length.")
         Pxx = x
 
     else:
-        raise ValueError(f"Invalid input type: {input}.")
+        raise ValueError(f"Invalid input type: {input_domain}.")
 
     # --- Step 2: reference level
     if freq_lims is None:
@@ -113,10 +127,10 @@ def powerbw(x, fs=1.0, f=None, r=3.01, freq_lims=None, input="time", plot=False,
         plt.grid(True)
 
     return dict(
-            bw=bw,
-            f_lo=f_lo,
-            f_hi=f_hi,
-            pwr=pwr,
-            f=f,
-            Pxx=Pxx,
+        bw=bw,
+        f_lo=f_lo,
+        f_hi=f_hi,
+        pwr=pwr,
+        f=f,
+        Pxx=Pxx,
     )

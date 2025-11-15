@@ -28,7 +28,7 @@ b = ProgressBar([], ...
 b.setup([], [], []);
 parfor iIteration = 1:numIterations
     pause(0.1);
-    
+
     % USE THIS FUNCTION AND NOT THE STEP() METHOD OF THE OBJECT!!!
     updateParallel();
 end
@@ -48,10 +48,8 @@ b = ProgressBar(numIterations, ...
 b.setup([], [], []);
 parfor iIteration = 1:numIterations
     pause(0.1);
-    
+
     % USE THIS FUNCTION AND NOT THE STEP() METHOD OF THE OBJECT!!!
     updateParallel([], pwd);
 end
 b.release();
-
-

@@ -1,0 +1,17 @@
+[flake8]
+max-line-length = 120
+ignore =
+    # Whitespace before ':': conflict with black
+    E203
+    # Line too long: handled by black
+    E501
+    # Ignore `multiple statements on one line` to support new black handling of empty functions
+    E704
+    # do not assign a lambda expression, use a def
+    E731
+
+    # <NAME> may be undefined, or defined from star imports
+    F405
+
+    # Line break occurred before a binary operator: conflict with black
+    W503

@@ -1,38 +1,50 @@
-import sys
 import atexit
-import logging
-from logging.handlers import RotatingFileHandler
-import time
 import inspect
-from colorama import Fore, Back, Style
+import logging
+import sys
+import time
+from logging.handlers import RotatingFileHandler
+
+from colorama import Back, Fore, Style
 
 from .dicts import dict_
 
 
 class Logger:
-    NAME2LEVEL = dict_(logging._nameToLevel)
-    LEVEL2NAME_OLD = dict_(logging._levelToName)
-    LEVEL2NAME = dict_({
-        logging.CRITICAL: 'Fatal',
-        logging.ERROR:    'Error',
-        logging.WARNING:  'Warn',
-        logging.INFO:     'Info',
-        logging.DEBUG:    'Debug',
-        logging.NOTSET:   'Notset',
-    })
+    NAME2LEVEL = dict_(logging._nameToLevel)  # pylint: disable=protected-access
+    LEVEL2NAME_OLD = dict_(logging._levelToName)  # pylint: disable=protected-access
+    LEVEL2NAME = dict_(
+        {
+            logging.CRITICAL: "Fatal",
+            logging.ERROR: "Error",
+            logging.WARNING: "Warn",
+            logging.INFO: "Info",
+            logging.DEBUG: "Debug",
+            logging.NOTSET: "Notset",
+        },
+    )
     ENTER_MSG = "STARTING LOGGER\t------------------------------------"
     EXIT_MSG = "CLOSING LOGGER\t------------------------------------"
 
     ENTER_CALLED = False
 
-    def __init__(self,
-            file_name: str = "./logs.log",
-            min_level_file: int = logging.INFO,
-            min_level_console: int = None,
-            default_level: int = logging.INFO,
-            log_message_format: str = "%(asctime)s | %(levelname)-14s | %(filename)-15s:%(lineno)4d | %(class_func)-30s >> %(message)s",
-            max_file_size: int = 10 * 1024 * 1024,
-            backup_count: int = 5,
+    def __init__(
+        self,
+        file_name: str = "./logs.log",
+        min_level_file: int = logging.INFO,
+        min_level_console: int = None,
+        default_level: int = logging.INFO,
+        log_message_format: str = "%(asctime)s"
+        " | "
+        "%(levelname)-14s"
+        " | "
+        "%(filename)-15s:%(lineno)4d"
+        " | "
+        "%(class_func)-30s"
+        " >> "
+        "%(message)s",
+        max_file_size: int = 10 * 1024 * 1024,
+        backup_count: int = 5,
     ):
         """
         Initialize logger.
@@ -69,7 +81,7 @@ class Logger:
         if not file_name.endswith(".log"):
             file_name += ".log"
 
-        with open(file_name, 'a'):  # Create the file if it doesn't exist
+        with open(file_name, "a"):  # Create the file if it doesn't exist
             pass
         self.logger = logging.getLogger(file_name)
         self.default_level = default_level
@@ -79,8 +91,10 @@ class Logger:
         class _Formatter(logging.Formatter):
             # Formatter that changes the level name to a shorthand version (e.g., WARNING->Warn).
             def format(self, record):
-                record.levelname = record.levelname.replace(Logger.LEVEL2NAME_OLD[record.levelno],
-                        Logger.LEVEL2NAME[record.levelno])
+                record.levelname = record.levelname.replace(
+                    Logger.LEVEL2NAME_OLD[record.levelno],
+                    Logger.LEVEL2NAME[record.levelno],
+                )
 
                 record.class_func = self._get_class_func(record)
 
@@ -92,18 +106,14 @@ class Logger:
                 while frame:
                     if frame.f_code.co_name == record.funcName:
                         # Look for 'self' or 'cls' in the frame's local variables
-                        local_self = frame.f_locals.get('self', None) or frame.f_locals.get('cls', None)
+                        local_self = frame.f_locals.get("self", None) or frame.f_locals.get("cls", None)
                         if local_self:
-                            return f'{local_self.__class__.__name__}.{record.funcName}'
+                            return f"{local_self.__class__.__name__}.{record.funcName}"
                     frame = frame.f_back
                 return record.funcName  # Fallback
 
         # Use RotatingFileHandler instead of FileHandler for file size rotation
-        self.file_handler = RotatingFileHandler(
-                file_name,
-                maxBytes=max_file_size,
-                backupCount=backup_count
-        )
+        self.file_handler = RotatingFileHandler(file_name, maxBytes=max_file_size, backupCount=backup_count)
         if min_level_file is not None:
             self.file_handler.setLevel(min_level_file)
             formatter = _Formatter(log_message_format)
@@ -115,11 +125,11 @@ class Logger:
             # Formatter that adds colors to log messages based on their level.
             COLORS = {
                 logging.CRITICAL: Fore.LIGHTWHITE_EX + Back.LIGHTRED_EX,
-                logging.ERROR:    Fore.RED,
-                logging.WARNING:  Fore.YELLOW,
-                logging.INFO:     Fore.BLUE,
-                logging.DEBUG:    Fore.MAGENTA,
-                logging.NOTSET:   Fore.BLACK
+                logging.ERROR: Fore.RED,
+                logging.WARNING: Fore.YELLOW,
+                logging.INFO: Fore.BLUE,
+                logging.DEBUG: Fore.MAGENTA,
+                logging.NOTSET: Fore.BLACK,
             }
 
             def format(self, record):
@@ -165,14 +175,17 @@ class Logger:
         self.logger.removeHandler(self.console_handler)
         self.console_handler.close()
 
-    def log(self,
-            msg: str,
-            level: int = None,
-            exc_info: bool = False,
-            time_log: float = None,
-            f: str = ':.3f',
-            stacklevel: int = 2,
-            *args, **kwargs):
+    def log(
+        self,
+        msg: str,
+        level: int = None,
+        exc_info: bool = False,
+        time_log: float = None,
+        f: str = ":.3f",
+        stacklevel: int = 2,
+        *args,
+        **kwargs,
+    ):
         """
         Send a log message to the log file.
 
@@ -207,14 +220,10 @@ class Logger:
 
         tm = time.time()
         if time_log is not None:
-            msg = msg.replace('{}', '{' + f + '}')
+            msg = msg.replace("{}", "{" + f + "}")
             msg = msg.format(tm - time_log)
 
-        self.logger.log(
-                level=level,
-                msg=msg,
-                exc_info=exc_info,
-                *args, **kwargs)
+        self.logger.log(level=level, msg=msg, exc_info=exc_info, *args, **kwargs)
 
         return tm
 

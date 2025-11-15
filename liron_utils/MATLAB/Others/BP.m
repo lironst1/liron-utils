@@ -18,25 +18,25 @@ function BP
 
  h = waitbar(0,'Please wait...');
 
- Ngames=20; 
- 
+ Ngames=20;
+
 for k = 1: Ngames
     waitbar(k/Ngames,h)
-    
+
     Nsecret=n(randi(numel(n)));
-    
+
     iter(k)= findNsecret (n,d, Nsecret);
-    
+
 end
 
-delete(h) 
+delete(h)
 
 figure (12)
 hist(iter)
-title('histogram of number of questions') 
+title('histogram of number of questions')
 
-mean(iter) 
-median(iter) 
+mean(iter)
+median(iter)
 
 end
 
@@ -46,33 +46,33 @@ function iter=findNsecret(n,d,Nsecret)
 
 iter=1;
 while true
-    
+
     Nask=n(randi(numel(n)));
-    
+
     [b,p]=bullPgia(Nask,Nsecret);
-    
-    
+
+
     if b==4
         % success
-        if 0 
+        if 0
         fprintf(1,'\n After %d questions, The secret number is %d \n\n',iter, Nask) ;
-        end 
+        end
         break
     end
-    
+
     ok=[];
     for k=1:numel(n)
         [b1 p1]=bullPgia (n(k), Nask);
         ok(k)=all([b p] == [b1 p1]);
     end
     n=n(boolean(ok));
-    
-    if 0 
+
+    if 0
     fprintf(1,'\n iter: %d Nask %d\n Nsecret %d\n b: %d   p: %d\n N: %d\n\n',iter, Nask,  Nsecret,  b , p , numel(n));
-    end 
-    
+    end
+
     iter=iter+1;
-    
+
 end   % while true
 
 end   % function findNsecret(n,d,Nsecret)
@@ -116,5 +116,3 @@ d(3)=floor(m/10);
 m=m-d(3)*10;
 d(4)=m;
 end
-
-

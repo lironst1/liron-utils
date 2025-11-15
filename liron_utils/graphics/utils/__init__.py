@@ -1,9 +1,10 @@
+# flake8: noqa: F401, F403
+
 import matplotlib.style
 
-# matplotlib.style.use('seaborn')
-
-
+from . import COLORS
 from .default_kwargs import *
 from .etc import *
 from .rc_params import *
-from . import COLORS
+
+# matplotlib.style.use('seaborn')

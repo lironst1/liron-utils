@@ -63,7 +63,7 @@ guidata(hObject, handles);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = rope_GUI_OutputFcn(hObject, eventdata, handles) 
+function varargout = rope_GUI_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -84,18 +84,18 @@ function slider1_Callback(hObject, eventdata, handles)
 
 global x t sineSum han
 
-ii=round(get(hObject,'Value') * numel(t) ); 
-ii=max(ii,1); ii=min(ii,numel(t)); 
+ii=round(get(hObject,'Value') * numel(t) );
+ii=max(ii,1); ii=min(ii,numel(t));
 
 
 plot(han,x,sineSum(:,ii))
 
 ylim([-1 1])
 
-% if 0 
-% figure 
-% surf(squeeze(dd),'EdgeColor','none') 
-% end 
+% if 0
+% figure
+% surf(squeeze(dd),'EdgeColor','none')
+% end
 
 
 
@@ -123,6 +123,3 @@ function slider1_ButtonDownFcn(hObject, eventdata, handles)
 
 
 % get(hObject,'Value')
-
-
-

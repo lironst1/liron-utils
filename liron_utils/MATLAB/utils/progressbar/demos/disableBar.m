@@ -1,5 +1,5 @@
 % This script will show how the bar can be programmatically disabled.
-% 
+%
 % Author:  J.-A. Adrian (JA) <jensalrik.adrian AT gmail.com>
 %
 

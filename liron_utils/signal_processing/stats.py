@@ -1,21 +1,17 @@
-import numpy as np
-import scipy.stats
 from collections import namedtuple
 
-from ..uncertainties_math import val, to_numpy
+import numpy as np
+import scipy.stats
 
-Power_divergenceResult = namedtuple('Power_divergenceResult',
-		('statistic', 'pvalue'))
+from ..uncertainties_math import to_numpy, val
+
+Power_divergenceResult = namedtuple("Power_divergenceResult", ("statistic", "pvalue"))
 
 
-def chi_squared_test(
-		f_exp, f_obs,
-		f_obs_err=None,
-		ddof: int = 0,
-		reduced: bool = False):
-	"""
-	Compute the chi-squared statistic and p-value for the goodness-of-fit test (see ref. [1]).
-	Same as scipy.stats.chisquare(f_obs, f_exp, ddof)
+def chi_squared_test(f_exp, f_obs, f_obs_err=None, ddof: int = 0, reduced: bool = False):
+    """
+    Compute the chi-squared statistic and p-value for the goodness-of-fit test (see ref. [1]).
+    Same as scipy.stats.chisquare(f_obs, f_exp, ddof)
 
     Parameters
     ----------
@@ -24,7 +20,7 @@ def chi_squared_test(
     f_obs :     array-like
         Observed values.
     f_obs_err : array-like, optional
-    	Uncertainties in the observed values.
+        Uncertainties in the observed values.
     ddof :      int, optional
         Degrees of freedom adjustment (e.g., number of fitted parameters). Default is 0.
     reduced :   bool, optional
@@ -48,23 +44,23 @@ def chi_squared_test(
     ----------
     [1] https://en.wikipedia.org/wiki/Pearson%27s_chi-squared_test
     [2] https://en.wikipedia.org/wiki/Reduced_chi-squared_statistic
-	"""
+    """
 
-	f_exp, f_exp_err = to_numpy(f_exp)
-	f_obs, f_obs_err = to_numpy(f_obs, f_obs_err)
+    f_exp, f_exp_err = to_numpy(f_exp)
+    f_obs, f_obs_err = to_numpy(f_obs, f_obs_err)
 
-	if reduced:
-		assert f_obs_err is not None, "f_exp_err, f_obs_err must be provided."
-		if f_exp_err is None:
-			f_exp_err = 0
-		sigma2 = np.sqrt(f_exp_err ** 2 + f_obs_err ** 2)
-		chi2 = np.sum((f_obs - f_exp) ** 2 / sigma2 ** 2)
-	else:
-		f_exp /= f_exp.sum()
-		f_obs /= f_obs.sum()
-		chi2 = np.sum((f_obs - f_exp) ** 2 / f_exp)
+    if reduced:
+        assert f_obs_err is not None, "f_exp_err, f_obs_err must be provided."
+        if f_exp_err is None:
+            f_exp_err = 0
+        sigma2 = np.sqrt(f_exp_err**2 + f_obs_err**2)
+        chi2 = np.sum((f_obs - f_exp) ** 2 / sigma2**2)
+    else:
+        f_exp /= f_exp.sum()
+        f_obs /= f_obs.sum()
+        chi2 = np.sum((f_obs - f_exp) ** 2 / f_exp)
 
-	dof = len(f_exp) - 1 - ddof
-	p_value = scipy.stats.chi2.sf(val(chi2), dof)
+    dof = len(f_exp) - 1 - ddof
+    p_value = scipy.stats.chi2.sf(val(chi2), dof)
 
-	return Power_divergenceResult(chi2, p_value)
+    return Power_divergenceResult(chi2, p_value)

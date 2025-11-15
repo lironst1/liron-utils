@@ -8,58 +8,62 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
 dependencies = [
+    "audioread>=3.0.1",
+    "black (>=25.11.0,<26.0.0)",
+    "build (>=1.3.0,<2.0.0)",
+    "colorama>=0.4.6",
     "Cython>=3.0.11",
     "ipykernel>=6.29.5",
     "ipympl>=0.9.3",
     "ipython>=8.30.0",
+    "isort>=7.0.0",
     "jupyterlab>=4.4.10",
     "keras>=2.10.0",
-    "matplotlib>=3.10.0",
-    "natsort>=7.1.1",
-    "notebook>=7.4.7",
-    "numpy>=2.2.6",
-    "openpyxl>=3.1.5",
-    "pandas>=2.2.3",
-    "plotly>=6.0.1",
-    "prettytable>=3.5.0",
-    "pyautogui>=0.9.54",
-    "pycairo>=1.23.0",
-    "pynput>=1.8.1",
-    "PyPDF2>=3.0.1",
-    "PyQt6>=6.9.1",
-    "scikit-image>=0.25.0",
-    "scikit-learn>=1.6.1",
-    "scipy>=1.15.2",
-    "selenium>=4.24.0",
-    "sympy>=1.13.3",
-    "tensorboard>=1.8.0",
-    "tifffile>=2022.10.10",
-    "tqdm>=4.67.1",
-    "audioread>=3.0.1",
-    "colorama>=0.4.6",
-    "future>=1.0.0",
     "latex>=0.7.0",
     "librosa>=0.11.0",
     "loguru>=0.7.3",
     "manim>=0.18.0.post0",
+    "matplotlib>=3.10.0",
+    "natsort>=7.1.1",
+    "notebook>=7.4.7",
+    "numpy>=2.2.6",
     "opencv-python>=4.11.0.86",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.3",
     "pipdeptree>=2.26.1",
+    "plotly>=6.0.1",
+    "pre-commit>=4.4.0",
+    "prettytable>=3.5.0",
+    "pyautogui>=0.9.54",
+    "pycairo>=1.23.0",
     "pyclesperanto>=0.14.2",
+    "pylint (>=4.0.3,<5.0.0)",
+    "pynput>=1.8.1",
+    "PyPDF2>=3.0.1",
+    "PyQt6>=6.9.1",
     "python-docx>=1.1.2",
     "pytube>=15.0.0",
     "pystoi>=0.4.1",
     "qiskit>=2.0.0",
     "qutip>=5.1.1",
     "resampy>=0.4.3",
+    "scikit-image>=0.25.0",
+    "scikit-learn>=1.6.1",
+    "scipy>=1.15.2",
+    "selenium>=4.24.0",
     "SoundFile>=0.13.1",
+    "sympy>=1.13.3",
+    "tensorboard>=1.8.0",
+    "tifffile>=2022.10.10",
     "tmm>=0.2.0",
-    "torch>=2.9.0",
-    "torchaudio>=2.9.0",
+    "tox (>=4.32.0,<5.0.0)",
+    #    "torch>=2.9.0",
+    #    "torchaudio>=2.9.0",
     "torchmetrics>=1.7.1",
-    "torchvision>=0.24.0",
+    #    "torchvision>=0.24.0",
+    "tqdm>=4.67.1",
     "uncertainties>=3.2.3",
 ]
-
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -75,7 +79,7 @@ url = "https://download.pytorch.org/whl/cu128"
 priority = "explicit"
 
 
-[tool.poetry.dependencies]
-torch = { source = "pytorch-gpu" }
-torchvision = { source = "pytorch-gpu" }
-torchaudio = { source = "pytorch-gpu" }
+#[tool.poetry.dependencies]
+#torch = { source = "pytorch-gpu" }
+#torchvision = { source = "pytorch-gpu" }
+#torchaudio = { source = "pytorch-gpu" }

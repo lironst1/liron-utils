@@ -34,7 +34,7 @@ counter = 0;
 while counter < numIterations
     counter = counter + 1;
     pause(0.3);
-    
+
     b(1, [], []);
 end
 b.release();
@@ -48,7 +48,7 @@ counter = 0;
 while counter < numIterations
     counter = counter + 1;
     pause(0.3);
-    
+
     b(1, [], []);
 end
 b.release();
@@ -80,13 +80,7 @@ b = ProgressBar(numIterations, ...
 
 for iIteration = 1:numIterations
     b(1, [], []);
-    
+
     pause(0.1);
 end
 b.release();
-
-
-
-
-
-

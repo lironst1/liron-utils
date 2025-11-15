@@ -26,14 +26,14 @@ for iOuterIteration = 1:numOuterIterations
         'Title', 'Loop 2' ...
         );
     b2.setup([], [], []);
-    
+
     for jInnerIteration = 1:numInnerIterations
         b2(1, [], []);
-        
+
         pause(0.1);
     end
     b2.release();
-    
+
     b1(1, [], []);
 end
 b1.release();
@@ -57,14 +57,12 @@ for iOuterIteration = 1:numOuterIterations
         'Title', 'Loop 2' ...
         );
     b2.setup([], [], []);
-    
-    for jInnerIteration = 1:numInnerIterations    
+
+    for jInnerIteration = 1:numInnerIterations
         b2.step(1, [], []);
     end
     b2.release();
-    
+
     b1.step(1, [], []);
 end
 b1.release();
-
-

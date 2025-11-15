@@ -1,9 +1,9 @@
  function hh = quiverc(varargin)
-% Modified version of Quiver to plots velocity vectors as arrows 
-% with components (u,v) at the points (x,y) using the current colormap 
+% Modified version of Quiver to plots velocity vectors as arrows
+% with components (u,v) at the points (x,y) using the current colormap
 
 % Bertrand Dano 3-3-03
-% Copyright 1984-2002 The MathWorks, Inc. 
+% Copyright 1984-2002 The MathWorks, Inc.
 
 %QUIVERC Quiver color plot.
 %   QUIVERC(X,Y,U,V) plots velocity vectors as arrows with components (u,v)
@@ -15,7 +15,7 @@
 %   QUIVERC(U,V) plots velocity vectors at equally spaced points in
 %   the x-y plane.
 %
-%   QUIVERC(U,V,S) or QUIVER(X,Y,U,V,S) automatically scales the 
+%   QUIVERC(U,V,S) or QUIVER(X,Y,U,V,S) automatically scales the
 %   arrows to fit within the grid and then stretches them by S.  Use
 %   S=0 to plot the arrows without the automatic scaling.
 %
@@ -34,10 +34,10 @@
 %      contour(x,y,z), hold on
 %      quiverc(x,y,px,py), hold off, axis image
 %
-%   See also FEATHER, QUIVER3, PLOT. 
+%   See also FEATHER, QUIVER3, PLOT.
 %   Clay M. Thompson 3-3-94
-%   Copyright 1984-2002 The MathWorks, Inc. 
-%   $Revision: 5.21 $  $Date: 2002/06/05 20:05:16 $ 
+%   Copyright 1984-2002 The MathWorks, Inc.
+%   $Revision: 5.21 $  $Date: 2002/06/05 20:05:16 $
 %-------------------------------------------------------------
 
 set(gca, 'color', 'blue');
@@ -63,7 +63,7 @@ while isstr(varargin{nin}),
     nin = nin-1;
   else
     [l,c,m,msg] = colstyle(vv);
-    if ~isempty(msg), 
+    if ~isempty(msg),
       error(sprintf('Unknown option "%s".',vv));
     end
     if ~isempty(l), ls = l; end
@@ -107,7 +107,7 @@ if autoscale,
 end
 
 %----------------------------------------------
-% Define colormap 
+% Define colormap
 vr=sqrt(u.^2+v.^2);
 vrn=round(vr/max(vr(:))*64);
 CC=colormap;
@@ -130,7 +130,7 @@ hold on
 
  for i=  1:3:imax-1
     ii=int8(round(vrn1(i)));
-    if ii==0; ii=1; end        
+    if ii==0; ii=1; end
     c1= CC(ii,1);    c2= CC(ii,2);    c3= CC(ii,3);
     plot(uui(i:i+1),vvi(i:i+1),'linewidth',lw,'color',[c1 c2 c3]);
 end
@@ -138,7 +138,7 @@ end
 %----------------------------------------------
 % Make arrow heads and plot them
 if plotarrows,
- 
+
   hu = [x+u-alpha*(u+beta*(v+eps));x+u; ...
         x+u-alpha*(u-beta*(v+eps));repmat(NaN,size(u))];
   hv = [y+v-alpha*(v-beta*(u+eps));y+v; ...
@@ -149,7 +149,7 @@ if plotarrows,
 
  for i=  1:imax-1
     ii=int8(round(vrn2(i)));
-    if ii==0; ii=1; end   
+    if ii==0; ii=1; end
     c1= CC(ii,1);    c2= CC(ii,2);    c3= CC(ii,3);
     plot(uui(i:i+1),vvi(i:i+1),'linewidth',lw,'color',[c1 c2 c3]);
  end

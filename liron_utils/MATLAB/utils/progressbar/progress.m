@@ -27,34 +27,34 @@ classdef progress < handle
     % =========================================================================
     %
     % progress Properties:
-    %	none
+    %   none
     %
     % progress Methods:
-    %	progress - class constructor
+    %   progress - class constructor
     %
     %
     % Author :  J.-A. Adrian (JA) <jensalrik.adrian AT gmail.com>
     %
-    
-    
+
+
     properties (Access = private)
         IterationList;
         ProgressBar;
     end
-    
+
     methods
         % Class Constructor
         function obj = progress(in, varargin)
             if ~nargin
                 return;
             end
-            
+
             obj.IterationList = in;
-            
+
             % pass all varargins to ProgressBar()
             obj.ProgressBar = ProgressBar(length(in), varargin{:});
         end
-        
+
         % Class Destructor
         function delete(obj)
             % call the destructor of the ProgressBar() object
@@ -62,21 +62,20 @@ classdef progress < handle
                 obj.ProgressBar.release();
             end
         end
-        
+
         function [varargout] = subsref(obj, S)
             % This method implements the subsref method and only calls the update()
             % method of ProgressBar. The actual input 'S' is passed to the default
             % subsref method of the class of obj.IterationList.
-            
+
             obj.ProgressBar.step([], [], []);
             varargout = {subsref(obj.IterationList, S)};
         end
-        
+
         function [m, n] = size(obj)
             % This method implements the size() function for the progress() class.
-            
+
             [m, n] = size(obj.IterationList);
         end
     end
 end
-

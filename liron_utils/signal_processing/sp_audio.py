@@ -1,6 +1,8 @@
 import os
+
 import numpy as np
 import scipy.signal
+
 from .base import array
 
 
@@ -33,20 +35,26 @@ def audio_read(files: (str, list), fs_new: int = None, always_3d: bool = False, 
 
     files = np.atleast_1d(array(files))
     assert files.ndim == 1
-    (channels, samplerate, frames) = [], [], []
-    for i, f in enumerate(files):
-        info = sf.info(f)
-        channels.append(info.channels), samplerate.append(info.samplerate), frames.append(info.frames)
-    (channels, samplerate, frames) = np.unique(channels), np.unique(samplerate), np.unique(frames)
-    assert channels.size == 1, 'Inconsistent number of channels.'
-    assert samplerate.size == 1, 'Inconsistent sample rates.'
-    assert frames.size == 1, 'Inconsistent signal lengths.'
+    channels, samplerate, frames = [], [], []
+    for file in enumerate(files):
+        info = sf.info(file)
+        channels.append(info.channels)
+        samplerate.append(info.samplerate)
+        frames.append(info.frames)
+    channels, samplerate, frames = (
+        np.unique(channels),
+        np.unique(samplerate),
+        np.unique(frames),
+    )
+    assert channels.size == 1, "Inconsistent number of channels."
+    assert samplerate.size == 1, "Inconsistent sample rates."
+    assert frames.size == 1, "Inconsistent signal lengths."
 
-    if 'start' not in kwargs.keys():
-        kwargs['start'] = 0
-    if 'stop' not in kwargs.keys():
-        kwargs['stop'] = frames[0]
-    frames = kwargs['stop'] - kwargs['start']
+    if "start" not in kwargs:
+        kwargs["start"] = 0
+    if "stop" not in kwargs:
+        kwargs["stop"] = frames[0]
+    frames = kwargs["stop"] - kwargs["start"]
 
     info = sf.info(files[0])
     M = np.zeros((len(files), frames, info.channels))
@@ -64,7 +72,7 @@ def audio_read(files: (str, list), fs_new: int = None, always_3d: bool = False, 
     return M, samplerate[0]
 
 
-def audio_write(files, M, fs, fs_save=None, mode='w', **kwargs):
+def audio_write(files, M, fs, fs_save=None, mode="w", **kwargs):
     """
     Audio Writer
 
@@ -116,20 +124,20 @@ def audio_write(files, M, fs, fs_save=None, mode='w', **kwargs):
 
     # Write
     for i, f in enumerate(files):
-        if mode.lower() == 'a':
+        if mode.lower() == "a":
             if not os.path.isfile(f):
-                with sf.SoundFile(f, 'w', samplerate=fs_save, **kwargs):
+                with sf.SoundFile(f, "w", samplerate=fs_save, **kwargs):
                     pass
 
-            with sf.SoundFile(f, 'r+') as h:
-                h._update_frames(h.seek(0, sf.SEEK_END))
-                h.buffer_write(M, dtype='float64')
+            with sf.SoundFile(f, "r+") as h:
+                h._update_frames(h.seek(0, sf.SEEK_END))  # pylint: disable=protected-access
+                h.buffer_write(M, dtype="float64")
 
-        elif mode.lower() == 'w+':
+        elif mode.lower() == "w+":
             sf.write(f, M[i, :, :].squeeze(), fs_save, **kwargs)
 
         else:
-            raise ValueError('Invalid declaration of variable `mode`.')
+            raise ValueError("Invalid declaration of variable `mode`.")
 
 
 def time_array(n: int, fs: int) -> np.ndarray:
@@ -151,9 +159,9 @@ def time_array(n: int, fs: int) -> np.ndarray:
 
 def time2samples(fs: int, *args):
     args = list(args)
-    for i in range(len(args)):
-        if args[i] is not None:
-            args[i] = round(fs * args[i])
+    for i, arg in enumerate(args):
+        if arg is not None:
+            args[i] = round(fs * arg)
     if len(args) == 1:
         return args[0]
     return args

@@ -11,7 +11,7 @@ function figs = create_figs(fig_kwargs, shape)
 %             figs(i):
 %               - fig
 %               - axs(j)
-% 
+%
 % Example:
 %   >> figs = create_figs([2,1], [3,1]);
 %         figs(1)            figs(2)
@@ -20,7 +20,7 @@ function figs = create_figs(fig_kwargs, shape)
 %       |=========|        | axs2(2) |
 %       | axs1(2) |        | axs2(3) |
 %       |=========|        |=========|
-% 
+%
 arguments
     fig_kwargs = {}
 end

@@ -9,7 +9,7 @@ function [pattern] = updateParallel(stepSize, workerDirName)
 % initialized. Each worker remembers its own file name to write to and will
 % update its own current progress and write it to file. The ProgressBar()
 % class will handle the management of all worker files.
-% 
+%
 %
 % Usage: [pattern] = updateParallel(stepSize, workerDirName)
 %
@@ -34,11 +34,11 @@ function [pattern] = updateParallel(stepSize, workerDirName)
 %                      Typically not be of interest for the user. The
 %                      variable is only returned if no input arguments were
 %                      passed!
-%        
+%
 %
 %
 % Author:  J.-A. Adrian (JA) <jensalrik.adrian AT gmail.com>
-% 
+%
 
 
 % some constants
@@ -56,7 +56,7 @@ if nargin <1 || isempty(stepSize)
 end
 if ~nargin && nargout
     pattern = [filePattern, '*'];
-    
+
     return;
 end
 
@@ -75,7 +75,7 @@ validateattributes(workerDirName, {'char'}, {'nonempty'});
 if isempty(workerFileName)
     uuid = char(java.util.UUID.randomUUID);
     workerFileName = fullfile(workerDirName, [filePattern, uuid]);
-    
+
     fid = fopen(workerFileName, 'wb');
     fwrite(fid, 0, 'uint64');
     fclose(fid);
@@ -86,10 +86,9 @@ end
 fid = fopen(workerFileName, 'r+b');
 if fid > 0
     status = fread(fid, 1, 'uint64');
-    
+
     fseek(fid, 0, 'bof');
     fwrite(fid, status + stepSize, 'uint64');
-    
+
     fclose(fid);
 end
-
