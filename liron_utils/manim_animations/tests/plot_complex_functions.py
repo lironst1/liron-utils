@@ -10,11 +10,11 @@ class PlotFunction(Scene):
         c_grid = ComplexPlane()
         moving_c_grid = ComplexPlane(
             faded_line_style={
-                "stroke_color":   GREY,
-                "stroke_width":   1,
-                "stroke_opacity": .25,
+                "stroke_color": GREY,
+                "stroke_width": 1,
+                "stroke_opacity": 0.25,
             },
-            faded_line_ratio=5
+            faded_line_ratio=5,
         )
 
         # c_grid.set_stroke(BLUE_E, 1)
@@ -22,9 +22,7 @@ class PlotFunction(Scene):
 
         moving_c_grid.prepare_for_nonlinear_transform()
 
-        self.play(
-            Create(c_grid, run_time=2, lag_ratio=0.1)
-        )
+        self.play(Create(c_grid, run_time=2, lag_ratio=0.1))
         self.wait(0.5)
 
         func_text = Tex(r"$f(z)$").to_corner(UP + LEFT)
@@ -43,7 +41,7 @@ class PlotFunction(Scene):
 
 
 if __name__ == "__main__":
-    func = lambda z: 2*z
+    func = lambda z: 2 * z
 
     h = PlotFunction()
     h.construct()

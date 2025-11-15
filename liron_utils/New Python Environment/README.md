@@ -8,21 +8,30 @@ brew install pyenv-virtualenv
 pyenv init
 ```
 
-Add the following to your shell configuration file (`~/.zshrc`):
+Add the following to the shell configuration file (`~/.zprofile`, `~/.zshrc`, `~/.bashrc`, etc.):
 
 ```bash
+sudo nano ~/.zprofile
+sudo nano ~/.zshrc
+
+# Added by pyenv
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - zsh)"
-pyenv activate "myvenv"
 ```
 
 Then, install the desired Python version and set it as the global default:
 
 ```bash
-pyenv virtualenv 3.11.14 myvenv  # Change to desired version
-pyenv global 3.11.14/envs/myvenv
+pyenv install 3.11.14  # Change to desired version
+pyenv global 3.11.14
 ```
+
+* Note: you can also create a new virtual environment with a specific Python version using:
+    ```bash
+    pyenv virtualenv 3.11.14 myvenv
+    pyenv global 3.11.14/envs/myvenv
+    ```
 
 In Windows, just install [Python](https://www.python.org/downloads/windows/), then create a virtual environment:
 
@@ -34,21 +43,16 @@ Then, choose one of the following package management tools to create a new envir
 
 ## Poetry
 
-1. Create a new virtual environment using pyenv-virtualenv:\
-   `pyenv virtualenv 3.11.14 "myenv"`\
-   Activate the environment: `pyenv activate "myenv"`
-
 1. To install Poetry, run:
-
-```bash
-curl -sSL https://install.python-poetry.org | python -  # (Linux/Mac) 
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -  # (Windows PowerShell)
-```
-
-2. Add Poetry to the PATH:
     ```bash
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-    source ~/.zshrc
+    curl -sSL https://install.python-poetry.org | python -  # (Linux/Mac) 
+    (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -  # (Windows PowerShell)
+    ```
+
+2. Add Poetry path to the shell configuration file:
+    ```bash
+   # Added by Poetry
+    export PATH="$HOME/.local/bin:$PATH"
     ```
    In Windows, it installs to: `%APPDATA%\Python\Scripts`.
 

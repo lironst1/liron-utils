@@ -44,7 +44,7 @@ def nextpow2(a):
     else:
         a = np.asarray(a)
         p = np.zeros(a.shape, dtype=int)
-        idx = (a != 0)
+        idx = a != 0
         p[idx] = np.ceil(np.log2(a[idx]))
 
     return p
@@ -58,7 +58,7 @@ deconv = scipy.signal.deconvolve
 convolution_matrix = scipy.linalg.convolution_matrix  # in 'scipy.linalg._special_matrices'
 
 # Digital filtering
-filter = scipy.signal.lfilter
+lfilter = scipy.signal.lfilter
 filtfilt = scipy.signal.filtfilt  # Zero-phase digital filtering
 movmedian = scipy.ndimage.filters.median_filter
 movmax = scipy.ndimage.filters.maximum_filter
@@ -95,7 +95,7 @@ def filter2(h, x, shape="full"):
     return out
 
 
-def movsum(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
+def movsum(x: np.ndarray, N: int, mode: str = "same", axis: int = -1) -> np.ndarray:
     """
     Moving sum filter
 
@@ -113,33 +113,33 @@ def movsum(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndar
     return np.apply_along_axis(lambda m: np.convolve(x, kernel, mode=mode), axis=axis, arr=x)
 
 
-def movmean(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
+def movmean(x: np.ndarray, N: int, mode: str = "same", axis: int = -1) -> np.ndarray:
     """Moving average filter"""
 
     return movsum(x, N, mode=mode, axis=axis) / N
 
 
-def movrms(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
+def movrms(x: np.ndarray, N: int, mode: str = "same", axis: int = -1) -> np.ndarray:
     """Moving RMS filter"""
 
-    return np.sqrt(movmean(x ** 2, N, mode=mode, axis=axis))
+    return np.sqrt(movmean(x**2, N, mode=mode, axis=axis))
 
 
-def movvar(x: np.ndarray, N: int, ddof: int = 1, mode: str = 'same', axis: int = -1) -> np.ndarray:
+def movvar(x: np.ndarray, N: int, ddof: int = 1, mode: str = "same", axis: int = -1) -> np.ndarray:
     """Moving variance filter"""
 
-    out = movmean(x ** 2, N, mode=mode, axis=axis) - movmean(x, N, mode=mode, axis=axis) ** 2
+    out = movmean(x**2, N, mode=mode, axis=axis) - movmean(x, N, mode=mode, axis=axis) ** 2
     out *= N / (N - ddof)
     return out
 
 
-def movstd(x: np.ndarray, N: int, mode: str = 'same', axis: int = -1) -> np.ndarray:
+def movstd(x: np.ndarray, N: int, mode: str = "same", axis: int = -1) -> np.ndarray:
     """Moving std filter"""
     out = np.sqrt(movvar(x, N, mode=mode, axis=axis))
     return out
 
 
-def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False):
+def analyze_window(window, N=64, fs=None, worN=2**17, fftbins=True, plot=False):
     """
     Computes key metrics and optionally plots time- and frequency-domain characteristics of a window function.
 
@@ -195,7 +195,7 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
     CG = w.mean()
 
     # --- ENBW
-    ENBW_bins = np.mean(w ** 2) / (np.mean(w) ** 2)  # In DFT bins
+    ENBW_bins = np.mean(w**2) / (np.mean(w) ** 2)  # In DFT bins
     ENBW_Hz = None
     if fs is not None:
         ENBW_Hz = ENBW_bins * fs / N  # In Hz (if fs is given)
@@ -249,9 +249,9 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
         PSL_dB, FSL_dB = np.nan, np.nan
 
     # --- ISL (power ratio sidelobes/main-lobe)
-    P = H_mag ** 2
-    P_main = P[:k_null + 1].sum()
-    P_side = P[k_null + 1:].sum()
+    P = H_mag**2
+    P_main = P[: k_null + 1].sum()
+    P_side = P[k_null + 1 :].sum()
     ISL_dB = 10 * np.log10(P_side / P_main) if P_main > 0 else np.nan
 
     # --- roll-off: slope of sidelobe *peaks* in dB vs log10(freq)
@@ -263,7 +263,7 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
         fpk, ypk = fpk[good], ypk[good]
         if fpk.size >= 2:
             x = np.log10(fpk)
-            a, b = np.polyfit(x, ypk, 1)  # y ≈ a*log10(f) + b
+            a, _ = np.polyfit(x, ypk, 1)  # y ≈ a*log10(f) + b
             RO_dBdec = float(a)
             RO_dBoct = float(a * np.log10(2.0))  # per octave
         else:
@@ -272,23 +272,24 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
         RO_dBdec = RO_dBoct = np.nan
 
     out = dict(
-            CG=CG,
-            ENBW_bins=ENBW_bins,
-            ENBW_Hz=ENBW_Hz,
-            MLW=MLW,
-            MLW_3dB=MLW_3dB,
-            PSL_dB=PSL_dB,
-            FSL_dB=FSL_dB,
-            ISL_dB=ISL_dB,
-            RO_dBdec=RO_dBdec,
-            RO_dBoct=RO_dBoct,
-            f_null=f_null,
-            f_3dB=f_3dB,
+        CG=CG,
+        ENBW_bins=ENBW_bins,
+        ENBW_Hz=ENBW_Hz,
+        MLW=MLW,
+        MLW_3dB=MLW_3dB,
+        PSL_dB=PSL_dB,
+        FSL_dB=FSL_dB,
+        ISL_dB=ISL_dB,
+        RO_dBdec=RO_dBdec,
+        RO_dBoct=RO_dBoct,
+        f_null=f_null,
+        f_3dB=f_3dB,
     )
 
     if plot:
         import matplotlib.pyplot as plt
-        fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+
+        _, axs = plt.subplots(1, 2, figsize=(12, 6))
         axs = iter(axs)
 
         # ---- Time-domain
@@ -320,38 +321,57 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
         ax.set_xlabel(xlabel)
         ax.set_ylabel("Magnitude (dB)")
 
-        ax.set_title(f"Frequency Domain")
+        ax.set_title("Frequency Domain")
         ax.grid(True)
 
         # annotate main-lobe width
         ax.axvline(+f_null, linestyle="--", linewidth=0.5)
         ax.axvline(-f_null, linestyle="--", linewidth=0.5)
-        ax.text(f_null, -6, rf"$\text{{MLW}}={MLW:.3f}${'' if fs is None else 'Hz'}", ha="left", va="top")
+        ax.text(
+            f_null,
+            -6,
+            rf"$\text{{MLW}}={MLW:.3f}${'' if fs is None else 'Hz'}",
+            ha="left",
+            va="top",
+        )
 
         # annotate 3dB bandwidth
         if np.isfinite(f_3dB):
             ax.axvline(f_3dB, linestyle=":")
-            ax.text(f_3dB, -3, rf"$\text{{MLW}}_{{-3\text{{dB}}}}={MLW_3dB:.3f}${'' if fs is None else 'Hz'}",
-                    ha="left", va="bottom")
+            ax.text(
+                f_3dB,
+                -3,
+                rf"$\text{{MLW}}_{{-3\text{{dB}}}}={MLW_3dB:.3f}${'' if fs is None else 'Hz'}",
+                ha="left",
+                va="bottom",
+            )
 
         # mark PSL peak
         if side_peaks.size:
             k_psl = side_peaks[np.argmax(H_dB[side_peaks])]
             ax.plot(freqs[k_psl], H_dB[k_psl], marker="o")
-            ax.text(freqs[k_psl], H_dB[k_psl], rf"PSL$={H_dB[k_psl]:.1f}$dB", ha="left", va="bottom")
+            ax.text(
+                freqs[k_psl],
+                H_dB[k_psl],
+                rf"PSL$={H_dB[k_psl]:.1f}$dB",
+                ha="left",
+                va="bottom",
+            )
 
         # shade sidelobe region for ISL visualization
-        ax.fill_between(freqs[k_null + 1:], H_dB[k_null + 1:], -300, alpha=0.08)
+        ax.fill_between(freqs[k_null + 1 :], H_dB[k_null + 1 :], -300, alpha=0.08)
 
         # Metrics textbox
-        unit_freq = "" if fs is None else " Hz"
         metrics_text = "\n".join([f"{k}={v:.3f}" for k, v in out.items() if v is not None])
-        ax.text(0.98, 0.98,
-                metrics_text,
-                fontsize="x-small",
-                ha="right", va="top",
-                transform=ax.transAxes,
-                bbox=dict(boxstyle="round", facecolor="white", alpha=0.8, edgecolor="0.8"),
+        ax.text(
+            0.98,
+            0.98,
+            metrics_text,
+            fontsize="x-small",
+            ha="right",
+            va="top",
+            transform=ax.transAxes,
+            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8, edgecolor="0.8"),
         )
 
         ax.set_xlim(0, 1 if fs is None else fs / 2)
@@ -363,8 +383,18 @@ def analyze_window(window, N=64, fs=None, worN=2 ** 17, fftbins=True, plot=False
     return out
 
 
-def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 17,
-        passband_tol=3.0, stopband_tol=60.0, eps=1e-20, plot=False, xscale="log"):
+def analyze_filter(
+    b=None,
+    a=1,
+    sos=None,
+    fs=None,
+    worN=2**17,
+    passband_tol=3.0,
+    stopband_tol=60.0,
+    eps=1e-20,
+    plot=False,
+    xscale="log",
+):
     """
     Analyze key characteristics of a digital filter.
 
@@ -409,7 +439,7 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 17,
     """
 
     # Determine filter representation and convert if necessary
-    if not ((b is None) ^ (sos is None)):
+    if not ((b is None) ^ (sos is None)):  # pylint: disable=superfluous-parens
         raise ValueError("Either `b` or `sos` must be provided.")
 
     is_sos = b is None
@@ -472,13 +502,10 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 17,
     tw = (f_stop - f_pass) if np.isfinite(f_pass) and np.isfinite(f_stop) else np.nan
 
     # --- Group delay
-    try:
-        system = sos if is_sos else (b, a)
-        w_gd, gd = scipy.signal.group_delay(system, worN=worN, fs=(fs if fs else 2 * np.pi))
-        group_delay_mean = np.mean(gd[np.isfinite(gd)])
-        group_delay_var = np.var(gd[np.isfinite(gd)])
-    except Exception:
-        group_delay_mean = group_delay_var = np.nan
+    system = sos if is_sos else (b, a)
+    _, gd = scipy.signal.group_delay(system, w=worN, fs=(fs if fs else 2 * np.pi))
+    group_delay_mean = np.mean(gd[np.isfinite(gd)])
+    group_delay_var = np.var(gd[np.isfinite(gd)])
 
     # --- Stability
     if is_sos:
@@ -510,26 +537,26 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 17,
         stability = np.all(np.abs(poles) < 1)
 
     out = dict(
-            order=order,
-            type=ftype,
-            bw_3dB=bw_3dB,
-            f_stop=f_stop,
-            tw=tw,
-            atten_stop=atten_stop,
-            ripple_pass=ripple_pass,
-            group_delay_mean=group_delay_mean,
-            group_delay_var=group_delay_var,
-            stability=stability,
-            f=f,
-            H=H
+        order=order,
+        type=ftype,
+        bw_3dB=bw_3dB,
+        f_stop=f_stop,
+        tw=tw,
+        atten_stop=atten_stop,
+        ripple_pass=ripple_pass,
+        group_delay_mean=group_delay_mean,
+        group_delay_var=group_delay_var,
+        stability=stability,
+        f=f,
+        H=H,
     )
     if is_sos:
-        out['n_sections'] = n_sections
+        out["n_sections"] = n_sections
 
     if plot:
         import matplotlib.pyplot as plt
 
-        fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+        _, axs = plt.subplots(2, 2, figsize=(12, 8))
         axs = axs.flatten()
         axs_iter = iter(axs)
 
@@ -547,7 +574,7 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 17,
 
         ax = next(axs_iter)
         ax.stem(np.arange(len(h)), h)
-        title = f"Impulse Response"
+        title = "Impulse Response"
         if is_sos:
             title += f" (SOS: {n_sections} sections)"
         ax.set_title(title)
@@ -557,14 +584,14 @@ def analyze_filter(b=None, a=1, sos=None, fs=None, worN=2 ** 17,
 
         # Pole-zero plot
         ax = next(axs_iter)
-        ax.scatter(np.real(zeros), np.imag(zeros), marker='o', label=f'{len(zeros)} Zeros')
-        ax.scatter(np.real(poles), np.imag(poles), marker='x', label=f'{len(poles)} Poles')
-        circ = plt.Circle((0, 0), 1, color='black', fill=False, ls='--')
+        ax.scatter(np.real(zeros), np.imag(zeros), marker="o", label=f"{len(zeros)} Zeros")
+        ax.scatter(np.real(poles), np.imag(poles), marker="x", label=f"{len(poles)} Poles")
+        circ = plt.Circle((0, 0), 1, color="black", fill=False, ls="--")
         ax.add_patch(circ)
         ax.set_title("Pole-Zero Plot")
         ax.set_xlabel(r"$\Re{\{z\}}$")
         ax.set_ylabel(r"$\Im{\{z\}}$")
-        ax.set_aspect('equal')
+        ax.set_aspect("equal")
         ax.legend()
         ax.grid(True)
 

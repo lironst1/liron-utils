@@ -46,15 +46,13 @@ class OpeningManim(Scene):
         )
         self.wait()
 
-        grid_transform_title = Tex(
-            r"That was a non-linear function \\ applied to the grid"
-        )
+        grid_transform_title = Tex(r"That was a non-linear function \\ applied to the grid")
         grid_transform_title.move_to(grid_title, UL)
         grid.prepare_for_nonlinear_transform()
         self.play(
             grid.animate.apply_function(
                 lambda p: p
-                          + np.array(
+                + np.array(
                     [
                         np.sin(p[1]),
                         np.sin(p[0]),
@@ -73,8 +71,11 @@ class OpeningManim(Scene):
 
 class MyTest(Scene):
     def construct(self):
-        ax = Axes(x_range=[-5, 5, 1], y_range=[-5, 5, 1],
-                  axis_config={'include_ticks': True, 'numbers_to_exclude': [0]}).add_coordinates()
+        ax = Axes(
+            x_range=[-5, 5, 1],
+            y_range=[-5, 5, 1],
+            axis_config={"include_ticks": True, "numbers_to_exclude": [0]},
+        ).add_coordinates()
         ax_labels = ax.get_axis_labels("x", "y")
         graph = ax.plot(lambda x: np.sin(x), x_range=[-1, 4])
         graph_label = ax.get_graph_label(graph, x_val=4)
@@ -89,9 +90,7 @@ class MyTest(Scene):
 
         box = Rectangle(stroke_color=MAROON, fill_color=BLUE_C, fill_opacity=0.5)
 
-        self.play(
-            Create(box, run_time=3)
-        )
+        self.play(Create(box, run_time=3))
         self.play(box.animate.shift(3 * UP))
 
 
@@ -115,12 +114,8 @@ class AddToVGroup(Scene):
             gr.animate.shift(LEFT),
             gr2.animate.shift(UP),
         )
-        self.play(  # Animate groups without modification
-            (gr + gr2).animate.shift(RIGHT)
-        )
-        self.play(  # Animate group without component
-            (gr - circle_red).animate.shift(RIGHT)
-        )
+        self.play((gr + gr2).animate.shift(RIGHT))  # Animate groups without modification
+        self.play((gr - circle_red).animate.shift(RIGHT))  # Animate group without component
 
 
 if __name__ == "__main__":

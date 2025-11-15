@@ -1,3 +1,5 @@
+# pylint: disable=no-value-for-parameter
+
 from typing import Iterable
 import numpy as np
 import scipy.signal
@@ -22,26 +24,40 @@ from ..signal_processing.base import interp1
 
 
 class Axes(_Axes):
-    def __init__(self,
-            shape: tuple[int, int] = (1, 1),
-            grid_layout: list[list[tuple]] = None,
-            sharex: bool | str = False, sharey: bool | str = False,
-            projection: str = None,
-            layout: str = None,
-            fig: Figure = None, axs: Axes_plt | Iterable[Axes_plt] = None,
-            subplot_kw: dict = None, gridspec_kw: dict = None, **fig_kw):
-        super().__init__(shape=shape, grid_layout=grid_layout, sharex=sharex, sharey=sharey, projection=projection,
-                layout=layout, fig=fig, axs=axs, subplot_kw=subplot_kw, gridspec_kw=gridspec_kw, **fig_kw)
 
-    def plot(self,
-            x, y=None, z=None,
-            **plot_kw):
+    def __init__(
+        self,
+        shape: tuple[int, int] = (1, 1),
+        grid_layout: list[list[tuple]] = None,
+        sharex: bool | str = False,
+        sharey: bool | str = False,
+        projection: str = None,
+        layout: str = None,
+        fig: Figure = None,
+        axs: Axes_plt | Iterable[Axes_plt] = None,
+        subplot_kw: dict = None,
+        gridspec_kw: dict = None,
+        **fig_kw,
+    ):
+        super().__init__(
+            shape=shape,
+            grid_layout=grid_layout,
+            sharex=sharex,
+            sharey=sharey,
+            projection=projection,
+            layout=layout,
+            fig=fig,
+            axs=axs,
+            subplot_kw=subplot_kw,
+            gridspec_kw=gridspec_kw,
+            **fig_kw,
+        )
+
+    def plot(self, x, y=None, z=None, **plot_kw):
 
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(cls=self, x=x, y=y, z=z)
-        def _plot(ax: Axes_plt,
-                x, y=None, z=None,
-                **plot_kw):
+        def _plot(ax: Axes_plt, x, y=None, z=None, **plot_kw):
             """
             2D plot of y=f(x)
 
@@ -74,15 +90,11 @@ class Axes(_Axes):
 
         return _plot()
 
-    def plot_vlines(self,
-            x=0, ymin=0, ymax=1,
-            **plot_kw):
+    def plot_vlines(self, x=0, ymin=0, ymax=1, **plot_kw):
 
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(cls=self, x=x, ymin=ymin, ymax=ymax)
-        def _plot_vlines(ax: Axes_plt,
-                x=0, ymin=0, ymax=1,
-                **plot_kw):
+        def _plot_vlines(ax: Axes_plt, x=0, ymin=0, ymax=1, **plot_kw):
             """
             Plot vertical lines.
 
@@ -112,24 +124,24 @@ class Axes(_Axes):
 
             lines = []
             for i, xx in enumerate(x):
-                line = ax.axvline(x=xx, ymin=ymin, ymax=ymax,
-                        label=label if i == x.shape[0] - 1 else "_nolabel_",
-                        **plot_kw)
+                line = ax.axvline(
+                    x=xx,
+                    ymin=ymin,
+                    ymax=ymax,
+                    label=label if i == x.shape[0] - 1 else "_nolabel_",
+                    **plot_kw,
+                )
                 lines.append(line)
 
             return lines
 
         return _plot_vlines()
 
-    def plot_hlines(self,
-            y=0, xmin=0, xmax=1,
-            **plot_kw):
+    def plot_hlines(self, y=0, xmin=0, xmax=1, **plot_kw):
 
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(cls=self, y=y, xmin=xmin, xmax=xmax)
-        def _plot_hlines(ax: Axes_plt,
-                y=0, xmin=0, xmax=1,
-                **plot_kw):
+        def _plot_hlines(ax: Axes_plt, y=0, xmin=0, xmax=1, **plot_kw):
             """
             Plot horizontal lines.
 
@@ -159,24 +171,24 @@ class Axes(_Axes):
 
             lines = []
             for i, yy in enumerate(y):
-                line = ax.axhline(y=yy, xmin=xmin, xmax=xmax,
-                        label=label if i == y.shape[0] - 1 else "_nolabel_",
-                        **plot_kw)
+                line = ax.axhline(
+                    y=yy,
+                    xmin=xmin,
+                    xmax=xmax,
+                    label=label if i == y.shape[0] - 1 else "_nolabel_",
+                    **plot_kw,
+                )
                 lines.append(line)
 
             return lines
 
         return _plot_hlines()
 
-    def plot_errorbar(self,
-            x, y=None, xerr=None, yerr=None,
-            **errorbar_kw):
+    def plot_errorbar(self, x, y=None, xerr=None, yerr=None, **errorbar_kw):
 
         @self._merge_kwargs("errorbar_kw", **errorbar_kw)
         @self._vectorize(cls=self, x=x, y=y, xerr=xerr, yerr=yerr)
-        def _plot_errorbar(ax: Axes_plt,
-                x, y=None, xerr=None, yerr=None,
-                **errorbar_kw):
+        def _plot_errorbar(ax: Axes_plt, x, y=None, xerr=None, yerr=None, **errorbar_kw):
             """
             2D plot of y=f(x) with errorbars
 
@@ -211,22 +223,39 @@ class Axes(_Axes):
 
         return _plot_errorbar()
 
-    def plot_filled_error(self, ax: Axes_plt,
-            x,
-            y=None, yerr=None, n_std=2,
-            y_low=None, y_high=None,
-            **fill_between_kw):
+    def plot_filled_error(
+        self,
+        ax: Axes_plt,
+        x,
+        y=None,
+        yerr=None,
+        n_std=2,
+        y_low=None,
+        y_high=None,
+        **fill_between_kw,
+    ):
 
         @self._merge_kwargs("fill_between_kw", **fill_between_kw)
-        @self._vectorize(cls=self, ax=ax,
-                x=x,
-                y=y, yerr=yerr, n_std=n_std,
-                y_low=y_low, y_high=y_high)
-        def _plot_filled_error(ax: Axes_plt,
-                x,
-                y=None, yerr=None, n_std=2,
-                y_low=None, y_high=None,
-                **fill_between_kw):
+        @self._vectorize(
+            cls=self,
+            ax=ax,
+            x=x,
+            y=y,
+            yerr=yerr,
+            n_std=n_std,
+            y_low=y_low,
+            y_high=y_high,
+        )
+        def _plot_filled_error(
+            ax: Axes_plt,
+            x,
+            y=None,
+            yerr=None,
+            n_std=2,
+            y_low=None,
+            y_high=None,
+            **fill_between_kw,
+        ):
             """
             Plot error using filled area
 
@@ -267,25 +296,53 @@ class Axes(_Axes):
                 y_low = y - n_std * yerr
                 y_high = y + n_std * yerr
 
-            return ax.fill_between(x, y_low, y_high,
-                    **fill_between_kw)
+            return ax.fill_between(x, y_low, y_high, **fill_between_kw)
 
         return _plot_filled_error()
 
-    def plot_data_and_curve_fit(self,
-            x, y, fit_fcn, xerr=None, yerr=None,
-            p_opt=None, p_cov=None, n_std=2, interp_factor=20,
-            curve_fit_plot_kw=None, **errorbar_kw):
+    def plot_data_and_curve_fit(
+        self,
+        x,
+        y,
+        fit_fcn,
+        xerr=None,
+        yerr=None,
+        p_opt=None,
+        p_cov=None,
+        n_std=2,
+        interp_factor=20,
+        curve_fit_plot_kw=None,
+        **errorbar_kw,
+    ):
 
         @self._merge_kwargs("errorbar_kw", **errorbar_kw)
-        @self._vectorize(cls=self,
-                x=x, y=y, fit_fcn=fit_fcn, xerr=xerr, yerr=yerr,
-                p_opt=p_opt, p_cov=p_cov, n_std=n_std, interp_factor=interp_factor,
-                curve_fit_plot_kw=curve_fit_plot_kw)
-        def _plot_data_and_curve_fit(ax: Axes_plt,
-                x, y, fit_fcn, xerr=None, yerr=None,
-                p_opt=None, p_cov=None, n_std=2, interp_factor=20,
-                curve_fit_plot_kw=None, **errorbar_kw):
+        @self._vectorize(
+            cls=self,
+            x=x,
+            y=y,
+            fit_fcn=fit_fcn,
+            xerr=xerr,
+            yerr=yerr,
+            p_opt=p_opt,
+            p_cov=p_cov,
+            n_std=n_std,
+            interp_factor=interp_factor,
+            curve_fit_plot_kw=curve_fit_plot_kw,
+        )
+        def _plot_data_and_curve_fit(
+            ax: Axes_plt,
+            x,
+            y,
+            fit_fcn,
+            xerr=None,
+            yerr=None,
+            p_opt=None,
+            p_cov=None,
+            n_std=2,
+            interp_factor=20,
+            curve_fit_plot_kw=None,
+            **errorbar_kw,
+        ):
             """
             2D scatter plot y=f(x) and curve fit.
 
@@ -297,7 +354,8 @@ class Axes(_Axes):
             fit_fcn : callable
                 Function to be fitted. The first argument of fit_fcn should be the independent variable (x).
             xerr, yerr : array_like, optional
-                Deviations in 'x','y'. 'x','y' may also be sent as 'uncertainties' arrays, then 'xerr','yerr' are disregarded
+                Deviations in 'x','y'. 'x','y' may also be sent as 'uncertainties' arrays, then 'xerr','yerr' are
+                disregarded
             p_opt : Output parameter of scipy.optimize.curve_fit
             p_cov : Output parameter of scipy.optimize.curve_fit
             n_std : int, optional, default 2
@@ -331,16 +389,11 @@ class Axes(_Axes):
                 >>> Ax.show_fig()
             """
 
-            errorbar_kw = {
-                              "label":  'Data',
-                              "zorder": -1
-                          } | errorbar_kw
+            errorbar_kw = {"label": "Data", "zorder": -1} | errorbar_kw
 
             if curve_fit_plot_kw is None:
                 curve_fit_plot_kw = dict()
-            curve_fit_plot_kw = {
-                                    "label": 'Curve fit'
-                                } | curve_fit_plot_kw
+            curve_fit_plot_kw = {"label": "Curve fit"} | curve_fit_plot_kw
 
             # Data
             x, xerr = to_numpy(x, xerr)
@@ -363,7 +416,7 @@ class Axes(_Axes):
                 fit_low = np.ones(interp_factor * len(x)) * np.inf
                 fit_high = np.ones(interp_factor * len(x)) * (-np.inf)
 
-                for i in range(len(p_opt)):
+                for i in range(len(p_opt)):  # pylint: disable=consider-using-enumerate
                     p_opt_i = p_opt.copy()
                     p_opt_i[i] = p_opt[i] - n_std * p_err[i]
                     low = fit_fcn(x_interp, *p_opt_i)
@@ -377,17 +430,20 @@ class Axes(_Axes):
 
         return _plot_data_and_curve_fit()
 
-    def plot_data_and_lin_reg(self,
-            x, y, reg=None, xerr=None, yerr=None,
-            reg_plot_kw=None, **errorbar_kw):
+    def plot_data_and_lin_reg(self, x, y, reg=None, xerr=None, yerr=None, reg_plot_kw=None, **errorbar_kw):
 
         @self._merge_kwargs("errorbar_kw", **errorbar_kw)
-        @self._vectorize(cls=self,
-                x=x, y=y, reg=reg, xerr=xerr, yerr=yerr,
-                reg_plot_kw=reg_plot_kw)
-        def _plot_data_and_lin_reg(ax: Axes_plt,
-                x, y, reg=None, xerr=None, yerr=None,
-                reg_plot_kw=None, **errorbar_kw):
+        @self._vectorize(cls=self, x=x, y=y, reg=reg, xerr=xerr, yerr=yerr, reg_plot_kw=reg_plot_kw)
+        def _plot_data_and_lin_reg(
+            ax: Axes_plt,
+            x,
+            y,
+            reg=None,
+            xerr=None,
+            yerr=None,
+            reg_plot_kw=None,
+            **errorbar_kw,
+        ):
             """
             2D scatter plot y=f(x) + linear regression.
 
@@ -421,21 +477,19 @@ class Axes(_Axes):
 
             """
 
-            errorbar_kw = {
-                              "label": "Data"
-                          } | errorbar_kw
+            errorbar_kw = {"label": "Data"} | errorbar_kw
 
             if reg_plot_kw is None:
                 reg_plot_kw = dict()
             reg_plot_kw = {
-                              "label": fr"{errorbar_kw['label']} linreg: slope={reg.slope:.3f}$\pm${reg.stderr:.3f}, $R^2$={reg.rvalue ** 2:.3f}"
-                          } | reg_plot_kw
+                "label": rf"{errorbar_kw['label']} linreg: slope={reg.slope:.3f}$\pm${reg.stderr:.3f}, "
+                rf"$R^2$={reg.rvalue ** 2:.3f}"
+            } | reg_plot_kw
 
             x, xerr = to_numpy(x, xerr)
             y, yerr = to_numpy(y, yerr)
 
-            self.plot_errorbar(x, y, xerr=xerr, yerr=yerr,
-                    **errorbar_kw)  # TODO: need to change to _plot_errorbar
+            self.plot_errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)  # TODO: need to change to _plot_errorbar
 
             if reg is not None:
                 tmp = [reg.slope * i + reg.intercept for i in x]
@@ -443,14 +497,24 @@ class Axes(_Axes):
 
         return _plot_data_and_lin_reg()
 
-    def plot_line_collection(self,
-            x: np.ndarray, y: np.ndarray, arr: np.ndarray,
-            colorbar_kw=None, **LineCollection_kw):
+    def plot_line_collection(
+        self,
+        x: np.ndarray,
+        y: np.ndarray,
+        arr: np.ndarray,
+        colorbar_kw=None,
+        **LineCollection_kw,
+    ):
 
         @self._vectorize(cls=self, x=x, y=y, arr=arr)
-        def _plot_line_collection(ax: Axes_plt,
-                x: np.ndarray, y: np.ndarray, arr: np.ndarray,
-                colorbar_kw=None, **LineCollection_kw):
+        def _plot_line_collection(
+            ax: Axes_plt,
+            x: np.ndarray,
+            y: np.ndarray,
+            arr: np.ndarray,
+            colorbar_kw=None,
+            **LineCollection_kw,
+        ):
             """
             Create a line collection with colors mapped to array values.
 
@@ -492,13 +556,16 @@ class Axes(_Axes):
 
         return _plot_line_collection(colorbar_kw=colorbar_kw, **LineCollection_kw)
 
-    def _plot_spectrum(self,
-            ax: Axes_plt,
-            X, freqs, fs=1.0,
-            dB=False,
-            eps=1e-20,
-            which="power",
-            **plot_kw
+    def _plot_spectrum(
+        self,
+        ax: Axes_plt,
+        X,
+        freqs,
+        fs=1.0,
+        dB=False,
+        eps=1e-20,
+        which="power",
+        **plot_kw,
     ):
         X = X.copy()
 
@@ -536,26 +603,42 @@ class Axes(_Axes):
 
         return line
 
-    def plot_fft(self,
-            x, fs=1.0, n=None,
+    def plot_fft(
+        self,
+        x,
+        fs=1.0,
+        n=None,
+        *,
+        one_sided=True,
+        normalize=False,
+        input_time=True,
+        plot_spectrum_kw=None,
+        **plot_kw,
+    ):
+
+        @self._merge_kwargs("plot_kw", **plot_kw)
+        @self._vectorize(
+            cls=self,
+            x=x,
+            fs=fs,
+            n=n,
+            one_sided=one_sided,
+            normalize=normalize,
+            input_time=input_time,
+            plot_spectrum_kw=plot_spectrum_kw,
+        )
+        def _plot_fft(
+            ax: Axes_plt,
+            x,
+            fs=1.0,
+            n=None,
             *,
             one_sided=True,
             normalize=False,
             input_time=True,
             plot_spectrum_kw=None,
-            **plot_kw):
-
-        @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, x=x, fs=fs, n=n, one_sided=one_sided, normalize=normalize, input_time=input_time,
-                plot_spectrum_kw=plot_spectrum_kw)
-        def _plot_fft(ax: Axes_plt,
-                x, fs=1.0, n=None,
-                *,
-                one_sided=True,
-                normalize=False,
-                input_time=True,
-                plot_spectrum_kw=None,
-                **plot_kw):
+            **plot_kw,
+        ):
             """
             Plot the magnitude spectrum of the FFT of a signal.
 
@@ -605,8 +688,8 @@ class Axes(_Axes):
             freqs = np.fft.fftfreq(n=n, d=1 / fs)
 
             if one_sided:
-                X = X[:n // 2]
-                freqs = freqs[:n // 2]
+                X = X[: n // 2]
+                freqs = freqs[: n // 2]
             else:
                 X = np.fft.fftshift(X, axes=0)
                 freqs = np.fft.fftshift(freqs)
@@ -620,26 +703,42 @@ class Axes(_Axes):
 
         return _plot_fft()
 
-    def plot_periodogram(self,
-            x, fs=1.0, n=None,
+    def plot_periodogram(
+        self,
+        x,
+        fs=1.0,
+        n=None,
+        *,
+        window="boxcar",
+        one_sided=True,
+        normalize=False,
+        plot_spectrum_kw=None,
+        **plot_kw,
+    ):
+
+        @self._merge_kwargs("plot_kw", **plot_kw)
+        @self._vectorize(
+            cls=self,
+            x=x,
+            fs=fs,
+            n=n,
+            window=window,
+            one_sided=one_sided,
+            normalize=normalize,
+            plot_spectrum_kw=plot_spectrum_kw,
+        )
+        def _plot_periodogram(
+            ax: Axes_plt,
+            x,
+            fs=1.0,
+            n=None,
             *,
             window="boxcar",
             one_sided=True,
             normalize=False,
             plot_spectrum_kw=None,
-            **plot_kw):
-
-        @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, x=x, fs=fs, n=n, window=window, one_sided=one_sided, normalize=normalize,
-                plot_spectrum_kw=plot_spectrum_kw)
-        def _plot_periodogram(ax: Axes_plt,
-                x, fs=1.0, n=None,
-                *,
-                window="boxcar",
-                one_sided=True,
-                normalize=False,
-                plot_spectrum_kw=None,
-                **plot_kw):
+            **plot_kw,
+        ):
 
             x = np.asarray(x)
             if n is None:
@@ -647,9 +746,16 @@ class Axes(_Axes):
             if np.iscomplexobj(x):
                 one_sided = False
 
-            freqs, Pxx = scipy.signal.periodogram(x, fs=fs,
-                    window=window, nfft=n, detrend=False,
-                    return_onesided=one_sided, scaling="density", axis=0)
+            freqs, Pxx = scipy.signal.periodogram(
+                x,
+                fs=fs,
+                window=window,
+                nfft=n,
+                detrend=False,
+                return_onesided=one_sided,
+                scaling="density",
+                axis=0,
+            )
 
             if normalize:
                 Pxx = Pxx / Pxx.max(axis=0)
@@ -667,16 +773,10 @@ class Axes(_Axes):
 
         return _plot_periodogram()
 
-    def plot_impulse_response(self,
-            b, a=1,
-            dt=1, t=None, n=None,
-            **plot_kw):
+    def plot_impulse_response(self, b, a=1, dt=1, t=None, n=None, **plot_kw):
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(cls=self, b=b, a=a, dt=dt, t=t, n=n)
-        def _plot_impulse_response(ax: Axes_plt,
-                b, a=1,
-                dt=1, t=None, n=None,
-                **plot_kw):
+        def _plot_impulse_response(ax: Axes_plt, b, a=1, dt=1, t=None, n=None, **plot_kw):
             """
             Plot the impulse response of a linear time-invariant (LTI) system defined by its numerator (b) and
             denominator (a) coefficients.
@@ -705,9 +805,9 @@ class Axes(_Axes):
 
             b, a = np.atleast_1d(b), np.atleast_1d(a)
             if len(b) > len(a):
-                a = np.pad(a, (0, len(b) - len(a)), 'constant', constant_values=0)
+                a = np.pad(a, (0, len(b) - len(a)), "constant", constant_values=0)
             elif len(a) > len(b):
-                b = np.pad(b, (0, len(a) - len(b)), 'constant', constant_values=0)
+                b = np.pad(b, (0, len(a) - len(b)), "constant", constant_values=0)
 
             if dt is None:  # Continuous-time system
                 system = scipy.signal.lti(b, a)
@@ -730,27 +830,47 @@ class Axes(_Axes):
 
         return _plot_impulse_response()
 
-    def plot_frequency_response(self,
-            b, a=1, fs=1.0, worN=512,
+    def plot_frequency_response(
+        self,
+        b,
+        a=1,
+        fs=1.0,
+        worN=512,
+        *,
+        one_sided=True,
+        dB=False,
+        eps=1e-20,
+        which="amp",
+        normalize=False,
+        **plot_kw,
+    ):
+        @self._merge_kwargs("plot_kw", **plot_kw)
+        @self._vectorize(
+            cls=self,
+            b=b,
+            a=a,
+            fs=fs,
+            worN=worN,
+            one_sided=one_sided,
+            dB=dB,
+            eps=eps,
+            which=which,
+            normalize=normalize,
+        )
+        def _plot_frequency_response(
+            ax: Axes_plt,
+            b,
+            a=1,
+            fs=1.0,
+            worN=512,
             *,
             one_sided=True,
             dB=False,
             eps=1e-20,
             which="amp",
             normalize=False,
-            **plot_kw):
-        @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, b=b, a=a, fs=fs, worN=worN,
-                one_sided=one_sided, dB=dB, eps=eps, which=which, normalize=normalize)
-        def _plot_frequency_response(ax: Axes_plt,
-                b, a=1, fs=1.0, worN=512,
-                *,
-                one_sided=True,
-                dB=False,
-                eps=1e-20,
-                which="amp",
-                normalize=False,
-                **plot_kw):
+            **plot_kw,
+        ):
             """
             Plot the frequency response of a linear time-invariant (LTI) system defined by its numerator (b) and
             denominator (a) coefficients.
@@ -786,37 +906,35 @@ class Axes(_Axes):
             """
 
             if fs is None:  # Continuous-time system
-                w, h = scipy.signal.freqs(b=b, a=a,
-                        worN=worN)
+                w, h = scipy.signal.freqs(b=b, a=a, worN=worN)
 
             else:  # Discrete-time system
-                w, h = scipy.signal.freqz(b=b, a=a,
-                        fs=2 * np.pi * fs,
-                        worN=worN,
-                        whole=not one_sided)
+                w, h = scipy.signal.freqz(b=b, a=a, fs=2 * np.pi * fs, worN=worN, whole=not one_sided)
 
             freqs = w / (2 * np.pi) - 0.5
 
-            _, line = Axes(axs=ax).plot_fft(
-                    x=h, fs=fs,
-                    n=2 * worN if one_sided else worN,
-                    one_sided=one_sided, dB=dB, eps=eps, which=which, normalize=normalize,
-                    input_time=False,
-                    **plot_kw)[0, 0]
+            _, line = Axes(axs=ax).plot_fft(  # pylint: disable=invalid-sequence-index
+                x=h,
+                fs=fs,
+                n=2 * worN if one_sided else worN,
+                one_sided=one_sided,
+                dB=dB,
+                eps=eps,
+                which=which,
+                normalize=normalize,
+                input_time=False,
+                **plot_kw,
+            )[0, 0]
 
             return (h, freqs), line
 
         return _plot_frequency_response()
 
-    def plot_specgram(self,
-            y: np.ndarray, fs: float,
-            **specgram_kw):
+    def plot_specgram(self, y: np.ndarray, fs: float, **specgram_kw):
 
         @self._merge_kwargs("specgram_kw", **specgram_kw)
         @self._vectorize(cls=self, y=y, fs=fs)
-        def _plot_specgram(ax: Axes_plt,
-                y: np.ndarray, fs: float,
-                **specgram_kw):
+        def _plot_specgram(ax: Axes_plt, y: np.ndarray, fs: float, **specgram_kw):
             """
             Plot spectrogram
 
@@ -837,17 +955,29 @@ class Axes(_Axes):
                 A tuple containing (spectrum, freqs, t, im) from ax.specgram.
             """
 
-            specgram_out = ax.specgram(y, Fs=fs,
-                    **specgram_kw)  # todo: add option for log frequency mapping using librosa.feature.melspectrogram()
-            spectrum, freqs, t, im = specgram_out
+            specgram_out = ax.specgram(
+                y, Fs=fs, **specgram_kw
+            )  # todo: add option for log frequency mapping using librosa.feature.melspectrogram()
+            _, freqs, _, im = specgram_out
 
-            scaling = {0: "", 3: "K", 6: "M", 9: "G", 12: "T"}  # todo: use siprefix.si_format
+            scaling = {
+                0: "",
+                3: "K",
+                6: "M",
+                9: "G",
+                12: "T",
+            }  # todo: use siprefix.si_format
             scale = 0
             if fs != 1:
                 scale = 3 * (int(np.log10(freqs[-1])) // 3)
 
                 extent = im.get_extent()
-                extent = (extent[0], extent[1], extent[2] / 10 ** scale, extent[3] / 10 ** scale)
+                extent = (
+                    extent[0],
+                    extent[1],
+                    extent[2] / 10**scale,
+                    extent[3] / 10**scale,
+                )
                 im.set_extent(extent=extent)
 
             if ax.get_title() == "":
@@ -864,15 +994,11 @@ class Axes(_Axes):
 
         return _plot_specgram()
 
-    def plot_surf(self,
-            x, y, z,
-            **plot_surface_kw):
+    def plot_surf(self, x, y, z, **plot_surface_kw):
 
         @self._merge_kwargs("plot_surface_kw", **plot_surface_kw)
         @self._vectorize(cls=self, x=x, y=y, z=z)
-        def _plot_surf(ax: Axes_plt,
-                x, y, z,
-                **plot_surface_kw):
+        def _plot_surf(ax: Axes_plt, x, y, z, **plot_surface_kw):
             """
             3D surface plot of z=f(x,y)
 
@@ -895,8 +1021,10 @@ class Axes(_Axes):
                 The 3D surface plot object.
             """
 
-            assert hasattr(ax, "plot_surface"), "Axes does not have a plot_surface attribute. " \
-                                                "make sure that you created an axes with projection='3d'"
+            assert hasattr(ax, "plot_surface"), (
+                "Axes does not have a plot_surface attribute. "
+                "make sure that you created an axes with projection='3d'"
+            )
 
             X, Y, Z = x, y, z
             if x.ndim == 1:
@@ -912,14 +1040,10 @@ class Axes(_Axes):
 
         return _plot_surf()
 
-    def plot_contour(self,
-            x, y, z, contours,
-            *args, **kwargs):
+    def plot_contour(self, x, y, z, contours, *args, **kwargs):
 
         @self._vectorize(cls=self, x=x, y=y, z=z, contours=contours)
-        def _plot_contour(ax: Axes_plt,
-                x, y, z, contours,
-                *args, **kwargs):
+        def _plot_contour(ax: Axes_plt, x, y, z, contours, *args, **kwargs):
             """
             Contour plot of scalar field z=f(x,y)
 
@@ -944,13 +1068,17 @@ class Axes(_Axes):
 
         return _plot_contour(*args, **kwargs)
 
-    def plot_animation(self, axs: (Axes_plt, np.ndarray[Axes_plt]),
-            func: callable = None,
-            n_frames: int = None,
-            data: list[np.ndarray] = None,
-            data_instance: list = None,
-            titles: list = None,
-            *args, **kwargs):
+    def plot_animation(
+        self,
+        axs: (Axes_plt, np.ndarray[Axes_plt]),
+        func: callable = None,
+        n_frames: int = None,
+        data: list[np.ndarray] = None,
+        data_instance: list = None,
+        titles: list = None,
+        *args,
+        **kwargs,
+    ):
         """
         Plot animation
 
@@ -991,17 +1119,18 @@ class Axes(_Axes):
         -------
 
         """
-        assert (func is not None and n_frames is not None) or \
-               (data is not None and data_instance is not None), \
-            "Either (func, n_frames) or (data, data_instance) should be given."
+        assert (func is not None and n_frames is not None) or (
+            data is not None and data_instance is not None
+        ), "Either (func, n_frames) or (data, data_instance) should be given."
 
-        if type(axs) is Axes_plt:  # convert to array
+        if isinstance(axs, Axes_plt):  # convert to array
             axs = [axs]
             data = [data]
             data_instance = [data_instance]
 
-        assert (axs[i].figure == axs[i + 1].figure
-            for i in range(len(axs) - 1)), "All axes should be of the same figure."
+        assert (
+            axs[i].figure == axs[i + 1].figure for i in range(len(axs) - 1)
+        ), "All axes should be of the same figure."
 
         if func is None:
             assert len(axs) == len(data) == len(data_instance), "Number of axes should be equal to number of data sets."
@@ -1023,7 +1152,7 @@ class Axes(_Axes):
             """
             for idx_ax, ax in enumerate(axs):
                 h = data_instance[idx_ax]
-                if type(h) is list:  # multiple objects
+                if isinstance(h, Iterable):  # multiple objects
                     for j, hh in enumerate(h):
                         hh.set_data(data[idx_ax][i][j])  # update images
                 else:
@@ -1037,6 +1166,6 @@ class Axes(_Axes):
         if func is None:
             func = update_data
 
-        self.func_animation = matplotlib.animation.FuncAnimation(fig=axs[0].figure,
-                func=func, frames=n_frames,
-                *args, **kwargs)
+        self.func_animation = matplotlib.animation.FuncAnimation(
+            fig=axs[0].figure, func=func, frames=n_frames, *args, **kwargs
+        )

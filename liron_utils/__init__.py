@@ -1,4 +1,4 @@
-__version__ = "2025.11.13"
+__version__ = "2025.11.16"
 
 # Import all submodules
 from . import graphics
@@ -13,15 +13,15 @@ from . import web
 from . import manim_animations
 
 __all__ = [
-    '__version__',
-    'graphics',
-    'signal_processing',
-    'machine_learning',
-    'pure_python',
-    'symbolic_math',
-    'time',
-    'uncertainties_math',
-    'files',
-    'web',
-    'manim_animations'
+    "__version__",
+    "graphics",
+    "signal_processing",
+    "machine_learning",
+    "pure_python",
+    "symbolic_math",
+    "time",
+    "uncertainties_math",
+    "files",
+    "web",
+    "manim_animations",
 ]

@@ -1,4 +1,4 @@
-from typing import OrderedDict, Iterable, Iterator, TypeVar, Generic
+from typing import OrderedDict, Iterator, TypeVar, Generic
 import threading
 import pandas as pd
 
@@ -7,7 +7,7 @@ T = TypeVar("T")
 
 class MetaDict(type, Generic[T]):
     def __iter__(cls) -> Iterator[str]:
-        for name, value in cls.__dict__.items():
+        for name in cls.__dict__:
             if not name.startswith("_"):
                 yield name
 
@@ -18,10 +18,10 @@ class MetaDict(type, Generic[T]):
         return list(iter(cls))
 
     def values(cls) -> list[T]:
-        return [cls[k] for k in cls]
+        return [cls[k] for k in cls]  # pylint: disable=not-an-iterable
 
     def items(cls) -> list[tuple[str, T]]:
-        return [(k, cls[k]) for k in cls]
+        return [(k, cls[k]) for k in cls]  # pylint: disable=not-an-iterable
 
 
 class dict_(dict):
@@ -129,8 +129,7 @@ class NamedQueue:
         with self._lock:
             if self.queue:
                 return self.queue.popitem(last=False)
-            else:
-                raise StopIteration
+            raise StopIteration
 
     def keys(self):
         """Return the keys of the queue."""
