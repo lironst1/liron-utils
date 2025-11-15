@@ -84,7 +84,7 @@ ORANGE_A = "#FF7F0E"
 ORANGE_B = "#D95319"
 PINK_A = "#E377C2"
 
-__all__ = [item for item in dir() if not item.startswith('_')]
+__all__ = [item for item in dir() if not item.startswith("_")]
 
 # %% Custom Variables
 RGB = (RED_A, GREEN_A, BLUE_A)

@@ -1,0 +1,31 @@
+[MESSAGES CONTROL]
+disable =
+	C0103,  # invalid-name
+    C0114,  # missing-module-docstring,
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring,
+    C0302,  # too-many-lines
+    C0415,  # import-outside-toplevel
+    C3001,  # unnecessary-lambda-assignment
+
+    E1121,  # too-many-function-args
+
+	R0902,  # too-many-instance-attributes
+	R0903,  # too-few-public-methods
+	R0912,  # too-many-branches
+    R0913,  # too-many-arguments
+	R0914,  # too-many-locals
+	R0915,  # too-many-statements
+	R0917,  # too-many-positional-arguments
+	R1735,  # use-dict-literal
+
+	W0511,  # _fixme
+	W0613,  # unused-argument
+	W1113,  # keyword-arg-before-vararg
+	W1514,  # unspecified-encoding
+
+[FORMAT]
+max-line-length=128
+
+[BASIC]
+const-naming-style=UPPER_CASE

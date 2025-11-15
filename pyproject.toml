@@ -1,43 +1,91 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = [
+    "setuptools",
+    "wheel"
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "liron-utils"
-version = "2025.11.13"
+dynamic = [
+    "version"
+]
 description = "Utilities module"
 authors = [
     { name = "Liron Stettiner", email = "lironst1@gmail.com" }
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
+
 dependencies = [
-    "numpy",
-    "scipy",
+    "audioread",
+    "colorama",
+    "ipython",
     "matplotlib",
     "natsort",
+    "numpy",
     "pandas",
-    "sympy",
     "scikit-learn",
-    "audioread",
+    "scipy",
     "soundfile",
+    "sympy",
+    "tqdm",
     "uncertainties",
 ]
 license = "MIT"
 
 [project.optional-dependencies]
 extra = [
+    "docx",
     "manim",
     "pytube",
     "PyPDF2",
 ]
+dev = [
+    "black",
+    "mypy",
+    "pylint",
+    "types-tqdm",
+    "tox>=4.32.0,<5.0.0",
+]
+tests = [
+    "pytest",
+    "pytest-cov",
+    "pytest-html",
+    "pytest-xdist[psutil]",
+]
 all = [
     "liron-utils[extra]",
+    "liron-utils[dev]",
+    "liron-utils[tests]",
 ]
 
 [project.urls]
 Homepage = "https://github.com/lironst1/liron-utils"
 
+[tool.setuptools.dynamic]
+version = { attr = "liron_utils.__version__" }
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["liron_utils*"]
+
+[tool.tox]
+env_list = ["black", "lint"]
+
+[tool.black]
+line-length = 120
+
+[tool.tox.env.lint]
+description = "Run pylint"
+deps = ["pylint"]
+commands = [
+    ["pylint", "liron_utils", ".git_hooks"]
+]
+
+[tool.tox.env.black]
+description = "Run black formatting check"
+deps = ["black"]
+commands = [
+    ["black", "liron_utils", ".git_hooks"]
+]

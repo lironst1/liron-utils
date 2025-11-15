@@ -4,20 +4,20 @@ Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.sv
 # MatlabProgressBar
 
 - [MatlabProgressBar](#matlabprogressbar)
-  - [Dependencies](#dependencies)
-  - [Installation](#installation)
-  - [Usage](#usage)
-    - [Proposed Usage for Simple Loops](#proposed-usage-for-simple-loops)
-    - [Extended Usage with all Features](#extended-usage-with-all-features)
-    - [Parallel Toolbox Support](#parallel-toolbox-support)
-  - [Known Issues](#known-issues)
-    - [Flickering Bar or Flooding of the Command Window](#flickering-bar-or-flooding-of-the-command-window)
-    - [The Bar Gets Longer With Each Iteration](#the-bar-gets-longer-with-each-iteration)
-    - [Strange Symbols in the Progress Bar](#strange-symbols-in-the-progress-bar)
-    - [Remaining Timer Objects in MATLAB's Background](#remaining-timer-objects-in-matlabs-background)
-    - [Issues Concerning Parallel Processing](#issues-concerning-parallel-processing)
-  - [Unit Tests](#unit-tests)
-  - [License](#license)
+    - [Dependencies](#dependencies)
+    - [Installation](#installation)
+    - [Usage](#usage)
+        - [Proposed Usage for Simple Loops](#proposed-usage-for-simple-loops)
+        - [Extended Usage with all Features](#extended-usage-with-all-features)
+        - [Parallel Toolbox Support](#parallel-toolbox-support)
+    - [Known Issues](#known-issues)
+        - [Flickering Bar or Flooding of the Command Window](#flickering-bar-or-flooding-of-the-command-window)
+        - [The Bar Gets Longer With Each Iteration](#the-bar-gets-longer-with-each-iteration)
+        - [Strange Symbols in the Progress Bar](#strange-symbols-in-the-progress-bar)
+        - [Remaining Timer Objects in MATLAB's Background](#remaining-timer-objects-in-matlabs-background)
+        - [Issues Concerning Parallel Processing](#issues-concerning-parallel-processing)
+    - [Unit Tests](#unit-tests)
+    - [License](#license)
 
 This project hosts the source code to the [original MATLAB FileExchange
 project](https://de.mathworks.com/matlabcentral/fileexchange/57895-matlabprogressbar)
@@ -43,6 +43,7 @@ project.
 ![Easy progress bar example](images/example2.gif)
 
 **Supported features include (or are planned)**:
+
 - [x] proper unit testing
 - [x] display the bar name as a ticker. That way, a fixed bar width could be used
 - [x] inherit from MATLAB System Object to gain benefits from the setup method
@@ -77,7 +78,6 @@ project.
   beneficial (e.g. if the bar is used in a sub-application of a processing cluster).
   Default is `true`.
 
-
 **Note**:
 Be sure to have a look at the [Known Issues](#known-issues) section for current known
 bugs and possible work-arounds.
@@ -89,12 +89,10 @@ No dependencies to toolboxes.
 The code has been tested with MATLAB R2016a, R2016b and R2020b on Windows 10, Xubuntu
 16.04.2 LTS and Linux Mint 20.
 
-
 ## Installation
 
 Put the files `ProgressBar.m`, `progress.m` and `updateParallel.m` into your MATLAB path
 or the directory of your MATLAB project.
-
 
 ## Usage
 
@@ -102,6 +100,7 @@ Detailed information and examples about all features of `ProgressBar` are stated
 demo scripts in the `./demos/` directory.
 
 ### Proposed Usage for Simple Loops
+
 The simplest use in `for`-loops is to use the `progress()` function. It wraps the main
 `ProgressBar` class and is intended to only support the usual progress bar. Be aware
 that functionalities like `printMessage()`, printing success information or a step size
@@ -109,6 +108,7 @@ different to 1 are not supported with `progress.m`. Also, this only works for
 **non-parallel** loops.
 
 See the example below:
+
 ```matlab
 numIterations = 10e3;
 
@@ -121,6 +121,7 @@ end
 ![Example 2](images/example2.gif)
 
 ### Extended Usage with all Features
+
 The basic work flow is to instantiate a `ProgressBar` object and use either the `step()`
 method to update the progress state (MATLAB <= R2015b) or use the instantiated object
 directly as seen below. Refer to the method's help for information about input
@@ -137,6 +138,7 @@ up the internal state and avoid possibly unrobust behavior of following progress
 `obj = ProgressBar(totalIterations, varargin)`
 
 A simple but quite common example looks like this:
+
 ```matlab
 numIterations = 10e3;
 
@@ -191,7 +193,6 @@ progBar.release();
 ```
 
 As of `v3.4.0`, you can also nest the loops so that the inner one uses a `parfor` loop.
-
 
 ## Known Issues
 
@@ -260,13 +261,13 @@ clean up all files and timer objects.
     - Also try to look into your temp directory (returned by `tempdir()`) if remaining
       `progbarworker_*` files exist. Delete those if necessary.
 
-
 **TL/DR**:
 `clear all` and `delete(timerfindall('Tag', 'ProgressBar'))` are your friend! Be sure
 that no files following the pattern `progbarworker_*` remain in the directory returned
 by `tempdir()`.
 
 ## Unit Tests
+
 You can run all available tests in the project directory by navigating into the `tests`
 folder and executing `runtests` in MATLAB. However, if you want to omit the parallel
 tests (e.g. you don't have the Parallel Toolbox installed), just execute

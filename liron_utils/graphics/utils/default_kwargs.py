@@ -11,67 +11,50 @@ class _FuncDefaultKwargs(dict):
 
 class DefaultKwargs(metaclass=MetaDict):
     # Figure
-    FIG_KW = _FuncDefaultKwargs(
-
-    )
+    FIG_KW = _FuncDefaultKwargs()
 
     # Axes
     SET_PROPS_KW = _FuncDefaultKwargs(
-            sup_title=None,  # str
-            ax_title=None,  # list(str)
-            axis=None,  # list(bool)
-            spines=None,  # list(bool)
-            ticks=None,  # list(bool/list)
-            tick_labels=None,  # list(bool/list)
-            labels=None,  # list(list(str))
-            limits=None,  # list(list(float))
-            view=None,  # list(list(float))
-            grid=None,  # list(bool)
-            legend=True,  # list(bool/list(str))
-            legend_loc=None,  # list(str)
-            colorbar=False,  # list(bool/list)
-            xy_lines=True,  # list(bool)
-            face_color=None,  # list(color)
-            show_fig=True,  # bool
-            open_dir=False,  # bool
-            close_fig=False  # bool
+        sup_title=None,  # str
+        ax_title=None,  # list(str)
+        axis=None,  # list(bool)
+        spines=None,  # list(bool)
+        ticks=None,  # list(bool/list)
+        tick_labels=None,  # list(bool/list)
+        labels=None,  # list(list(str))
+        limits=None,  # list(list(float))
+        view=None,  # list(list(float))
+        grid=None,  # list(bool)
+        legend=True,  # list(bool/list(str))
+        legend_loc=None,  # list(str)
+        colorbar=False,  # list(bool/list)
+        xy_lines=True,  # list(bool)
+        face_color=None,  # list(color)
+        show_fig=True,  # bool
+        open_dir=False,  # bool
+        close_fig=False,  # bool
     )
 
-    XY_LINES_KW = _FuncDefaultKwargs(
-            color=COLORS.DARK_GREY,
-            linewidth=2
-    )
+    XY_LINES_KW = _FuncDefaultKwargs(color=COLORS.DARK_GREY, linewidth=2)
 
     # 2D Plotting
-    PLOT_KW = _FuncDefaultKwargs(
+    PLOT_KW = _FuncDefaultKwargs()
 
-    )
+    ERRORBAR_KW = _FuncDefaultKwargs(linestyle="none", marker=".", markersize=10, ecolor=COLORS.RED_E, elinewidth=1.4)
 
-    ERRORBAR_KW = _FuncDefaultKwargs(
-            linestyle="none",
-            marker=".",
-            markersize=10,
-            ecolor=COLORS.RED_E,
-            elinewidth=1.4
-    )
-
-    FILL_BETWEEN_KW = _FuncDefaultKwargs(
-            linestyle="-",
-            color=COLORS.LIGHT_GRAY,
-            alpha=0.4
-    )
+    FILL_BETWEEN_KW = _FuncDefaultKwargs(linestyle="-", color=COLORS.LIGHT_GRAY, alpha=0.4)
 
     SPECGRAM_KW = _FuncDefaultKwargs(
-            NFFT=4096,
-            window=windows.blackmanharris(4096),
-            noverlap=int(0.85 * 4096),
-            pad_to=4096 + int(1 * 4096),
-            cmap='inferno'
+        NFFT=4096,
+        window=windows.blackmanharris(4096),
+        noverlap=int(0.85 * 4096),
+        pad_to=4096 + int(1 * 4096),
+        cmap="inferno",
     )
 
     # 3D Plotting
     PLOT_SURFACE_KW = _FuncDefaultKwargs(
-            cmap='viridis',
+        cmap="viridis",
     )
 
 
@@ -80,18 +63,18 @@ def update_kwargs(key=None, **kwargs):
     Update the default kwargs with the new ones.
 
     Args:
-    	key (str):  Key to KWARGS to update.
-    	**kwargs:   New kwargs to update or merge.
+        key (str):  Key to KWARGS to update.
+        **kwargs:   New kwargs to update or merge.
 
     Returns:
-    	dict: Updated KWARGS.
+        dict: Updated KWARGS.
     """
 
     if key:
         DefaultKwargs[key.upper()].update(**kwargs)
     else:
-        for key in kwargs.keys():
-            DefaultKwargs[key.upper()].update(**kwargs[key])
+        for k in kwargs:  # pylint: disable=consider-using-dict-items
+            DefaultKwargs[k.upper()].update(**kwargs[k])
     return DefaultKwargs
 
 
@@ -100,13 +83,13 @@ def merge_kwargs(**kwargs):
     Merge between empty/partially filled kwargs to the default ones, giving priority to the new settings.
 
     Args:
-    	**kwargs:
+        **kwargs:
 
     Returns:
-    	KWARGS " kwargs (take KWARGS and overwrite it with kwargs where needed)
+        KWARGS " kwargs (take KWARGS and overwrite it with kwargs where needed)
     """
 
-    for key in kwargs.keys():
+    for key in kwargs:  # pylint: disable=consider-using-dict-items
         if kwargs[key] is None:
             kwargs[key] = dict()
 

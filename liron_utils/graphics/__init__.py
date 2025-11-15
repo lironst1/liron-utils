@@ -4,7 +4,7 @@ from .plotting import *
 from .utils import *
 from ..pure_python import is_notebook
 
-__all__ = [s for s in dir() if not s.startswith('_')]
+__all__ = [s for s in dir() if not s.startswith("_")]
 
 update_rcParams()  # Change default MatPlotLib parameters (e.g, figure size, label size, grid, colors, etc.)
 
