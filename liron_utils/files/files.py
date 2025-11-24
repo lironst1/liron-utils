@@ -2,6 +2,7 @@ import os
 import platform
 import shutil
 import subprocess
+from pathlib import Path
 
 move_file = os.rename
 remove_file = os.remove
@@ -178,3 +179,13 @@ def open_file(file):
         subprocess.run(["open", file], check=True)
     else:
         subprocess.run(["xdg-open", file], check=True)
+
+
+def wslpath(filename: str | Path):
+    filename = str(filename).strip()
+    if "\\" in str(filename):
+        filename = subprocess.run(
+            ["wslpath", "-u", filename], capture_output=True, text=True, check=True
+        ).stdout.strip()  # Convert to linux path
+
+    return Path(filename)
