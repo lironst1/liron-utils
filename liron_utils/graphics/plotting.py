@@ -1,6 +1,6 @@
 # pylint: disable=no-value-for-parameter
 
-from collections.abc import Iterable
+from typing import Sequence, Iterable
 
 import matplotlib.animation
 import matplotlib.cm
@@ -28,13 +28,13 @@ class Axes(_Axes):
     def __init__(
         self,
         shape: tuple[int, int] = (1, 1),
-        grid_layout: list[list[tuple]] = None,
+        grid_layout: Sequence[Sequence[int | tuple[int, int]]] = None,
         sharex: bool | str = False,
         sharey: bool | str = False,
         projection: str = None,
         layout: str = None,
         fig: Figure = None,
-        axs: Axes_plt | Iterable[Axes_plt] = None,
+        axs: Axes_plt | Sequence[Axes_plt] = None,
         subplot_kw: dict = None,
         gridspec_kw: dict = None,
         **fig_kw,
@@ -389,11 +389,11 @@ class Axes(_Axes):
                 >>> Ax.show_fig()
             """
 
-            errorbar_kw = {"label": "Data", "zorder": -1} | errorbar_kw
+            errorbar_kw = dict(label="Data", zorder=-1) | errorbar_kw
 
             if curve_fit_plot_kw is None:
                 curve_fit_plot_kw = dict()
-            curve_fit_plot_kw = {"label": "Curve fit"} | curve_fit_plot_kw
+            curve_fit_plot_kw = dict(label="Curve fit") | curve_fit_plot_kw
 
             # Data
             x, xerr = to_numpy(x, xerr)
@@ -477,7 +477,7 @@ class Axes(_Axes):
 
             """
 
-            errorbar_kw = {"label": "Data"} | errorbar_kw
+            errorbar_kw = dict(label="Data") | errorbar_kw
 
             if reg_plot_kw is None:
                 reg_plot_kw = dict()
@@ -1139,7 +1139,7 @@ class Axes(_Axes):
             n_frames = len(data[0])
 
         if titles is not None:
-            kwargs = {"blit": False} | kwargs
+            kwargs = dict(blit=False) | kwargs
 
         # if callable(titles):
         #     titles = [titles(i) for i in range(n_frames)]  # convert to list

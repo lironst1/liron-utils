@@ -11,7 +11,17 @@ RC_PARAMS = {
     # ***************************************************************************
     # * BACKENDS                                                                *
     # ***************************************************************************
-    "interactive": False,
+    # The default backend.  If you omit this parameter, the first working
+    # backend from the following list is used:
+    #     MacOSX Qt5Agg Gtk3Agg TkAgg WxAgg Agg
+    # Other choices include:
+    #     Qt5Cairo GTK3Cairo TkCairo WxCairo Cairo
+    #     Qt4Agg Qt4Cairo Wx  # deprecated.
+    #     PS PDF SVG Template
+    # You can also deploy your own backend outside of Matplotlib by referring to
+    # the module name (which must be in the PYTHONPATH) as 'module://my_backend'.
+    # "backend": "Agg",
+    # "interactive": False,
     # ***************************************************************************
     # * LINES                                                                   *
     # ***************************************************************************

@@ -77,7 +77,7 @@ def mkdirs(dirs, *args, **kwargs):
 
     """
 
-    kwargs = {"exist_ok": True} | kwargs
+    kwargs = dict(exist_ok=True) | kwargs
 
     os.makedirs(dirs, *args, **kwargs)
 

@@ -4,7 +4,7 @@ import copy
 import functools
 import os
 import warnings
-from collections.abc import Iterable
+from typing import Sequence, Iterable
 
 import matplotlib.animation
 import matplotlib.pyplot as plt
@@ -25,14 +25,14 @@ class _Axes:
 
     def __init__(
         self,
-        shape: tuple[int] = (1, 1),
-        grid_layout: list[list[tuple]] = None,
+        shape: tuple[int, int] = (1, 1),
+        grid_layout: Sequence[Sequence[int | tuple[int, int]]] = None,
         sharex: bool | str = False,
         sharey: bool | str = False,
         projection: str = None,
         layout: str = None,
         fig: Figure = None,
-        axs: Axes_plt | Iterable[Axes_plt] = None,
+        axs: Axes_plt | Sequence[Axes_plt] = None,
         subplot_kw: dict = None,
         gridspec_kw: dict = None,
         **fig_kw,
@@ -42,11 +42,9 @@ class _Axes:
 
         Parameters
         ----------
-        shape :             tuple[int], default: (1, 1)
-                            number of rows, columns (in case of subplots).
+        shape :             number of rows, columns (in case of subplots).
 
-        layout :            list[list[tuple]], optional
-                            ([<row_start>, <row_end>], [<col_start>, <col_end>]),
+        grid_layout :       [[(<row_start>, <row_end>), (<col_start>, <col_end>)], ...],
                             e.g., [[(0, 2), (0, 2)], [(0, 1), (2, 4)]]
 
         sharex, sharey :    bool or {'none', 'all', 'row', 'col'}, default: False
@@ -132,8 +130,7 @@ class _Axes:
                                 relative height of ``height_ratios[i] / sum(height_ratios)``.
                                 If not given, all rows will have the same height.
 
-        fig_kw :            dict, optional
-                            num : int or str or `.Figure` or `.SubFigure`, optional
+        fig_kw :            num : int or str or `.Figure` or `.SubFigure`, optional
                                 A unique identifier for the figure.
 
                                 If a figure with that identifier already exists, this figure is made
@@ -148,7 +145,7 @@ class _Axes:
                                 window title is set to this value.  If num is a ``SubFigure``, its
                                 parent ``Figure`` is activated.
 
-                            figsize : (float, float), default: :rc:`figure.figsize`
+                            figsize : tuple[float, float], default: :rc:`figure.figsize`
                                 Width, height in inches.
 
                             dpi : float, default: :rc:`figure.dpi`
@@ -192,13 +189,13 @@ class _Axes:
         """
 
         self.fig = fig
-        self.axs = np.atleast_2d(axs)
+        self.axs: np.ndarray[tuple[int, int], np.dtype[Axes_plt]] = np.atleast_2d(axs)
 
         if fig is None and axs is None:
             if subplot_kw is None:
                 subplot_kw = dict()
-            subplot_kw = {"projection": projection} | subplot_kw
-            fig_kw = {"layout": layout} | fig_kw
+            subplot_kw = dict(projection=projection) | subplot_kw
+            fig_kw = dict(layout=layout) | fig_kw
             fig_kw = merge_kwargs(fig_kw=fig_kw)["fig_kw"]
             padding = [None] * 4
             for i, key in enumerate(["w_pad", "h_pad", "wspace", "hspace"]):
@@ -892,7 +889,7 @@ def new_figure(
 ) -> (Figure, Axes_plt):
     if subplot_kw is None:
         subplot_kw = dict()
-    subplot_kw = {"projection": projection} | subplot_kw
+    subplot_kw = dict(projection=projection) | subplot_kw
 
     fig, axs = plt.subplots(
         nrows=nrows,

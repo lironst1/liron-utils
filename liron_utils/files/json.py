@@ -11,7 +11,7 @@ def load_json(file):
 
 
 def write_json(d, file, *args, **kwargs):
-    kwargs = {"indent": 4} | kwargs
+    kwargs = dict(indent=4) | kwargs
     # dump = json.dumps(d, *args, **kwargs)
     # with open(file, 'w') as f:
     #     json.dump(dump, f)
