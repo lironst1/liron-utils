@@ -24,6 +24,7 @@ dependencies = [
     "ipython",
     "matplotlib",
     "natsort",
+    "numba",
     "numpy",
     "pandas",
     "scikit-learn",

@@ -1,6 +1,6 @@
 # pylint: disable=no-value-for-parameter
 
-from typing import Sequence, Iterable
+from collections.abc import Iterable, Sequence
 
 import matplotlib.animation
 import matplotlib.cm

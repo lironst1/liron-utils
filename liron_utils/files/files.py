@@ -185,7 +185,10 @@ def wslpath(filename: str | Path):
     filename = str(filename).strip()
     if "\\" in str(filename):
         filename = subprocess.run(
-            ["wslpath", "-u", filename], capture_output=True, text=True, check=True
+            ["wslpath", "-u", filename],
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()  # Convert to linux path
 
     return Path(filename)

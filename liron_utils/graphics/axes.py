@@ -4,7 +4,7 @@ import copy
 import functools
 import os
 import warnings
-from typing import Sequence, Iterable
+from collections.abc import Iterable, Sequence
 
 import matplotlib.animation
 import matplotlib.pyplot as plt

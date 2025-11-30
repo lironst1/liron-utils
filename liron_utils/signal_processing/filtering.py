@@ -1,54 +1,8 @@
 import numpy as np
-import scipy.fft
 import scipy.linalg
 import scipy.ndimage.filters
 import scipy.optimize
 import scipy.signal
-
-# Fourier Transform
-fft = scipy.fft.fft
-fft2 = scipy.fft.fft2
-fftn = scipy.fft.fftn
-fftshift = scipy.fft.fftshift
-ifft = scipy.fft.ifft
-ifft2 = scipy.fft.ifft2
-ifftn = scipy.fft.ifftn
-ifftshift = scipy.fft.ifftshift
-dft_matrix = scipy.linalg.dft  # in 'scipy.linalg._special_matrices'
-fftfreq = scipy.fft.fftfreq
-
-
-# todo: Fractional Fourier Transform: pip install git+ssh://git@github.com/audiolabs/python_frft.git#egg=frft
-
-
-def nextpow2(a):
-    """
-    Exponent of next higher power of 2. Returns the exponents for the smallest powers
-    of two that satisfy 2**p > a
-
-    Parameters
-    ----------
-    a :     array_like
-
-    Returns
-    -------
-    p :     array_like
-
-    """
-
-    if np.isscalar(a):
-        if a == 0:
-            p = 0
-        else:
-            p = int(np.ceil(np.log2(a)))
-    else:
-        a = np.asarray(a)
-        p = np.zeros(a.shape, dtype=int)
-        idx = a != 0
-        p[idx] = np.ceil(np.log2(a[idx]))
-
-    return p
-
 
 # Convolution
 conv = scipy.signal.convolve
@@ -58,8 +12,10 @@ deconv = scipy.signal.deconvolve
 convolution_matrix = scipy.linalg.convolution_matrix  # in 'scipy.linalg._special_matrices'
 
 # Digital filtering
-lfilter = scipy.signal.lfilter
+lfilter = scipy.signal.lfilter  # 1-D digital filtering
 filtfilt = scipy.signal.filtfilt  # Zero-phase digital filtering
+sosfilt = scipy.signal.sosfilt  # Second-order sections filtering
+sosfiltfilt = scipy.signal.sosfiltfilt  # Zero-phase second-order sections filtering
 movmedian = scipy.ndimage.filters.median_filter
 movmax = scipy.ndimage.filters.maximum_filter
 movmin = scipy.ndimage.filters.minimum_filter
