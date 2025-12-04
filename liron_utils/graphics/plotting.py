@@ -400,7 +400,11 @@ class Axes(_Axes):
             y, yerr = to_numpy(y, yerr)
             p_opt, _ = to_numpy(p_opt)
             idx = np.argsort(x)
-            x, y, xerr, yerr = x[idx], y[idx], xerr[idx], yerr[idx]
+            x, y = x[idx], y[idx]
+            if xerr is not None:
+                xerr = xerr[idx]
+            if yerr is not None:
+                yerr = yerr[idx]
 
             self.plot_errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
 

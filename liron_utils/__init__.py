@@ -1,4 +1,4 @@
-__version__ = "2025.11.26"
+__version__ = "2025.12.04"
 
 # Import all submodules
 from . import (
