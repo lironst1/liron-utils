@@ -24,6 +24,7 @@ dependencies = [
     "loguru>=0.7.3",
     "manim>=0.18.0.post0",
     "matplotlib>=3.10.0",
+    "mpl-interactions>=0.24.2",
     "natsort>=7.1.1",
     "notebook>=7.4.7",
     "numpy>=2.2.6",

@@ -9,6 +9,8 @@ from colorama import Back, Fore, Style
 
 from .dicts import dict_
 
+# todo: change to use loguru
+
 
 class Logger:
     NAME2LEVEL = dict_(logging._nameToLevel)  # pylint: disable=protected-access
