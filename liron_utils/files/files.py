@@ -181,8 +181,8 @@ def open_file(file):
         subprocess.run(["xdg-open", file], check=True)
 
 
-def wslpath(filename: str | Path):
-    filename = str(filename).strip()
+def wslpath(filename: str | Path) -> Path:
+    filename = str(filename).strip().replace('"', "").replace("'", "")
     if "\\" in str(filename):
         filename = subprocess.run(
             ["wslpath", "-u", filename],
