@@ -104,6 +104,14 @@ To clear the cache, run:\
 
 ## pip
 
+If you simply want to install the dependencies described in `pyproject.toml` using pip, run:
+```bash
+brew install uv
+uv pip install -r pyproject.toml
+```
+
+---
+
 Get version requirements from `pip_requirements_in.txt` and save them to `pip_requirements.txt` using pip-tools:\
 `pip-compile pip_requirements_in.txt --max-rounds 100 --output-file pip_requirements.txt`
 
