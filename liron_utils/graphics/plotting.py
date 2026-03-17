@@ -678,10 +678,10 @@ class Axes(_Axes):
             x = np.asarray(x)
             if n is None:
                 n = x.shape[0]
-            if np.iscomplexobj(x):
-                one_sided = False
 
             if input_time:
+                if np.iscomplexobj(x):
+                    one_sided = False
                 X = np.fft.fft(x, n=n, axis=0)
             else:
                 X = x.copy()
