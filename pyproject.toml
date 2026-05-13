@@ -1,21 +1,20 @@
 [build-system]
 requires = [
-    "setuptools",
-    "wheel"
+    "poetry-core>=1.0.0",
+    "poetry-dynamic-versioning>=1.0.0,<2.0.0"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "poetry_dynamic_versioning.backend"
 
-# Project
 [project]
 name = "liron-utils"
+readme = "README.md"
 dynamic = [
-    "version"
+    "version",
 ]
 description = "Utilities module"
 authors = [
     { name = "Liron Stettiner", email = "lironst1@gmail.com" }
 ]
-readme = "README.md"
 requires-python = ">=3.10"
 
 dependencies = [
@@ -27,6 +26,8 @@ dependencies = [
     "numba",
     "numpy",
     "pandas",
+    "pydantic-settings",
+    "pydantic",
     "scikit-learn",
     "scipy",
     "soundfile",
@@ -47,38 +48,51 @@ dev = [
     "black",
     "isort",
     "mypy",
+    "pandas-stubs",
     "pylint",
+    "pytest-mypy",
+    "types-colorama",
+    "types-protobuf",
+    "types-pytz",
+    "types-setuptools",
+    "types-tabulate",
     "types-tqdm",
-    "tox",
 ]
 tests = [
     "pytest",
     "pytest-cov",
     "pytest-html",
+    "pytest-mock",
     "pytest-xdist[psutil]",
-]
-all = [
-    "liron-utils[extra]",
-    "liron-utils[dev]",
-    "liron-utils[tests]",
 ]
 
 [project.urls]
 Homepage = "https://github.com/lironst1/liron-utils"
 
-# Setuptools
-[tool.setuptools.dynamic]
-version = { attr = "liron_utils.__version__" }
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["liron_utils*"]
+[tool.poetry]
+packages = [
+    { include = "liron_utils" },
+]
+version = "0.0.0"  # placeholder
+
+[tool.poetry.requires-plugins]
+#poetry-plugin-export = ">=1.8"
+poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
+
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
 
 # Tox
 [tool.tox]
 env_list = [
     "style",
-    "lint"
+    "tests",
+    "lint",
+    "typing"
 ]
 
 [tool.tox.env.style]
@@ -91,6 +105,15 @@ commands = [
     ["pre-commit", "run", "--all-files"]
 ]
 
+[tool.tox.env.tests]
+description = "Run tests"
+extras = [
+    "tests",
+]
+commands = [
+    ["pytest", "tests/"]
+]
+
 [tool.tox.env.lint]
 description = "Run pylint"
 deps = [
@@ -100,17 +123,70 @@ commands = [
     ["pylint", "liron_utils/", "tests/", ".git_hooks/"]
 ]
 
-# Black
+[tool.tox.env.typing]
+description = "Run mypy"
+extras = [
+    "dev",
+    "tests",
+]
+commands = [
+    ["mypy", "liron_utils/", "tests/", ".git_hooks/"]
+]
+
 [tool.black]
 line-length = 120
 
-# isort
-[tool.isort]
-profile = "black"
+[tool.mypy]
+plugins = [
+    "pydantic.mypy"
+]
 
-# PyLint
+check_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+explicit_package_bases = true
+namespace_packages = true
+no_implicit_optional = true
+show_error_codes = true
+strict = true
+strict_equality = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = false
+init_typed = true
+warn_required_dynamic_aliases = true
+
+[[tool.mypy.overrides]]
+module = [
+    "diskcache.*",
+    "matplotlib.*",
+    "pytest_mock.*",
+    "scipy.*",
+    "torchaudio.*",
+    "us.*",
+]
+ignore_missing_imports = true
+
+[tool.pylint.MASTER]
+disable = [
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+    "wrong-import-order",
+    "wrong-import-position",
+]
+enable = [
+    "useless-suppression",
+]
+
 [tool.pylint.FORMAT]
-max-line-length = 128
+max-line-length = 120
+max-args = 8
 
 [tool.pylint.BASIC]
 const-naming-style = "UPPER_CASE"
@@ -141,3 +217,11 @@ disable = [
     "W1113", # keyword-arg-before-vararg
     "W1514", # unspecified-encoding
 ]
+
+[tool.isort]
+profile = "black"
+atomic = true
+combine_as_imports = true
+
+[tool.codespell]
+skip = "*poetry.lock"
