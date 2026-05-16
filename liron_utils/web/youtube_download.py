@@ -8,7 +8,7 @@ from pytube import YouTube
 
 # Defining CreateWidgets() function
 # to create necessary tkinter widgets
-def Widgets():
+def Widgets() -> None:
     head_label = tk.Label(
         root,
         text="YouTube Video Downloader Using Tkinter",
@@ -53,7 +53,7 @@ def Widgets():
 # destination folder to save the video
 
 
-def Browse():
+def Browse() -> None:
     # Presenting user with a pop-up for
     # directory selection. initialdir
     # argument is optional Retrieving the
@@ -69,7 +69,7 @@ def Browse():
 # Defining Download() to download the video
 
 
-def Download():
+def Download() -> None:
     # getting user-input Youtube Link
     Youtube_link = video_Link.get()
 

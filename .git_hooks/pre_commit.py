@@ -6,14 +6,14 @@ from pathlib import Path
 
 
 def update_init_version(version: str, file: Path = Path("./liron_utils/__init__.py")):
-    content = file.read_text()
+    content = file.read_text(encoding="utf-8")
     new_content, n = re.subn(
         r'__version__\s*=\s*["\']\d{4}\.\d{1,2}\.\d{1,2}["\']',
         f'__version__ = "{version}"',
         content,
     )
     if n:
-        file.write_text(new_content)
+        file.write_text(new_content, encoding="utf-8")
         subprocess.run(["git", "add", str(file)], check=True)
         print(f"Updated {file} version to {version}")
     else:
@@ -21,10 +21,10 @@ def update_init_version(version: str, file: Path = Path("./liron_utils/__init__.
 
 
 def update_license_year(year: str, file: Path = Path("./LICENSE")):
-    content = file.read_text()
+    content = file.read_text(encoding="utf-8")
     new_content, n = re.subn(r"Copyright \(c\) \d{4}", f"Copyright (c) {year}", content)
     if n:
-        file.write_text(new_content)
+        file.write_text(new_content, encoding="utf-8")
         subprocess.run(["git", "add", str(file)], check=True)
         print(f"Updated {file} year to {year}")
     else:

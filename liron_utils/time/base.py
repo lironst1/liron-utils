@@ -11,7 +11,7 @@ time_str_formats = {
 }
 
 
-def get_time():
+def get_time() -> datetime:
     """
     Get time a datetime object
 
@@ -21,7 +21,7 @@ def get_time():
     return datetime.now()
 
 
-def get_time_str(fmt=time_str_formats["full_dash"]) -> str:
+def get_time_str(fmt: str = time_str_formats["full_dash"]) -> str:
     """
     Get time as a string with a specified format.
 
