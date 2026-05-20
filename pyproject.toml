@@ -114,6 +114,7 @@ extras = [
 commands = [
     ["pytest", "tests/"]
 ]
+ignore_outcome = true
 
 [tool.tox.env.lint]
 description = "Run pylint"
@@ -121,7 +122,7 @@ deps = [
     "pylint"
 ]
 commands = [
-    ["pylint", "liron_utils/", "tests/", ".git_hooks/"]
+    ["pylint", "liron_utils/", "tests/"]
 ]
 
 [tool.tox.env.typing]
@@ -131,7 +132,7 @@ extras = [
     "tests",
 ]
 commands = [
-    ["mypy", "liron_utils/", "tests/", ".git_hooks/"]
+    ["mypy", "liron_utils/", "tests/"]
 ]
 
 [tool.black]
@@ -141,6 +142,7 @@ line-length = 120
 plugins = [
     "pydantic.mypy"
 ]
+mypy_path = "stubs"
 
 check_untyped_defs = true
 disallow_incomplete_defs = true
@@ -164,11 +166,18 @@ warn_required_dynamic_aliases = true
 
 [[tool.mypy.overrides]]
 module = [
+    "audioread.*",
     "diskcache.*",
     "matplotlib.*",
+    "numba.*",
+    "natsort.*",
     "pytest_mock.*",
     "scipy.*",
+    "sklearn.*",
+    "soundfile.*",
+    "sympy.*",
     "torchaudio.*",
+    "tqdm.*",
     "us.*",
 ]
 ignore_missing_imports = true

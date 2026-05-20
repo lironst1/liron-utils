@@ -1,24 +1,311 @@
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter,too-many-lines
 
 import copy
+import dataclasses
 import functools
 import os
+import typing
 import warnings
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 
 import matplotlib.animation
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes as Axes_plt
 from matplotlib.figure import Figure
+from matplotlib.layout_engine import ConstrainedLayoutEngine
 from matplotlib.ticker import ScalarFormatter
 
 from ..files import MAIN_FILE_DIR, mkdirs, open_file
-from ..pure_python.dicts import DL_to_LD
+from ..pure_python.dicts import dl_to_ld
 from ..time import TIME_STR, get_time_str
 from .utils.default_kwargs import merge_kwargs
 
 # TODO: change Ax.axs to be 1D (top->down, left->right), enable custom shapes (large, small axes)
+
+_R = typing.TypeVar("_R")
+_P = typing.ParamSpec("_P")
+
+# Catch-all for opaque/arbitrary-dim arrays.
+_Array = np.ndarray[typing.Any, np.dtype[typing.Any]]
+
+
+def _extract_layout_padding(fig_kw: dict[str, typing.Any]) -> list[typing.Any]:
+    """Pop layout padding keys from ``fig_kw`` and return them in fixed order.
+
+    Args:
+        fig_kw: Figure kwargs from which ``w_pad``, ``h_pad``, ``wspace``, ``hspace``
+            are removed in place.
+
+    Returns:
+        Length-4 list ``[w_pad, h_pad, wspace, hspace]`` (entries default to None).
+    """
+    padding: list[typing.Any] = [None] * 4
+    for i, key in enumerate(["w_pad", "h_pad", "wspace", "hspace"]):
+        if key in fig_kw:
+            padding[i] = fig_kw.pop(key)
+    return padding
+
+
+def _apply_constrained_layout_padding(fig: Figure, padding: list[typing.Any]) -> None:
+    """Apply padding values to ``fig`` when it uses a constrained layout engine.
+
+    Args:
+        fig: Target figure.
+        padding: Length-4 list ``[w_pad, h_pad, wspace, hspace]`` (see
+            :func:`_extract_layout_padding`).
+    """
+    layout_engine = fig.get_layout_engine()
+    if isinstance(layout_engine, ConstrainedLayoutEngine):
+        typing.cast(typing.Any, layout_engine).set(
+            w_pad=padding[0],
+            h_pad=padding[1],
+            hspace=padding[2],
+            wspace=padding[3],
+        )
+
+
+def _normalize_share_flag(share: bool | str) -> bool:
+    """Normalize an ``"all"`` / ``"none"`` / bool axis-share flag to a plain bool.
+
+    Args:
+        share: ``"all"`` (True), ``"none"`` (False), or an existing bool.
+
+    Returns:
+        Bool form of ``share``.
+
+    Raises:
+        AssertionError: If ``share`` is not one of the accepted forms.
+    """
+    if share == "all":
+        return True
+    if share == "none":
+        return False
+    assert isinstance(share, bool), "'sharex' and 'sharey' must be bool when using grid_layout."
+    return share
+
+
+def _as_range(value: int | tuple[int, int]) -> tuple[int, int]:
+    """Promote a single int row/col index to a ``[start, end)`` range tuple.
+
+    Args:
+        value: Either a tuple ``(start, end)`` or a single index ``i``.
+
+    Returns:
+        ``(value, value + 1)`` for an int input, or ``value`` unchanged for a tuple.
+    """
+    if isinstance(value, int):
+        return value, value + 1
+    return value
+
+
+@dataclasses.dataclass
+class _FigureBuildConfig:
+    """Configuration bundle for constructing a new figure with subplots.
+
+    Attributes:
+        shape: ``(nrows, ncols)`` for the subplot grid.
+        grid_layout: Optional span layout (see :class:`_Axes`).
+        share: ``(sharex, sharey)`` pair (bool or ``"all"`` / ``"none"``).
+        subplot_kw: Forwarded to ``Figure.add_subplot``.
+        gridspec_kw: Forwarded to ``Figure.add_gridspec``.
+        fig_kw: Forwarded to ``plt.figure`` (with layout shortcuts already injected).
+    """
+
+    shape: tuple[int, int]
+    grid_layout: Sequence[Sequence[int | tuple[int, int]]] | None
+    share: tuple[bool | str, bool | str]  # (sharex, sharey)
+    subplot_kw: dict[str, typing.Any]
+    gridspec_kw: dict[str, typing.Any] | None
+    fig_kw: dict[str, typing.Any]
+
+
+def _normalize_ticks_labels(
+    ticks: typing.Any,
+    labels: typing.Any,
+    ndim: int,
+) -> tuple[list[typing.Any], list[typing.Any]]:
+    """Expand bool/None/dict ticks/labels into per-dimension lists.
+
+    Args:
+        ticks: Scalar (bool/None/dict) or per-dim list specifying ticks.
+        labels: Scalar (bool/None) or per-dim list specifying labels.
+        ndim: Axis dimensionality (2 or 3).
+
+    Returns:
+        Tuple ``(ticks_per_dim, labels_per_dim)``, each of length ``ndim``.
+    """
+    if ticks is None or ticks is True:
+        ticks = [True] * ndim
+        if labels is None:
+            labels = [True] * ndim
+    elif ticks is False:
+        ticks = [False] * ndim
+        if labels is None:
+            labels = [False] * ndim
+    elif isinstance(ticks, dict):
+        ticks = [ticks] + [True] * (ndim - 1)
+
+    if labels is True:
+        labels = [True] * ndim
+    elif labels is False:
+        labels = [False] * ndim
+    elif labels is None:
+        labels = [None] * ndim
+
+    return ticks, labels
+
+
+def _collect_current_ticks_labels(ax: Axes_plt, ndim: int) -> dict[str, dict[int, typing.Any]]:
+    """Snapshot the current ticks and tick-labels of an axis.
+
+    Args:
+        ax: Source axes.
+        ndim: Axis dimensionality (2 or 3).
+
+    Returns:
+        Mapping ``{"ticks": {0: x, 1: y, 2: z}, "labels": {0: x, 1: y, 2: z}}``.
+    """
+    return {
+        "ticks": {
+            0: ax.get_xticks(),
+            1: ax.get_yticks(),
+            2: ax.get_zticks() if ndim == 3 else [],  # type: ignore[attr-defined]
+        },
+        "labels": {
+            0: ax.get_xticklabels(),
+            1: ax.get_yticklabels(),
+            2: ax.get_zticklabels() if ndim == 3 else [],  # type: ignore[attr-defined]
+        },
+    }
+
+
+def _filter_ticks_within_limits(
+    ax: Axes_plt,
+    d: dict[str, dict[int, typing.Any]],
+    ndim: int,
+) -> None:
+    """Drop ticks (and their labels) that fall outside ``ax``'s current limits.
+
+    Args:
+        ax: Source axes (provides the per-dim limit getters).
+        d: Tick/label dict produced by :func:`_collect_current_ticks_labels`, mutated in place.
+        ndim: Axis dimensionality (2 or 3).
+    """
+    funcs = [ax.get_xlim, ax.get_ylim]
+    if ndim == 3:
+        funcs += [ax.get_zlim]  # type: ignore[attr-defined]
+
+    for i, func in enumerate(funcs):
+        lim = func()
+        idx = np.logical_and(min(lim) <= d["ticks"][i], d["ticks"][i] <= max(lim))
+        if len(d["ticks"][i]) > 0:
+            d["ticks"][i] = d["ticks"][i][idx]
+        if len(d["labels"][i]) > 0:
+            d["labels"][i] = np.array(d["labels"][i])[idx]
+
+
+def _apply_tick_override(
+    d: dict[str, dict[int, typing.Any]],
+    i: int,
+    tick_i: typing.Any,
+    label_i: typing.Any,
+) -> None:
+    """Update ``d`` in place for one axis with the caller-provided tick spec.
+
+    Args:
+        d: Tick/label dict (see :func:`_collect_current_ticks_labels`).
+        i: Axis index (0=x, 1=y, 2=z).
+        tick_i: Bool, dict (``{position: label}``), or iterable of positions.
+        label_i: Companion label spec (only consulted to validate ``tick_i``).
+
+    Raises:
+        ValueError: If ``tick_i`` is not bool, dict, or iterable.
+    """
+    if tick_i is None or tick_i is True or tick_i is np.True_:
+        return
+    if tick_i is False or tick_i is np.False_:
+        d["ticks"][i] = []
+        if label_i is None:
+            d["labels"][i] = []
+        return
+    if isinstance(tick_i, dict):
+        assert label_i is None or label_i is np.True_, "When 'ticks' is a dict, 'labels' must not be given."
+        d["ticks"][i] = tick_i.keys()
+        d["labels"][i] = tick_i.values()
+        return
+    if isinstance(tick_i, Iterable):
+        d["ticks"][i] = tick_i
+        d["labels"][i] = tick_i
+        return
+    raise ValueError("'ticks' must be given either as a boolean, list[list] or list[dict].")
+
+
+def _apply_label_override(
+    d: dict[str, dict[int, typing.Any]],
+    i: int,
+    tick_i: typing.Any,
+    label_i: typing.Any,
+) -> None:
+    """Update ``d`` in place for one axis with the caller-provided label spec.
+
+    Args:
+        d: Tick/label dict (see :func:`_collect_current_ticks_labels`).
+        i: Axis index (0=x, 1=y, 2=z).
+        tick_i: Companion tick spec; used to validate the label length.
+        label_i: Bool or iterable of labels.
+
+    Raises:
+        AssertionError: If ``len(label_i) != len(tick_i)``.
+        ValueError: If ``label_i`` is not bool or iterable.
+    """
+    if label_i is None or label_i is True or label_i is np.True_:
+        return
+    if label_i is False or label_i is np.False_:
+        d["labels"][i] = []
+        return
+    if isinstance(label_i, Iterable):
+        label_i_list = list(label_i)
+        assert len(label_i_list) == len(tick_i), "len(labels[i]) must equal len(ticks[i])."
+        d["labels"][i] = label_i_list
+        return
+    raise ValueError("'labels' must be given either as a boolean or list[list].")
+
+
+def _apply_tick_label_overrides(
+    d: dict[str, dict[int, typing.Any]],
+    ticks: list[typing.Any],
+    labels: list[typing.Any],
+) -> None:
+    """Apply per-dim tick and label overrides to ``d`` in place.
+
+    Args:
+        d: Tick/label dict (see :func:`_collect_current_ticks_labels`).
+        ticks: Per-dim tick specs (length ``ndim``).
+        labels: Per-dim label specs (length ``ndim``).
+    """
+    for i, (tick_i, label_i) in enumerate(zip(ticks, labels)):
+        _apply_tick_override(d, i, tick_i, label_i)
+        _apply_label_override(d, i, ticks[i], label_i)
+
+
+def _set_ticks_on_axes(ax: Axes_plt, d: dict[str, dict[int, typing.Any]], ndim: int) -> None:
+    """Write the (overridden) ticks and labels in ``d`` back onto ``ax``.
+
+    Args:
+        ax: Target axes.
+        d: Tick/label dict (see :func:`_collect_current_ticks_labels`).
+        ndim: Axis dimensionality (2 or 3).
+    """
+    ax.set_xticks(d["ticks"][0], d["labels"][0])
+    ax.xaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+
+    ax.set_yticks(d["ticks"][1], d["labels"][1])
+    ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+
+    if ndim == 3:
+        ax.set_zticks(d["ticks"][2], d["labels"][2])  # type: ignore[attr-defined]
+        ax.zaxis.set_major_formatter(ScalarFormatter(useOffset=True))  # type: ignore[attr-defined]
 
 
 class _Axes:
@@ -26,286 +313,250 @@ class _Axes:
     def __init__(
         self,
         shape: tuple[int, int] = (1, 1),
-        grid_layout: Sequence[Sequence[int | tuple[int, int]]] = None,
-        sharex: bool | str = False,
-        sharey: bool | str = False,
-        projection: str = None,
-        layout: str = None,
-        fig: Figure = None,
-        axs: Axes_plt | Sequence[Axes_plt] = None,
-        subplot_kw: dict = None,
-        gridspec_kw: dict = None,
-        **fig_kw,
-    ):
+        grid_layout: Sequence[Sequence[int | tuple[int, int]]] | None = None,
+        *,
+        fig: Figure | None = None,
+        axs: Axes_plt | Sequence[Axes_plt] | _Array | None = None,
+        subplot_kw: dict[str, typing.Any] | None = None,
+        gridspec_kw: dict[str, typing.Any] | None = None,
+        **fig_kw: typing.Any,
+    ) -> None:
+        """Create a new figure with (possibly) subplots, or wrap existing ones.
+
+        When both ``fig`` and ``axs`` are None, a fresh figure is built via
+        ``plt.subplots`` (or ``plt.figure`` + a custom gridspec when ``grid_layout``
+        is given). Otherwise, the existing figure/axes are wrapped.
+
+        Args:
+            shape: ``(nrows, ncols)`` for the subplot grid.
+            grid_layout: Optional list of span specs ``[[row_range, col_range], ...]``,
+                where each range is either an int ``i`` (interpreted as ``(i, i+1)``)
+                or a ``(start, end)`` tuple. Example: ``[[(0, 2), (0, 2)], [(0, 1), (2, 4)]]``.
+            fig: Existing figure to wrap (mutually exclusive with ``axs``).
+            axs: Existing axes (single, sequence, or 2D array) to wrap.
+            subplot_kw: Forwarded to ``plt.subplots``.
+            gridspec_kw: GridSpec spacing parameters (``wspace``, ``hspace``,
+                ``width_ratios``, ``height_ratios``, etc.).
+            **fig_kw: Forwarded to ``plt.figure``. Also accepts the shortcuts:
+
+                * ``sharex`` / ``sharey``: Share the x or y axis across subplots.
+                * ``projection``: Subplot projection (None → ``'rectilinear'``).
+                * ``layout``: One of ``'constrained'``, ``'compressed'``, ``'tight'``,
+                  ``'none'``, a ``LayoutEngine`` instance, or None.
+
+        Example:
+            >>> import numpy as np
+            >>> from liron_utils import graphics as gr
+            >>>
+            >>> axes = gr.Axes(shape=(2, 3))
+            >>> t = np.linspace(0, 10, 1001)
+            >>> axes.plot(t, np.sin(t))
+            >>> axes.set_props(sup_title="abc", show_fig=True)
         """
-        Create a new figure with (possibly) subplots using the plt.subplots() function.
-
-        Parameters
-        ----------
-        shape :             number of rows, columns (in case of subplots).
-
-        grid_layout :       [[(<row_start>, <row_end>), (<col_start>, <col_end>)], ...],
-                            e.g., [[(0, 2), (0, 2)], [(0, 1), (2, 4)]]
-
-        sharex, sharey :    bool or {'none', 'all', 'row', 'col'}, default: False
-                            Share the x or y `~matplotlib.axis` with sharex and/or sharey.
-                            The axis will have the same limits, ticks, and scale as the axis
-                            of the shared axes.
-
-        projection :        {None, 'aitoff', 'hammer', 'lambert', 'mollweide', 'polar', 'rectilinear', str},
-                                default: None
-                            The projection type of the subplot (`~.axes.Axes`). *str* is the
-                            name of a custom projection, see `~matplotlib.projections`. The
-                            default None results in a 'rectilinear' projection.
-
-        layout :            {'constrained', 'compressed', 'tight', 'none', `.LayoutEngine`, None}, default: None
-                            The layout mechanism for positioning of plot elements to avoid
-                            overlapping Axes decorations (labels, ticks, etc). Note that layout
-                            managers can measurably slow down figure display.
-
-                            - 'constrained': The constrained layout solver adjusts axes sizes
-                              to avoid overlapping axes decorations.  Can handle complex plot
-                              layouts and colorbars, and is thus recommended.
-
-                              See :ref:`constrainedlayout_guide`
-                              for examples.
-
-                            - 'compressed': uses the same algorithm as 'constrained', but
-                              removes extra space between fixed-aspect-ratio Axes.  Best for
-                              simple grids of axes.
-
-                            - 'tight': Use the tight layout mechanism. This is a relatively
-                              simple algorithm that adjusts the subplot parameters so that
-                              decorations do not overlap. See `.Figure.set_tight_layout` for
-                              further details.
-
-                            - 'none': Do not use a layout engine.
-
-                            - A `.LayoutEngine` instance. Builtin layout classes are
-                              `.ConstrainedLayoutEngine` and `.TightLayoutEngine`, more easily
-                              accessible by 'constrained' and 'tight'.  Passing an instance
-                              allows third parties to provide their own layout engine.
-
-                            If not given, fall back to using the parameters *tight_layout* and
-                            *constrained_layout*, including their config defaults
-                            :rc:`figure.autolayout` and :rc:`figure.constrained_layout.use`.
-
-        fig :               Figure, optional
-                            Usually None, or send an existing figure
-
-        axs :               Axes, optional
-                            Usually None, or send own axis/axes
-
-        Other Parameters
-        ----------------
-        subplot_kw :        dict, optional
-                            Not interesting
-
-        gridspec_kw :       dict, optional
-                            left, right, top, bottom : float, optional
-                                Extent of the subplots as a fraction of figure width or height.
-                                Left cannot be larger than right, and bottom cannot be larger than
-                                top. If not given, the values will be inferred from a figure or
-                                rcParams at draw time. See also `GridSpec.get_subplot_params`.
-
-                            wspace : float, optional
-                                The amount of width reserved for space between subplots,
-                                expressed as a fraction of the average axis width.
-                                If not given, the values will be inferred from a figure or
-                                rcParams when necessary. See also `GridSpec.get_subplot_params`.
-
-                            hspace : float, optional
-                                The amount of height reserved for space between subplots,
-                                expressed as a fraction of the average axis height.
-                                If not given, the values will be inferred from a figure or
-                                rcParams when necessary. See also `GridSpec.get_subplot_params`.
-
-                            width_ratios : array-like of length *ncols*, optional
-                                Defines the relative widths of the columns. Each column gets a
-                                relative width of ``width_ratios[i] / sum(width_ratios)``.
-                                If not given, all columns will have the same width.
-
-                            height_ratios : array-like of length *nrows*, optional
-                                Defines the relative heights of the rows. Each row gets a
-                                relative height of ``height_ratios[i] / sum(height_ratios)``.
-                                If not given, all rows will have the same height.
-
-        fig_kw :            num : int or str or `.Figure` or `.SubFigure`, optional
-                                A unique identifier for the figure.
-
-                                If a figure with that identifier already exists, this figure is made
-                                active and returned. An integer refers to the ``Figure.number``
-                                attribute, a string refers to the figure label.
-
-                                If there is no figure with the identifier or *num* is not given, a new
-                                figure is created, made active and returned.  If *num* is an int, it
-                                will be used for the ``Figure.number`` attribute, otherwise, an
-                                auto-generated integer value is used (starting at 1 and incremented
-                                for each new figure). If *num* is a string, the figure label and the
-                                window title is set to this value.  If num is a ``SubFigure``, its
-                                parent ``Figure`` is activated.
-
-                            figsize : tuple[float, float], default: :rc:`figure.figsize`
-                                Width, height in inches.
-
-                            dpi : float, default: :rc:`figure.dpi`
-                                The resolution of the figure in dots-per-inch.
-
-                            facecolor : color, default: :rc:`figure.facecolor`
-                                The background color.
-
-                            edgecolor : color, default: :rc:`figure.edgecolor`
-                                The border color.
-
-                            frameon : bool, default: True
-                                If False, suppress drawing the figure frame.
-
-                            FigureClass : subclass of `~matplotlib.figure.Figure`
-                                If set, an instance of this subclass will be created, rather than a
-                                plain `.Figure`.
-
-                            clear : bool, default: False
-                                If True and the figure already exists, then it is cleared.
-
-                            **kwargs
-                                Additional keyword arguments are passed to the `.Figure` constructor.
-
-
-        Examples
-        --------
-            >> from plotting import plot
-            >> Ax = AxesLiron([2, 3])
-            >> t = np.linspace(0, 10, 1001)
-            >> plot(Ax.axs[0,0], t, np.sin(t))
-            >> plot(Ax.axs[1,0], t, np.cos(t))
-            >> plot(Ax.axs[0,1], t, np.log(t))
-            >> plot(Ax.axs[1,1], t, np.exp(t))
-            >> plot(Ax.axs[0,2], t, np.sqrt(t))
-            >> plot(Ax.axs[1,2], t, np.square(t))
-
-            >> Ax.set_props(sup_title="abc", ax_title=[1, 2, 3, 4, 5, 6], grid=[True, True, False, True, False, True],
-                show_fig=True)
-
-        """
-
-        self.fig = fig
-        self.axs: np.ndarray[tuple[int, int], np.dtype[Axes_plt]] = np.atleast_2d(axs)
+        self.fig: Figure | None = fig
+        self.axs: _Array = np.atleast_2d(typing.cast(typing.Any, axs))
 
         if fig is None and axs is None:
-            if subplot_kw is None:
-                subplot_kw = dict()
-            subplot_kw = dict(projection=projection) | subplot_kw
-            fig_kw = dict(layout=layout) | fig_kw
-            fig_kw = merge_kwargs(fig_kw=fig_kw)["fig_kw"]
-            padding = [None] * 4
-            for i, key in enumerate(["w_pad", "h_pad", "wspace", "hspace"]):
-                if key in fig_kw:
-                    padding[i] = fig_kw.pop(key)
-
-            nrows, ncols = shape
-
-            if grid_layout is None:
-                self.fig, self.axs = plt.subplots(
-                    nrows=nrows,
-                    ncols=ncols,
-                    sharex=sharex,
-                    sharey=sharey,
-                    squeeze=False,
-                    subplot_kw=subplot_kw,
+            sharex = fig_kw.pop("sharex", False)
+            sharey = fig_kw.pop("sharey", False)
+            projection = fig_kw.pop("projection", None)
+            layout = fig_kw.pop("layout", None)
+            self._build_new_figure(
+                _FigureBuildConfig(
+                    shape=shape,
+                    grid_layout=grid_layout,
+                    share=(sharex, sharey),
+                    subplot_kw={"projection": projection} | (subplot_kw or {}),
                     gridspec_kw=gridspec_kw,
-                    **fig_kw,
-                )
-            else:
-                if gridspec_kw is None:
-                    gridspec_kw = dict()
-                if sharex == "all":
-                    sharex = True
-                elif sharex == "none":
-                    sharex = False
-                if sharey == "all":
-                    sharey = True
-                elif sharey == "none":
-                    sharey = False
-                assert isinstance(sharex, bool) and isinstance(sharey, bool), "'sharex' and 'sharey' must be bool."
-
-                self.fig = plt.figure(**fig_kw)
-                gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
-
-                ax_share = None
-                axs = np.ones(shape=shape, dtype=Axes_plt)
-                for i, (row_range, col_range) in enumerate(grid_layout):
-                    if isinstance(row_range, int):
-                        row_range = (row_range, row_range + 1)
-                    if isinstance(col_range, int):
-                        col_range = (col_range, col_range + 1)
-                    r0, r1 = row_range
-                    c0, c1 = col_range
-
-                    axs[r0:r1, c0:c1] = 0
-                    axs[r0, c0] = self.fig.add_subplot(
-                        gs[r0:r1, c0:c1],
-                        sharex=ax_share if sharex else None,
-                        sharey=ax_share if sharey else None,
-                        **subplot_kw,
-                    )
-
-                    if ax_share is None:
-                        ax_share = axs[r0, c0]
-
-                for r, c in np.argwhere(axs == 1):
-                    axs[r, c] = self.fig.add_subplot(
-                        gs[r, c],
-                        sharex=ax_share if sharex else None,
-                        sharey=ax_share if sharey else None,
-                        **subplot_kw,
-                    )
-
-                self.axs = axs
-
-            from matplotlib.layout_engine import ConstrainedLayoutEngine
-
-            if isinstance(self.fig.get_layout_engine(), ConstrainedLayoutEngine):
-                self.fig.get_layout_engine().set(
-                    w_pad=padding[0],
-                    h_pad=padding[1],
-                    hspace=padding[2],
-                    wspace=padding[3],
-                )
-
+                    fig_kw={"layout": layout} | fig_kw,
+                ),
+            )
         elif fig is not None:
-            self.axs = np.atleast_2d(self.fig.axes)
-
+            self.axs = np.atleast_2d(typing.cast(typing.Any, fig.axes))
         elif axs is not None:
             self.fig = self.axs[0, 0].figure
 
-        self.func_animation = None
+        self.func_animation: matplotlib.animation.FuncAnimation | None = None
 
-    def __getitem__(self, item):
+    def _build_new_figure(self, cfg: "_FigureBuildConfig") -> None:
+        """Create ``self.fig`` and ``self.axs`` from a build config.
+
+        Routes through ``plt.subplots`` for plain grids, or through
+        :meth:`_build_custom_grid` for span layouts. Also applies layout padding.
+
+        Args:
+            cfg: Bundle of figure-build options.
+        """
+        cfg.fig_kw = merge_kwargs(fig_kw=cfg.fig_kw)["fig_kw"]
+        padding = _extract_layout_padding(cfg.fig_kw)
+
+        if cfg.grid_layout is None:
+            nrows, ncols = cfg.shape
+            sharex, sharey = cfg.share
+            self.fig, self.axs = plt.subplots(
+                nrows=nrows,
+                ncols=ncols,
+                sharex=typing.cast(typing.Any, sharex),
+                sharey=typing.cast(typing.Any, sharey),
+                squeeze=False,
+                subplot_kw=cfg.subplot_kw,
+                gridspec_kw=cfg.gridspec_kw,
+                **cfg.fig_kw,
+            )
+        else:
+            self._build_custom_grid(cfg)
+
+        assert self.fig is not None
+        _apply_constrained_layout_padding(self.fig, padding)
+
+    def _build_custom_grid(self, cfg: "_FigureBuildConfig") -> None:
+        """Build a figure with a custom span gridspec from ``cfg.grid_layout``.
+
+        Args:
+            cfg: Build config; ``cfg.grid_layout`` must be non-None.
+        """
+        assert cfg.grid_layout is not None
+        assert cfg.subplot_kw is not None
+        gridspec_kw = cfg.gridspec_kw if cfg.gridspec_kw is not None else {}
+        share_bool = (_normalize_share_flag(cfg.share[0]), _normalize_share_flag(cfg.share[1]))
+
+        nrows, ncols = cfg.shape
+        self.fig = plt.figure(**cfg.fig_kw)
+        gs = self.fig.add_gridspec(nrows=nrows, ncols=ncols, **gridspec_kw)
+
+        axs_arr: _Array = np.ones(shape=cfg.shape, dtype=Axes_plt)
+        ax_share = self._add_span_subplots(axs_arr, gs, cfg, share_bool=share_bool)
+        self._fill_remaining_subplots(axs_arr, gs, cfg.subplot_kw, ax_share=ax_share, share_bool=share_bool)
+
+        self.axs = axs_arr
+
+    def _add_span_subplots(
+        self,
+        axs_arr: _Array,
+        gs: typing.Any,
+        cfg: "_FigureBuildConfig",
+        share_bool: tuple[bool, bool],
+    ) -> Axes_plt | None:
+        """Create the span subplots defined by ``cfg.grid_layout``.
+
+        Args:
+            axs_arr: Output 2D array; cells covered by a span are set to 0 and the
+                top-left cell of each span receives the new ``Axes_plt``. Mutated in place.
+            gs: GridSpec instance from ``self.fig.add_gridspec``.
+            cfg: Build config (uses ``grid_layout`` and ``subplot_kw``).
+            share_bool: Normalized ``(sharex, sharey)`` booleans.
+
+        Returns:
+            The first created axis (used as the share-target for the rest), or None
+            if ``cfg.grid_layout`` is empty.
+        """
+        assert self.fig is not None
+        assert cfg.grid_layout is not None
+        sharex_bool, sharey_bool = share_bool
+        ax_share: Axes_plt | None = None
+        for row_range, col_range in cfg.grid_layout:
+            r0, r1 = _as_range(row_range)
+            c0, c1 = _as_range(col_range)
+
+            axs_arr[r0:r1, c0:c1] = 0
+            axs_arr[r0, c0] = self.fig.add_subplot(
+                gs[r0:r1, c0:c1],
+                sharex=ax_share if sharex_bool else None,
+                sharey=ax_share if sharey_bool else None,
+                **cfg.subplot_kw,
+            )
+
+            if ax_share is None:
+                ax_share = axs_arr[r0, c0]
+        return ax_share
+
+    def _fill_remaining_subplots(
+        self,
+        axs_arr: _Array,
+        gs: typing.Any,
+        subplot_kw: dict[str, typing.Any],
+        *,
+        ax_share: Axes_plt | None,
+        share_bool: tuple[bool, bool],
+    ) -> None:
+        """Fill the gridspec cells not covered by any span with single-cell subplots.
+
+        Args:
+            axs_arr: Output 2D array; cells still equal to 1 receive a new ``Axes_plt``.
+                Mutated in place.
+            gs: GridSpec instance from ``self.fig.add_gridspec``.
+            subplot_kw: Forwarded to ``Figure.add_subplot``.
+            ax_share: First axis to share with (or None to skip sharing).
+            share_bool: Normalized ``(sharex, sharey)`` booleans.
+        """
+        assert self.fig is not None
+        sharex_bool, sharey_bool = share_bool
+        for r, c in np.argwhere(axs_arr == 1):
+            axs_arr[r, c] = self.fig.add_subplot(
+                gs[r, c],
+                sharex=ax_share if sharex_bool else None,
+                sharey=ax_share if sharey_bool else None,
+                **subplot_kw,
+            )
+
+    def __getitem__(self, item: typing.Any) -> "_Axes":
+        """Return a deep-copied ``_Axes`` whose ``axs`` is sliced by ``item``.
+
+        Args:
+            item: Anything accepted by ``np.ndarray.__getitem__`` on ``self.axs``.
+
+        Returns:
+            A new ``_Axes`` sharing ``self.fig`` but holding the sliced axes array.
+        """
         out = copy.deepcopy(self)
         out.axs = np.atleast_2d(self.axs[item])
         return out
 
-    @staticmethod
-    def _vectorize(cls, ax: Axes_plt = None, **vec_params):  # pylint: disable=bad-staticmethod-argument
-        def decorator(func):
+    def _vectorize(
+        self,
+        ax: Axes_plt | None = None,
+        **vec_params: typing.Any,
+    ) -> Callable[[Callable[..., _R]], Callable[..., _Array]]:
+        """Return a decorator that runs ``func`` either on one axis or across the grid.
+
+        When ``ax`` is given, ``func`` is called once with that specific axis. Otherwise
+        ``func`` is called once per cell of ``self.axs`` (skipping non-axes cells),
+        with the per-axis slice of ``vec_params``; results are collected into a
+        matching object-dtype ndarray.
+
+        Args:
+            ax: Optional single axis to bind ``func`` to.
+            **vec_params: Per-call kwargs. List-valued entries are de-interleaved
+                (via ``dl_to_ld``) to one mapping per axis; scalar entries are broadcast.
+
+        Returns:
+            A decorator wrapping ``func`` into a callable that returns an object-dtype
+            ndarray of per-axis results.
+        """
+
+        def decorator(func: Callable[..., _R]) -> Callable[..., _Array]:
             @functools.wraps(func)
-            def wrapper(*args, **kwargs):
+            def wrapper(*args: typing.Any, **kwargs: typing.Any) -> _Array:
                 if ax is not None:
-                    return func(ax, *args, **vec_params, **kwargs)
+                    return typing.cast(_Array, func(ax, *args, **vec_params, **kwargs))
 
-                # Vectorize the function
-                m, n = cls.axs.shape
+                m, n = self.axs.shape
 
-                params_list = DL_to_LD(vec_params)
+                params_list = dl_to_ld(vec_params)
                 if params_list is None or len(params_list) != m * n:
-                    params_list = np.repeat(vec_params, m * n)
+                    params_list = list(np.repeat(typing.cast(typing.Any, vec_params), m * n))
 
-                out = np.empty((m, n), dtype=object)
+                out: _Array = np.empty((m, n), dtype=object)
 
                 for i in range(m):
                     for j in range(n):
-                        if isinstance(cls.axs[i, j], Axes_plt):
-                            out[i, j] = func(cls.axs[i, j], *args, **params_list[j * m + i], **kwargs)
+                        if isinstance(self.axs[i, j], Axes_plt):
+                            out[i, j] = func(
+                                self.axs[i, j],
+                                *args,
+                                **params_list[j * m + i],
+                                **kwargs,
+                            )
 
                 return out
 
@@ -313,109 +564,101 @@ class _Axes:
 
         return decorator
 
-    @staticmethod
-    def _merge_kwargs(key, **kwargs):
-        def decorator(func):
-            @functools.wraps(func)
-            def wrapper(*args):
-                kwargs_merged = merge_kwargs(**{key: kwargs})[key]
+    def _merge_kwargs(
+        self,
+        key: str,
+        **kwargs: typing.Any,
+    ) -> Callable[[Callable[_P, _R]], Callable[_P, _R]]:
+        """Return a decorator that overrides one kwarg with defaults merged from ``DefaultKwargs``.
 
+        Args:
+            key: Name of the kwarg in the wrapped function whose value is replaced
+                with ``DefaultKwargs[key.upper()] | kwargs``.
+            **kwargs: Caller-supplied overrides applied on top of the defaults.
+
+        Returns:
+            A decorator wrapping ``func`` so each call uses the merged kwargs.
+        """
+
+        def decorator(func: Callable[_P, _R]) -> Callable[_P, _R]:
+            @functools.wraps(func)
+            def wrapper(*args: _P.args, **outer_kwargs: _P.kwargs) -> _R:  # pylint: disable=unused-argument
+                kwargs_merged = merge_kwargs(**{key: kwargs})[key]
                 return func(*args, **kwargs_merged)
 
             return wrapper
 
         return decorator
 
-    def draw_xy_lines(self, **xy_lines_kw):
+    def draw_xy_lines(self, **xy_lines_kw: typing.Any) -> None:
+        """Draw bold ``x=0`` and ``y=0`` lines on each axis to highlight the origin.
+
+        3D plots and axes containing images are skipped. Each axis is annotated
+        with ``axis_lines_drawn = True`` to make the operation idempotent.
+
+        Args:
+            **xy_lines_kw: Forwarded to ``ax.axhline`` and ``ax.axvline``.
+        """
+
         @self._merge_kwargs("xy_lines_kw", **xy_lines_kw)
-        @self._vectorize(cls=self)
-        def _draw_xy_lines(ax: Axes_plt, **xy_lines_kw):
-            """
-            Draw x-y axes lines to look bolder than the rest of the grid lines
-
-            Args:
-                ax:
-                **axis_lines_kw:
-
-            Returns:
-
-            """
-
+        @self._vectorize()
+        def _draw_xy_lines(ax: Axes_plt, **kw: typing.Any) -> None:
+            # Don't draw axis lines for 3D plots and images
             if hasattr(ax, "axis_lines_drawn") or hasattr(ax, "zaxis") or len(ax.images) > 0:
-                # Don't draw axis lines for 3D plots and images
                 return
 
             xlim = ax.get_xlim()
             ylim = ax.get_ylim()
 
-            ax.axhline(**xy_lines_kw)
-            ax.axvline(**xy_lines_kw)
+            ax.axhline(**kw)
+            ax.axvline(**kw)
 
             ax.set_xlim(*xlim, auto=True)
             ax.set_ylim(*ylim, auto=True)
 
-            ax.axis_lines_drawn = True
+            ax.axis_lines_drawn = True  # type: ignore[attr-defined]
 
         _draw_xy_lines()
 
-    def sup_title(self, title: str):
+    def sup_title(self, title: str) -> None:
+        """Set the figure-wide super-title.
+
+        Args:
+            title: Super-title text.
+        """
         # todo: for unknown reason, color is not automatically inherited from text.color
+        assert self.fig is not None
         self.fig.suptitle(title, color=plt.rcParams["text.color"])
 
-    def ax_axis(self, axis: bool | str):
+    def ax_axis(self, axis: bool | str) -> None:
+        """Set the axis visibility / scaling mode on each axis.
+
+        Args:
+            axis: Forwarded to ``ax.axis``. Common values include ``"on"``/``"off"``,
+                ``"equal"``, ``"scaled"``, ``"tight"``, ``"auto"``, ``"image"``,
+                ``"square"``, or a bool.
         """
 
-        Parameters
-        ----------
-        ax :
-        axis :  ================ ===========================================================
-                Value            Description
-                ================ ===========================================================
-                'off' or `False` Hide all axis decorations, i.e. axis labels, spines,
-                                 tick marks, tick labels, and grid lines.
-                                 This is the same as `~.Axes.set_axis_off()`.
-                'on' or `True`   Do not hide all axis decorations, i.e. axis labels, spines,
-                                 tick marks, tick labels, and grid lines.
-                                 This is the same as `~.Axes.set_axis_on()`.
-                'equal'          Set equal scaling (i.e., make circles circular) by
-                                 changing the axis limits. This is the same as
-                                 ``ax.set_aspect('equal', adjustable='datalim')``.
-                                 Explicit data limits may not be respected in this case.
-                'scaled'         Set equal scaling (i.e., make circles circular) by
-                                 changing dimensions of the plot box. This is the same as
-                                 ``ax.set_aspect('equal', adjustable='box', anchor='C')``.
-                                 Additionally, further autoscaling will be disabled.
-                'tight'          Set limits just large enough to show all data, then
-                                 disable further autoscaling.
-                'auto'           Automatic scaling (fill plot box with data).
-                'image'          'scaled' with axis limits equal to data limits.
-                'square'         Square plot; similar to 'scaled', but initially forcing
-                                 ``xmax-xmin == ymax-ymin``.
-                ================ ===========================================================
-
-        Returns
-        -------
-
-        """
-
-        @self._vectorize(cls=self, axis=axis)
-        def _ax_axis(ax: Axes_plt, axis: bool | str):
+        @self._vectorize(axis=axis)
+        def _ax_axis(ax: Axes_plt, axis: bool | str) -> None:
             ax.axis(axis)
 
         _ax_axis()
 
-    def ax_spines(self, spines: str | list | bool):
+    def ax_spines(self, spines: str | list[str] | bool) -> None:
+        """Show or hide axis spines (boundaries) on each axis.
+
+        Args:
+            spines: ``True`` shows all four spines, ``False`` hides them, a string
+                or list of strings selects specific ones from
+                ``["left", "bottom", "top", "right"]``.
+
+        Raises:
+            ValueError: If ``spines`` is not one of (str, list, bool).
         """
-        Show axis spines (boundaries)
 
-        Parameters
-        ----------
-        spines :        str | list | bool
-
-        """
-
-        @self._vectorize(cls=self, spines=spines)
-        def _ax_spines(ax: Axes_plt, spines: str | list | bool):
+        @self._vectorize(spines=spines)
+        def _ax_spines(ax: Axes_plt, spines: str | list[str] | bool) -> None:
             locs = np.array(["left", "bottom", "top", "right"])
 
             if isinstance(spines, str):
@@ -423,7 +666,7 @@ class _Axes:
 
             if isinstance(spines, Iterable):
                 locs = np.array(spines)
-                idx = [True] * locs.size
+                idx: list[bool] = [True] * locs.size
             elif isinstance(spines, bool):
                 idx = [False] * locs.size
                 if spines:
@@ -438,237 +681,219 @@ class _Axes:
 
         _ax_spines()
 
-    def ax_ticks(self, ticks: bool | list[list] | dict | list[dict], labels: bool | list[list]):
-        @self._vectorize(cls=self, ticks=ticks, labels=labels)
+    def ax_ticks(
+        self,
+        ticks: bool | list[typing.Any] | dict[typing.Any, typing.Any] | list[dict[typing.Any, typing.Any]] | None,
+        labels: bool | list[typing.Any] | None,
+    ) -> None:
+        """Set ticks (and labels) on each axis along x, y, and (for 3D) z.
+
+        Args:
+            ticks: ``True``/``None`` shows the default ticks, ``False`` hides them, a
+                per-dim list selects per-axis values, a dict ``{position: label}``
+                applies to the x-axis only.
+            labels: ``True``/``None`` keeps current labels, ``False`` hides them, a
+                per-dim list provides explicit labels. When ``ticks`` is a dict,
+                ``labels`` must not be given.
+        """
+
+        @self._vectorize(ticks=ticks, labels=labels)
         def _ax_ticks(
             ax: Axes_plt,
-            ticks: bool | list[list] | dict | list[dict],
-            labels: bool | list[list],
-        ):
-            # todo: if labels is False
+            ticks: bool | list[typing.Any] | dict[typing.Any, typing.Any] | list[dict[typing.Any, typing.Any]] | None,
+            labels: bool | list[typing.Any] | None,
+        ) -> None:
             if len(ax.get_shared_x_axes().get_siblings(ax)) > 1 or len(ax.get_shared_y_axes().get_siblings(ax)) > 1:
                 # todo: fix in future
                 warnings.warn("Axis shares x or y axis with siblings. Changing ticks would affect all siblings.")
 
             ndim = 3 if hasattr(ax, "get_zticks") else 2
+            ticks_norm, labels_norm = _normalize_ticks_labels(ticks, labels, ndim)
 
-            if ticks is None or ticks is True:  # show ticks for all axes
-                ticks = [True] * ndim
-                if labels is None:  # show labels for all axes
-                    labels = [True] * ndim
-            elif ticks is False:  # hide ticks for all axes
-                ticks = [False] * ndim
-                if labels is None:  # hide labels for all axes
-                    labels = [False] * ndim
-            elif isinstance(ticks, dict):  # only x-axis
-                ticks = [ticks] + [True] * (ndim - 1)
-            # labels check is done later
+            assert len(ticks_norm) <= ndim, "len(ticks) must be <= graph dimensionality."
+            assert len(labels_norm) <= ndim, "len(labels) must be <= graph dimensionality."
 
-            if labels is True:  # show labels for all axes
-                labels = [True] * ndim
-            elif labels is False:  # hide labels for all axes
-                labels = [False] * ndim
-            elif labels is None:
-                labels = [None] * ndim
-
-            # ticks = np.atleast_1d(ticks)
-            # labels = np.atleast_1d(labels)
-            assert len(ticks) <= ndim, "len(ticks) must be <= graph dimensionality."
-            assert len(labels) <= ndim, "len(labels) must be <= graph dimensionality."
-
-            d = {
-                "ticks": {
-                    0: ax.get_xticks(),
-                    1: ax.get_yticks(),
-                    2: ax.get_zticks() if ndim == 3 else [],
-                },
-                "labels": {
-                    0: ax.get_xticklabels(),
-                    1: ax.get_yticklabels(),
-                    2: ax.get_zticklabels() if ndim == 3 else [],
-                },
-                # "offset": {
-                #     0: ax.xaxis.get_offset_text(),
-                #     1: ax.yaxis.get_offset_text(),
-                #     2: ax.zaxis.get_offset_text() if ndim == 3 else [],
-                # },
-            }
-
-            funcs = [ax.get_xlim, ax.get_ylim]
-            if ndim == 3:
-                funcs += [ax.get_zlim]
-
-            for i, func in enumerate(funcs):
-                lim = func()
-                idx = np.logical_and(min(lim) <= d["ticks"][i], d["ticks"][i] <= max(lim))
-                if len(d["ticks"][i]) > 0:
-                    d["ticks"][i] = d["ticks"][i][idx]
-                if len(d["labels"][i]) > 0:
-                    d["labels"][i] = np.array(d["labels"][i])[idx]
-
-            for i in range(len(ticks)):  # x,y,z axes, pylint: disable=consider-using-enumerate
-                if ticks[i] is None or ticks[i] is True or ticks[i] is np.True_:  # show ticks
-                    pass
-
-                elif ticks[i] is False or ticks[i] is np.False_:  # hide ticks
-                    d["ticks"][i] = []
-                    if labels[i] is None:  # hide labels
-                        d["labels"][i] = []
-                # d["offset"][i] = None
-
-                elif isinstance(ticks[i], dict):  # custom ticks
-                    assert (
-                        labels[i] is None or labels[i] is np.True_
-                    ), "When 'ticks' is a dict, 'labels' must not be given."
-                    d["ticks"][i] = ticks[i].keys()
-                    d["labels"][i] = ticks[i].values()
-
-                elif isinstance(ticks[i], Iterable):  # custom ticks
-                    d["ticks"][i] = ticks[i]
-                    d["labels"][i] = ticks[i]
-                # d["offset"][i] = None  # todo: check
-
-                else:
-                    raise ValueError("'ticks' must be given either as a boolean, list[list] or list[dict].")
-
-                if labels[i] is None or labels[i] is True or labels[i] is np.True_:  # show labels
-                    pass
-
-                elif labels[i] is False or labels[i] is np.False_:  # hide labels
-                    d["labels"][i] = []
-                # d["offset"][i] = None
-
-                elif isinstance(labels[i], Iterable):  # custom labels
-                    assert len(labels[i]) == len(ticks[i]), "len(labels[i]) must be equal to len(ticks[i])."
-                    d["labels"][i] = labels[i]
-                # d["offset"][i] = None  # todo: check
-
-                else:
-                    raise ValueError("'labels' must be given either as a boolean or list[list].")
-
-            # Set ticks and labels
-            ax.set_xticks(d["ticks"][0], d["labels"][0])
-            ax.xaxis.set_major_formatter(
-                ScalarFormatter(useOffset=True),
-            )  # todo: returns the tick labels for unknown reason
-
-            ax.set_yticks(d["ticks"][1], d["labels"][1])
-            ax.yaxis.set_major_formatter(ScalarFormatter(useOffset=True))
-
-            if ndim == 3:
-                ax.set_zticks(d["ticks"][2], d["labels"][2])
-                ax.zaxis.set_major_formatter(ScalarFormatter(useOffset=True))
+            d = _collect_current_ticks_labels(ax, ndim)
+            _filter_ticks_within_limits(ax, d, ndim)
+            _apply_tick_label_overrides(d, ticks_norm, labels_norm)
+            _set_ticks_on_axes(ax, d, ndim)
 
         _ax_ticks()
 
-    def ax_title(self, title: str):
-        @self._vectorize(cls=self, title=title)
-        def _ax_title(ax: Axes_plt, title: str):
+    def ax_title(self, title: str) -> None:
+        """Set the per-axes title on each axis.
+
+        Args:
+            title: Title text (vectorizable across the axes grid).
+        """
+
+        @self._vectorize(title=title)
+        def _ax_title(ax: Axes_plt, title: str) -> None:
             ax.set_title(title)
 
         _ax_title()
 
-    def ax_labels(self, labels: list[str]):
-        @self._vectorize(cls=self, labels=labels)
-        def _ax_labels(ax: Axes_plt, labels: list[str]):
-            labels = np.atleast_1d(labels)  # In case labels=None or labels is just 1 list (only xlabel)
-            ax.set_xlabel(labels[0])
-            if np.size(labels) >= 2:
-                ax.set_ylabel(labels[1])
-            if np.size(labels) >= 3:
-                ax.set_zlabel(labels[2])
+    def ax_labels(self, labels: list[str]) -> None:
+        """Set the x/y/z axis labels on each axis.
+
+        Args:
+            labels: 1-, 2-, or 3-element list — entries are applied to ``set_xlabel``,
+                ``set_ylabel``, and ``set_zlabel`` in order.
+        """
+
+        @self._vectorize(labels=labels)
+        def _ax_labels(ax: Axes_plt, labels: list[str]) -> None:
+            labels_arr = np.atleast_1d(labels)
+            ax.set_xlabel(labels_arr[0])
+            if np.size(labels_arr) >= 2:
+                ax.set_ylabel(labels_arr[1])
+            if np.size(labels_arr) >= 3:
+                ax.set_zlabel(labels_arr[2])  # type: ignore[attr-defined]
 
         _ax_labels()
 
-    def ax_limits(self, limits: list[float]):
-        @self._vectorize(cls=self, limits=limits)
-        def _ax_limits(ax: Axes_plt, limits: list[float]):
-            limits = np.array(limits, dtype=object)
-            limits = np.atleast_2d(limits)  # In case limits=None or limits is just 1 list (only xlim)
+    def ax_limits(self, limits: list[float]) -> None:
+        """Set the x/y/z axis limits on each axis.
 
-            ax.set_xlim(limits[0])
-            if len(limits) >= 2:
-                ax.set_ylim(limits[1])
-            if len(limits) >= 3:
-                ax.set_zlim(limits[2])
+        Args:
+            limits: List of ``[min, max]`` pairs, one per axis dimension. Example:
+                ``[[0, 2], [-1, 1]]`` sets ``xlim=[0, 2]`` and ``ylim=[-1, 1]``.
+        """
+
+        @self._vectorize(limits=limits)
+        def _ax_limits(ax: Axes_plt, limits: list[float]) -> None:
+            limits_arr = np.atleast_2d(np.array(limits, dtype=object))
+            ax.set_xlim(limits_arr[0])
+            if len(limits_arr) >= 2:
+                ax.set_ylim(limits_arr[1])
+            if len(limits_arr) >= 3:
+                ax.set_zlim(limits_arr[2])  # type: ignore[attr-defined]
 
         _ax_limits()
 
-    def ax_view(self, view: list):
-        @self._vectorize(cls=self, view=view)
-        def _ax_view(ax: Axes_plt, view: list):
-            ax.view_init(view[0], view[1])
+    def ax_view(self, view: list[float]) -> None:
+        """Set the 3D view angle on each axis.
+
+        Args:
+            view: ``[elev, azim]`` pair forwarded to ``Axes3D.view_init``.
+        """
+
+        @self._vectorize(view=view)
+        def _ax_view(ax: Axes_plt, view: list[float]) -> None:
+            ax.view_init(view[0], view[1])  # type: ignore[attr-defined]
 
         _ax_view()
 
-    def ax_grid(self, grid: bool):
-        @self._vectorize(cls=self, grid=grid)
-        def _ax_grid(ax: Axes_plt, grid: bool):
+    def ax_grid(self, grid: bool) -> None:
+        """Show or hide the grid on each axis.
+
+        Args:
+            grid: True shows the grid, False hides it; None toggles.
+        """
+
+        @self._vectorize(grid=grid)
+        def _ax_grid(ax: Axes_plt, grid: bool) -> None:
             ax.grid(grid)
 
         _ax_grid()
 
-    def ax_legend(self, legend: bool | list, legend_loc: str):
-        @self._vectorize(cls=self, legend=legend, legend_loc=legend_loc)
-        def _ax_legend(ax: Axes_plt, legend: bool | list, legend_loc: str):
-            if legend is False:
-                legend = ax.get_legend()
-                if legend is not None:
-                    legend.remove()
+    def ax_legend(self, legend: bool | list[str], legend_loc: str | None) -> None:
+        """Show, hide, or set the legend on each axis.
 
+        Args:
+            legend: ``True`` reuses the labels already attached to artists; ``False``
+                removes an existing legend; a list of strings sets explicit labels.
+            legend_loc: Matplotlib legend location string (e.g. ``"best"``,
+                ``"upper right"``) or ``None`` for the default.
+        """
+
+        @self._vectorize(legend=legend, legend_loc=legend_loc)
+        def _ax_legend(ax: Axes_plt, legend: bool | list[str], legend_loc: str | None) -> None:
+            if legend is False:
+                existing = ax.get_legend()
+                if existing is not None:
+                    existing.remove()
             elif legend is True:
                 handles, labels = ax.get_legend_handles_labels()
                 if len(handles) > 0:
-                    ax.legend(handles, labels, loc=legend_loc)  # todo [::-1] ?
-
+                    ax.legend(handles, labels, loc=legend_loc)
             else:
                 ax.legend(legend, loc=legend_loc)
 
         _ax_legend()
 
-    def ax_colorbar(self, axs: bool | list[Axes_plt] | list[list[Axes_plt]], **colorbar_kw):
+    def ax_colorbar(
+        self,
+        axs: bool | Axes_plt | typing.Sequence[typing.Any] | _Array,
+        **colorbar_kw: typing.Any,
+    ) -> None:
+        """Attach a colorbar to one or more axes that contain an image.
+
+        Args:
+            axs: ``False`` is a no-op; ``True`` finds every axis on the figure with
+                an image and gives each its own colorbar; a single axis or array/list
+                of axes adds one colorbar per entry; a list of lists creates a
+                shared colorbar across each inner list.
+            **colorbar_kw: Forwarded to ``Figure.colorbar``.
+
+        Raises:
+            AssertionError: If any provided axis has no image plotted.
+        """
         if axs is False:
             return
+        assert self.fig is not None
+        axs_list: list[typing.Any]
         if axs is True:
-            axs = [[ax] for ax in self.fig.axes if len(ax.images) > 0]
+            axs_list = [[ax] for ax in self.fig.axes if len(ax.images) > 0]
         elif isinstance(axs, Axes_plt):
-            axs = [axs]
+            axs_list = [axs]
         elif isinstance(axs, np.ndarray):
-            axs = axs.tolist()
+            axs_list = typing.cast(list[typing.Any], axs.tolist())
+        else:
+            axs_list = list(axs)
 
-        # convert to a list of lists
-        for i in range(len(axs)):  # run through common axes, pylint: disable=consider-using-enumerate
-            if isinstance(axs[i], Axes_plt):  # if not a list, convert to a list
-                axs[i] = [axs[i]]
+        for i in range(len(axs_list)):  # pylint: disable=consider-using-enumerate
+            if isinstance(axs_list[i], Axes_plt):
+                axs_list[i] = [axs_list[i]]
 
-            assert isinstance(axs[i], Iterable), "'axs' must be a list of lists."
-            for j in range(len(axs[i])):
-                assert len(axs[i][j].images) > 0, "At least one of the axes provided doesn't have an image plotted."
+            assert isinstance(axs_list[i], Iterable), "'axs' must be a list of lists."
+            for j in range(len(axs_list[i])):
+                assert len(axs_list[i][j].images) > 0, "At least one axis has no image plotted."
 
-        # draw colorbar
-        for ax_common in axs:
+        for ax_common in axs_list:
             mappable = ax_common[0].images[0]
             self.fig.colorbar(mappable=mappable, ax=ax_common, **colorbar_kw)
 
-    def ax_face_color(self, face_color):
-        @self._vectorize(cls=self, face_color=face_color)
-        def _ax_face_color(ax, face_color):
+    def ax_face_color(self, face_color: typing.Any) -> None:
+        """Set the axes face color on each axis.
+
+        Args:
+            face_color: Any matplotlib color spec (hex string, RGB tuple, etc.).
+        """
+
+        @self._vectorize(face_color=face_color)
+        def _ax_face_color(ax: Axes_plt, face_color: typing.Any) -> None:
             ax.set_facecolor(face_color)
 
         _ax_face_color()
 
-    def save_fig(self, file_name: str = None, **savefig_kw):
-        """
-        Save figure as file
+    def save_fig(self, file_name: str | None = None, **savefig_kw: typing.Any) -> str:
+        """Save the figure (or animation) to disk.
+
+        ``.gif`` outputs require :meth:`plot_animation` to have been called first;
+        any other extension is saved via ``Figure.savefig``.
 
         Args:
-            file_name:              File name
-            **savefig_kw:           kwargs for function fig.savefig
+            file_name: Output path. None or a bare filename routes through
+                :func:`get_savefig_file_name` to derive a default directory.
+            **savefig_kw: Forwarded to ``Figure.savefig`` or ``FuncAnimation.save``.
 
         Returns:
+            The full path the file was saved to.
 
+        Raises:
+            AssertionError: For ``.gif`` outputs when no animation has been created.
         """
-
         file_name = get_savefig_file_name(file_name, mkdir=True)
 
         ext = os.path.splitext(file_name)[-1]
@@ -680,216 +905,144 @@ class _Axes:
             ), "Call plot_animation() before saving gif."
             self.func_animation.save(file_name, **savefig_kw)
         else:
+            assert self.fig is not None
             self.fig.savefig(file_name, **savefig_kw)
 
         return file_name
 
-    def show_fig(self):
+    def show_fig(self) -> None:
+        """Show the wrapped figure (delegates to ``Figure.show``)."""
+        assert self.fig is not None
         self.fig.show()
 
-    def show(self):
+    def show(self) -> None:
+        """Alias for :meth:`show_fig`."""
         self.show_fig()
 
     def set_props(
         self,
         save_file_name: str | bool = False,
-        colorbar_kw: dict = None,
-        xy_lines_kw: dict = None,
-        save_fig_kw: dict = None,
-        **set_props_kw,
-    ):
+        colorbar_kw: dict[str, typing.Any] | None = None,
+        xy_lines_kw: dict[str, typing.Any] | None = None,
+        save_fig_kw: dict[str, typing.Any] | None = None,
+        **set_props_kw: typing.Any,
+    ) -> str | None:
+        """Apply post-plot figure/axes properties in a single call.
+
+        Each ``set_props_kw`` value is either a scalar (applied to all axes) or a
+        list/array (one entry per axis). Parameters marked vectorizable below also
+        accept per-axis lists.
+
+        Args:
+            save_file_name: ``False`` — don't save; ``True`` — save to ``MAIN_FILE_DIR``
+                with an auto-generated name; ``str`` — explicit path.
+            colorbar_kw: Forwarded to ``Figure.colorbar``.
+            xy_lines_kw: Forwarded to ``ax.axhline`` / ``ax.axvline`` via :meth:`draw_xy_lines`.
+            save_fig_kw: Forwarded to ``Figure.savefig`` via :meth:`save_fig`.
+            **set_props_kw: Property overrides. Vectorizable entries are marked ``*``:
+
+                * ``sup_title``: Figure suptitle.
+                * ``*ax_title``: Per-axis title.
+                * ``*axis``: Axis visibility / scaling mode.
+                * ``*spines``: Axis spines visibility.
+                * ``*ticks``: Axis ticks.
+                * ``*tick_labels``: Axis tick labels.
+                * ``*labels``: x/y/z labels.
+                * ``*limits``: Axis limits ``[[xmin, xmax], [ymin, ymax], ...]``.
+                * ``*view``: 3D view angles.
+                * ``*grid``: Show grid.
+                * ``*legend``: Show / set legend (bool or list of label strings).
+                * ``*legend_loc``: Legend location string.
+                * ``colorbar``: Add colorbar to image axes.
+                * ``*xy_lines``: Draw ``x=0`` and ``y=0`` lines.
+                * ``*face_color``: Axes face color.
+                * ``show_fig``: Show figure when done.
+                * ``open_dir``: Open the save directory after saving.
+                * ``close_fig``: Close the figure after saving / showing.
+
+        Returns:
+            The saved file path when ``save_file_name`` is truthy, else None.
         """
-        Set figure properties after plotting.
-
-        Parameters
-        ----------
-        save_file_name :    str/bool
-                            The file name to be saved.
-                            False - don't save, True - save to MAIN_FILE_DIR, str - specify location
-
-        save_fig_kw :       dict, optional
-                            Sent to fig.savefig()
-
-        colorbar_kw :       dict, optional
-                            Sent to fig.colorbar()
-
-        xy_lines_kw :       dict, optional
-                            Sent to ax.axhline()
-
-
-        Other Parameters
-        ----------------
-        For the following parameters, a '*' symbol means that it can be vectorized
-        to all axes by being sent as a list.
-
-        sup_title :         str, default: None
-                            supreme figure title
-
-        *ax_title :         str, default: None
-                            axis title
-
-        *axis :             str/bool, default: None
-
-        *spines :           bool/list/str, default: None
-                            show axis boundaries.
-                            'True' will plot all boundaries.
-                            Can be specified as one (or a list) of the strings ["left", "bottom", "top", "right"]
-
-        *ticks :            bool/list, default: None
-                            axis ticks
-                            'False' will remove all ticks and tick labels.
-                            A list will set the ticks for the x,y,z axes
-
-        *tick_labels :     bool/list, default: None
-                            axis tick labels
-                            'False' will remove all tick labels.
-                            A list will set the tick labels for the x,y,z axes
-
-        *labels :           list[str], default: None
-                            axis labels for the x,y,z axes
-
-        *limits :           list[float], default: None
-                            axis limits for the x,y,z axes, given as a 2-tuple,
-                            e.g., limits=[[0,2], [-1,1]] will set xlim=[0,2],ylim=[-1,1]
-
-        *view :             list[float], default: None
-                            axis view in case of a 3D plot, given as a 2-tuple.
-
-        *grid :             bool, default: None
-                            Show grid.
-                            'None' will toggle the grid on and off
-
-        *legend :           bool/list[str], default: True
-                            Show legend.
-                            A list of strings would set the legend labels
-
-        *legend_loc :       str, default: None
-                            The location of the legend:
-                            - 'upper left', 'upper right', 'lower left', 'lower right' place the legend at the
-                              corresponding corner of the axes.
-                            - 'upper center', 'lower center', 'center left', 'center right' place the legend
-                              at the center of the corresponding edge of the axes.
-                            - 'center' places the legend at the center of the axes.
-                            - 'best' places the legend at the location, among the nine locations defined so far, with
-                              the minimum overlap with other drawn artists.
-                              This option can be quite slow for plots with
-                              large amounts of data; your plotting speed may benefit from providing a specific location.
-                            The location can also be a 2-tuple giving the coordinates of the lower-left corner of the
-                            legend in axes coordinates (in which case bbox_to_anchor will be ignored).
-
-        colorbar :          bool/list[list[Axes], Axes], default: False
-                            A boolean decides whether to add a colorbar to each axis containing an image.
-                            Otherwise, provide a list of the desired axes.
-                            A list inside the list would create a common colorbar.
-
-        *xy_lines :         bool, default: True
-                            Draw x-y axis lines (the lines x=0 and y=0).
-
-        *face_color :       color, default: None
-                            axes face color
-
-        show_fig :          bool, default: True
-                            Show figure at the end of the function run
-
-        open_dir :          bool, default: False
-                            If file saved, open directory afterward.
-
-        Returns
-        -------
-
-        """
-
         if colorbar_kw is None:
-            colorbar_kw = dict()
+            colorbar_kw = {}
         if xy_lines_kw is None:
-            xy_lines_kw = dict()
+            xy_lines_kw = {}
         if save_fig_kw is None:
-            save_fig_kw = dict()
+            save_fig_kw = {}
 
-        set_props_kw = merge_kwargs(set_props_kw=set_props_kw)["set_props_kw"]
+        kw = merge_kwargs(set_props_kw=set_props_kw)["set_props_kw"]
 
-        def caller(func, *args, **kwargs):
+        def caller(func: Callable[..., typing.Any], *args: typing.Any, **kwargs: typing.Any) -> None:
             if args[0] is None:
-                return None
-            return func(*args, **kwargs)
+                return
+            func(*args, **kwargs)
 
-        # Supreme Title
-        caller(self.sup_title, set_props_kw["sup_title"])
+        caller(self.sup_title, kw["sup_title"])
+        caller(self.ax_title, kw["ax_title"])
+        caller(self.ax_axis, kw["axis"])
+        caller(self.ax_spines, kw["spines"])
+        caller(self.ax_labels, kw["labels"])
+        caller(self.ax_view, kw["view"])
+        caller(self.ax_grid, kw["grid"])
+        self.ax_legend(kw["legend"], kw["legend_loc"])
+        self.ax_colorbar(kw["colorbar"], **colorbar_kw)
+        caller(self.ax_limits, kw["limits"])
+        caller(self.ax_ticks, kw["ticks"], kw["tick_labels"])
 
-        # Axes Title
-        caller(self.ax_title, set_props_kw["ax_title"])
-
-        # Axis
-        caller(self.ax_axis, set_props_kw["axis"])
-
-        # Axis Spines
-        caller(self.ax_spines, set_props_kw["spines"])
-
-        # Axis Labels
-        caller(self.ax_labels, set_props_kw["labels"])
-
-        # View (in case of 3D)
-        caller(self.ax_view, set_props_kw["view"])
-
-        # Grid
-        caller(self.ax_grid, set_props_kw["grid"])
-
-        # Legend
-        self.ax_legend(set_props_kw["legend"], set_props_kw["legend_loc"])
-
-        # Colorbar
-        self.ax_colorbar(set_props_kw["colorbar"], **colorbar_kw)
-
-        # Axis Limits
-        caller(self.ax_limits, set_props_kw["limits"])
-
-        # Axis Ticks
-        caller(self.ax_ticks, set_props_kw["ticks"], set_props_kw["tick_labels"])
-
-        # x-y Lines (through the origin)
-        if set_props_kw["xy_lines"]:
+        if kw["xy_lines"]:
             self.draw_xy_lines(**xy_lines_kw)
 
-        # Face Color
-        caller(self.ax_face_color, set_props_kw["face_color"])
+        caller(self.ax_face_color, kw["face_color"])
 
-        # -------------------------------------------------------
+        file_name: str | None = None
+        if save_file_name is not False:
+            if save_file_name is True:
+                save_file_name = None  # type: ignore[assignment]
+            file_name = self.save_fig(file_name=save_file_name, **save_fig_kw)  # type: ignore[arg-type]
 
-        # Save Figure
-        file_name = None
-        if save_file_name is not False:  # if user wants to save figure
-            if save_file_name is True:  # default file name, otherwise provide a string
-                save_file_name = None
-
-            file_name = self.save_fig(file_name=save_file_name, **save_fig_kw)
-
-        # Show Figure
-        if set_props_kw["show_fig"]:
+        if kw["show_fig"]:
             self.show_fig()
-            if set_props_kw["open_dir"]:
+            if kw["open_dir"] and file_name is not None:
                 open_file(os.path.split(file_name)[0])
 
-        # Close Figure
-        if set_props_kw["close_fig"]:
+        if kw["close_fig"]:
+            assert self.fig is not None
             plt.close(self.fig)
 
         return file_name
 
 
 def new_figure(
-    nrows=1,
-    ncols=1,
-    sharex=False,
-    sharey=False,
-    projection=None,
-    squeeze=True,
-    subplot_kw=None,
-    gridspec_kw=None,
-    **figure_kw,
-) -> (Figure, Axes_plt):
+    nrows: int = 1,
+    ncols: int = 1,
+    sharex: bool = False,
+    sharey: bool = False,
+    projection: str | None = None,
+    *,
+    squeeze: bool = True,
+    subplot_kw: dict[str, typing.Any] | None = None,
+    gridspec_kw: dict[str, typing.Any] | None = None,
+    **figure_kw: typing.Any,
+) -> tuple[Figure, Axes_plt]:
+    """Thin wrapper around ``plt.subplots`` that injects ``projection`` into ``subplot_kw``.
+
+    Args:
+        nrows: Number of subplot rows.
+        ncols: Number of subplot columns.
+        sharex: Share the x-axis across subplots.
+        sharey: Share the y-axis across subplots.
+        projection: Default subplot projection (``None`` → ``'rectilinear'``).
+        squeeze: Forwarded to ``plt.subplots``.
+        subplot_kw: Forwarded to ``plt.subplots``.
+        gridspec_kw: Forwarded to ``plt.subplots``.
+        **figure_kw: Forwarded to ``plt.subplots``.
+
+    Returns:
+        ``(fig, axs)`` from ``plt.subplots``.
+    """
     if subplot_kw is None:
-        subplot_kw = dict()
-    subplot_kw = dict(projection=projection) | subplot_kw
+        subplot_kw = {}
+    subplot_kw = {"projection": projection} | subplot_kw
 
     fig, axs = plt.subplots(
         nrows=nrows,
@@ -905,49 +1058,65 @@ def new_figure(
     return fig, axs
 
 
-# @copy_docstring_and_deprecators(_AxesLiron.draw_xy_lines)
-def draw_xy_lines(ax: Axes_plt, **axis_lines_kw):
+def draw_xy_lines(ax: Axes_plt, **axis_lines_kw: typing.Any) -> None:
+    """Standalone shim around :meth:`_Axes.draw_xy_lines`.
+
+    Args:
+        ax: Target axes.
+        **axis_lines_kw: Forwarded to ``_Axes.draw_xy_lines``.
+    """
     _Axes(axs=ax).draw_xy_lines(**axis_lines_kw)
 
 
-# @copy_docstring_and_deprecators(_AxesLiron.save_fig)
-def save_fig(fig: Figure = None, file_name: str = None, **savefig_kw):
+def save_fig(fig: Figure | None = None, file_name: str | None = None, **savefig_kw: typing.Any) -> None:
+    """Standalone shim around :meth:`_Axes.save_fig`.
+
+    Args:
+        fig: Target figure (defaults to ``plt.gcf()``).
+        file_name: Output path; see :meth:`_Axes.save_fig`.
+        **savefig_kw: Forwarded to ``_Axes.save_fig``.
+    """
     if fig is None:
         fig = plt.gcf()
-
     _Axes(fig=fig).save_fig(file_name, **savefig_kw)
 
 
-# @copy_docstring_and_deprecators(_AxesLiron.set_props)
 def set_props(
-    ax: Axes_plt = None,
+    ax: Axes_plt | None = None,
     save_file_name: str | bool = False,
-    save_fig_kw: dict = None,
-    **set_props_kw,
-):
+    save_fig_kw: dict[str, typing.Any] | None = None,
+    **set_props_kw: typing.Any,
+) -> None:
+    """Standalone shim around :meth:`_Axes.set_props`.
+
+    Args:
+        ax: Target axes (defaults to ``plt.gca()``).
+        save_file_name: See :meth:`_Axes.set_props`.
+        save_fig_kw: Forwarded to ``_Axes.set_props``.
+        **set_props_kw: Forwarded to ``_Axes.set_props``.
+    """
     if ax is None:
         ax = plt.gca()
-
     _Axes(axs=ax).set_props(save_file_name=save_file_name, save_fig_kw=save_fig_kw, **set_props_kw)
 
 
-def get_savefig_file_name(file_name: str = None, time_dir: bool = False, mkdir: bool = False):
+def get_savefig_file_name(
+    file_name: str | None = None,
+    time_dir: bool = False,
+    mkdir: bool = False,
+) -> str:
+    """Build the full path for saving a figure.
+
+    Args:
+        file_name: If it has no directory component, the path resolves under
+            ``<MAIN_FILE_DIR>/figs``. If None, an auto-generated ``"fig <ts>"`` name
+            is used.
+        time_dir: If True, append a timestamped subdirectory.
+        mkdir: Create the directory if it doesn't exist.
+
+    Returns:
+        Resolved absolute (or near-absolute) file path.
     """
-
-    Parameters
-    ----------
-    file_name :     str, optional
-                    If <file_name> doesn't contain a directory name, the default saving directory
-                    will be "<CUR_DIR>/figs", where <CUR_DIR> is the current directory of the directory
-                    of the Python file being called.
-    time_dir :      bool, optional
-                    If True, a time directory will be created in the default saving directory.
-
-    Returns
-    -------
-    Full path of file to be saved.
-    """
-
     if file_name is None or os.path.dirname(file_name) == "":
         dir_name = os.path.join(MAIN_FILE_DIR, "figs")
     else:

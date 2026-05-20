@@ -1,11 +1,13 @@
+import typing
+
 from scipy.signal import windows
 
 from ...pure_python import MetaDict
 from . import COLORS
 
 
-class _FuncDefaultKwargs(dict):
-    def __init__(self, **kwargs):
+class _FuncDefaultKwargs(dict[str, typing.Any]):
+    def __init__(self, **kwargs: typing.Any) -> None:
         super().__init__(**kwargs)
 
 
@@ -58,41 +60,42 @@ class DefaultKwargs(metaclass=MetaDict):
     )
 
 
-def update_kwargs(key=None, **kwargs):
-    """
-    Update the default kwargs with the new ones.
+def update_kwargs(key: str | None = None, **kwargs: typing.Any) -> type[DefaultKwargs]:
+    """Update the defaults stored on ``DefaultKwargs`` in place.
 
     Args:
-        key (str):  Key to KWARGS to update.
-        **kwargs:   New kwargs to update or merge.
+        key: When given, update ``DefaultKwargs[key.upper()]`` with ``kwargs``. When None,
+            iterate ``kwargs`` and update ``DefaultKwargs[k.upper()]`` with each value.
+        **kwargs: New defaults to merge in.
 
     Returns:
-        dict: Updated KWARGS.
+        The ``DefaultKwargs`` class itself (mutated in place).
     """
-
     if key:
-        DefaultKwargs[key.upper()].update(**kwargs)
+        typing.cast(_FuncDefaultKwargs, DefaultKwargs[key.upper()]).update(**kwargs)
     else:
         for k in kwargs:  # pylint: disable=consider-using-dict-items
-            DefaultKwargs[k.upper()].update(**kwargs[k])
+            typing.cast(_FuncDefaultKwargs, DefaultKwargs[k.upper()]).update(**kwargs[k])
     return DefaultKwargs
 
 
-def merge_kwargs(**kwargs):
-    """
-    Merge between empty/partially filled kwargs to the default ones, giving priority to the new settings.
+def merge_kwargs(**kwargs: typing.Any) -> dict[str, typing.Any]:
+    """Merge each provided kwargs dict with its ``DefaultKwargs`` counterpart.
+
+    For each ``key=value`` in ``kwargs``, returns ``DefaultKwargs[key.upper()] | value``,
+    so values supplied by the caller win over defaults. ``None`` values are treated as
+    empty dicts.
 
     Args:
-        **kwargs:
+        **kwargs: Mapping of ``<name>=<partial-kwargs-dict-or-None>`` to merge.
 
     Returns:
-        KWARGS " kwargs (take KWARGS and overwrite it with kwargs where needed)
+        Dict with the same keys as ``kwargs``, each mapped to the merged dict.
     """
-
+    result: dict[str, typing.Any] = {}
     for key in kwargs:  # pylint: disable=consider-using-dict-items
-        if kwargs[key] is None:
-            kwargs[key] = dict()
-
-        kwargs[key] = DefaultKwargs[key.upper()] | kwargs[key]
-
-    return kwargs
+        value = kwargs[key]
+        if value is None:
+            value = {}
+        result[key] = DefaultKwargs[key.upper()] | value
+    return result

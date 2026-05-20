@@ -1,4 +1,5 @@
-# pylint: disable=import-error
+# pylint: disable=import-error,invalid-name
+# mypy: ignore-errors
 
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -6,9 +7,8 @@ from tkinter import filedialog, messagebox
 from pytube import YouTube
 
 
-# Defining CreateWidgets() function
-# to create necessary tkinter widgets
 def Widgets() -> None:
+    """Construct the tkinter widgets for the downloader window."""
     head_label = tk.Label(
         root,
         text="YouTube Video Downloader Using Tkinter",
@@ -49,68 +49,33 @@ def Widgets() -> None:
     Download_B.grid(row=4, column=1, pady=20, padx=20)
 
 
-# Defining Browse() to select a
-# destination folder to save the video
-
-
 def Browse() -> None:
-    # Presenting user with a pop-up for
-    # directory selection. initialdir
-    # argument is optional Retrieving the
-    # user-input destination directory and
-    # storing it in downloadDirectory
+    """Open a directory picker and store the chosen path in ``download_Path``."""
     download_Directory = filedialog.askdirectory(initialdir="YOUR DIRECTORY PATH", title="Save Video")
-
-    # Displaying the directory in the directory
-    # textbox
     download_Path.set(download_Directory)
 
 
-# Defining Download() to download the video
-
-
 def Download() -> None:
-    # getting user-input Youtube Link
+    """Download the YouTube video at ``video_Link`` to ``download_Path``."""
     Youtube_link = video_Link.get()
-
-    # select the optimal location for
-    # saving file's
     download_Folder = download_Path.get()
 
-    # Creating object of YouTube()
     getVideo = YouTube(Youtube_link)
-
-    # Getting all the available streams of the
-    # youtube video and selecting the first
-    # from the
     videoStream = getVideo.streams.first()
-
-    # Downloading the video to destination
-    # directory
     videoStream.download(download_Folder)
 
-    # Displaying the message
     messagebox.showinfo("SUCCESSFULLY", "DOWNLOADED AND SAVED IN\n" + download_Folder)
 
 
-# Creating object of tk class
 root = tk.Tk()
-
-# Setting the title, background color
-# and size of the tkinter window and
-# disabling the resizing property
 root.geometry("520x280")
 root.resizable(False, False)
 root.title("YouTube Video Downloader")
 root.config(background="PaleGreen1")
 
-# Creating the tkinter Variables
 video_Link = tk.StringVar()
 download_Path = tk.StringVar()
 
-# Calling the Widgets() function
 Widgets()
 
-# Defining infinite loop to run
-# application
 root.mainloop()

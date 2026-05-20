@@ -8,10 +8,10 @@ from .utils import *
 
 __all__ = [s for s in dir() if not s.startswith("_")]
 
-update_rcParams()  # Change default MatPlotLib parameters (e.g, figure size, label size, grid, colors, etc.)
+update_rc_params()  # Change default MatPlotLib parameters (e.g, figure size, label size, grid, colors, etc.)
 
 if is_notebook():
-    update_rcParams("liron-utils-notebook")
+    update_rc_params("liron-utils-notebook")
 
 # TODO:
 #   - matplotlib.animation.FuncAnimation

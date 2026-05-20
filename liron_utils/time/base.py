@@ -12,23 +12,17 @@ time_str_formats = {
 
 
 def get_time() -> datetime:
-    """
-    Get time a datetime object
-
-    Returns:
-
-    """
+    """Return the current local time as a ``datetime`` object."""
     return datetime.now()
 
 
 def get_time_str(fmt: str = time_str_formats["full_dash"]) -> str:
-    """
-    Get time as a string with a specified format.
+    """Return the current local time formatted as a string.
 
     Args:
-        fmt:        Format of the time string
+        fmt: ``strftime`` format string; defaults to ``time_str_formats["full_dash"]``.
 
     Returns:
-
+        Formatted current time.
     """
     return datetime.now().strftime(fmt)

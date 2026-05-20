@@ -2,11 +2,14 @@ import functools
 import multiprocessing as mp
 import sys
 import threading
+import typing
 import warnings
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .progress_bar import tqdm_
+
+_T = typing.TypeVar("_T")
 
 NUM_CPUS = mp.cpu_count()
 NUM_PROCESSES_TO_USE = NUM_CPUS
@@ -14,82 +17,52 @@ NUM_THREADS_TO_USE = 20
 
 
 def parallel_map(
-    func: callable,
-    iterable: Iterable,
-    callback=None,
-    error_callback=None,
+    func: Callable[..., _T],
+    iterable: Iterable[typing.Any],
+    *,
+    callback: Callable[..., typing.Any] | None = None,
+    error_callback: Callable[..., typing.Any] | None = None,
     num_processes: int = NUM_PROCESSES_TO_USE,
-    tqdm_kw=None,
-    **kwargs,
-) -> list:
-    """
-    Run function 'func' in parallel.
-    See qutip.parallel.parallel_map for reference.
+    tqdm_kw: dict[str, typing.Any] | None = None,
+    **kwargs: typing.Any,
+) -> list[_T]:
+    """Run ``func`` over ``iterable`` in parallel using a process pool.
 
-    Notes
-    -----
-    - 'func' must be a global function (can't be nested inside another function).
-    - parallel_map uses 'spawn' [1,2] by default in Windows, which starts a Python child process from scratch.
-      This means that everything not under an 'if __name__==__main__' block will be executed multiple times.
-    - In UNIX we use 'fork'.
+    ``func`` must be a global (picklable) function. On macOS the ``fork`` start
+    method is used; on Windows the default (``spawn``) is used, so anything not
+    guarded by ``if __name__ == "__main__"`` may be executed in each worker.
 
-    References
-    ----------
-    [1] https://stackoverflow.com/questions/64095876/multiprocessing-fork-vs-spawn/66113051#66113051
-    [2] https://stackoverflow.com/questions/72935231/statements-before-multiprocessing-main-executed-multiple-times-python
-    [3] https://superfastpython.com/multiprocessing-pool-issue-tasks
+    References:
+        - https://stackoverflow.com/questions/64095876
+        - https://stackoverflow.com/questions/72935231
+        - https://superfastpython.com/multiprocessing-pool-issue-tasks
 
-    Examples
-    --------
-    >>> import time
-    >>> def func(iter, x, y):
-    >>>     time.sleep(1)
-    >>>     return (x + y) ** iter
-    >>>
-    >>> if __name__ == '__main__':
-    >>>     x = 1
-    >>>     y = 2
-    >>>     t0 = time.time()
-    >>>     out = parallel_map(func=func, iterable=range(100), num_processes=8, x=x, y=y)
-    >>>     print(out[:5])
-    >>>     print(f"time: {time.time() - t0}sec")
+    Args:
+        func: Function to evaluate in parallel; its first positional argument is
+            the per-iteration value.
+        iterable: Source of first-argument values for ``func``.
+        callback: Per-task success callback.
+        error_callback: Per-task error callback.
+        num_processes: Worker process count; capped at ``min(NUM_CPUS, len(iterable))``.
+        tqdm_kw: Forwarded to ``tqdm_``.
+        **kwargs: Forwarded to ``func`` as keyword arguments.
 
-    Notes
-    -----
-    - If you get UserWarning: Can't pickle local object 'func.<locals>.func_partial', try to define 'func' in
-      the global scope.
+    Returns:
+        ``func`` outputs in the iteration order of ``iterable``.
 
-    Parameters
-    ----------
-    func :              callable
-                        The function to evaluate in parallel. The first argument is the changing value of each iteration
-    iterable :          array_like
-                        First input argument for 'func'
-    callback :          callable
-                        function to call after each iteration is done
-    error_callback :    callable
-                        function to call if an error occurs
-    num_processes :     int
-                        number of processes to use
-    progress_bar :     bool
-                        if True, show a progress bar using tqdm
-    desc :              str
-                        description for tqdm
-    postfix :           callable
-                        postfix for tqdm description. If callable, should return a dict.
-    tqdm_kw :           dict
-                        kwargs for tqdm.
-    kwargs :            passed to func
-
-    Returns
-    -------
-    list of 'func' outputs, organized by the order of 'iter'.
-
+    Example:
+        >>> import time
+        >>> def func(it, x, y):
+        ...     time.sleep(1)
+        ...     return (x + y) ** it
+        >>>
+        >>> if __name__ == "__main__":
+        ...     out = parallel_map(func=func, iterable=range(100), num_processes=8, x=1, y=2)
     """
     if sys.platform == "darwin":  # in UNIX 'fork' can be used (faster but more dangerous)
-        Pool = mp.get_context("fork").Pool
-    else:  # In Windows only 'spwan' is available
-        Pool = mp.Pool
+        pool_cls = mp.get_context("fork").Pool
+    else:  # In Windows only 'spawn' is available
+        pool_cls = mp.Pool
         mp.Process()
 
     if num_processes > NUM_CPUS:
@@ -98,9 +71,10 @@ def parallel_map(
             f"For better performance, consider reducing 'num_processes'.",
             category=UserWarning,
         )
+    iterable = list(iterable)
     num_processes = min(num_processes, NUM_CPUS, len(iterable))
 
-    with Pool(processes=num_processes) as pool:
+    with pool_cls(processes=num_processes) as pool:
         func_partial = functools.partial(func, **kwargs)  # pass kwargs to func
 
         out_async = [
@@ -113,7 +87,10 @@ def parallel_map(
             for i in iterable
         ]
 
-        out = []
+        out: list[_T] = []
+
+        if tqdm_kw is None:
+            tqdm_kw = {}
 
         for out_async_i in tqdm_(out_async, **tqdm_kw):
             try:
@@ -129,47 +106,34 @@ def parallel_map(
 
 
 def parallel_threading(
-    func: callable,
-    iterable: Iterable,
+    func: Callable[..., _T],
+    iterable: Iterable[typing.Any],
     lock: bool = False,
     num_threads: int = NUM_THREADS_TO_USE,
-    tqdm_kw=None,
-    **kwargs,
-) -> list:
+    tqdm_kw: dict[str, typing.Any] | None = None,
+    **kwargs: typing.Any,
+) -> list[_T | None]:
+    """Run ``func`` over ``iterable`` in parallel using a thread pool.
+
+    Args:
+        func: Function evaluated per item; its first positional argument is the
+            per-iteration value.
+        iterable: Source of first-argument values for ``func``.
+        lock: If True, serialize calls to ``func`` via a shared lock.
+        num_threads: Worker thread count.
+        tqdm_kw: Forwarded to ``tqdm_``.
+        **kwargs: Forwarded to ``func`` as keyword arguments.
+
+    Returns:
+        ``func`` outputs in the iteration order of ``iterable``;
+        any item whose call raised an exception is ``None``.
     """
-    Run function 'func' in parallel using threads.
+    thread_lock: threading.Lock | None = threading.Lock() if lock else None
 
-    Parameters
-    ----------
-    func :          callable
-                    The function to evaluate using threads. The first argument is the changing value of each iteration.
-    iterable :      array_like
-                    First input argument for 'func'
-    lock :          bool
-                    Use a lock to prevent concurrent access to shared resources.
-    num_threads :   int
-                    Number of threads to use.
-    progress_bar : bool
-                    If True, show a progress bar using tqdm.
-    desc :          str or callable
-                    Description for tqdm. If callable, should return a string.
-    postfix :       callable
-                    Postfix for tqdm description. If callable, should return a dict.
-    tqdm_kw :       dict
-                    kwargs for tqdm.
-    kwargs :        Passed to func.
-
-    Returns
-    -------
-    List of 'func' outputs, organized by the order of 'iterable'.
-    """
-    if lock:
-        lock = threading.Lock()
-
-    def wrapped_func(index, item):
+    def wrapped_func(index: int, item: typing.Any) -> tuple[int, _T | None]:
         try:
-            if lock:
-                with lock:
+            if thread_lock is not None:
+                with thread_lock:
                     result = func(item, **kwargs)
             else:
                 result = func(item, **kwargs)
@@ -178,13 +142,14 @@ def parallel_threading(
             warnings.warn(f"Exception at index {index}: {e}")
             return index, None
 
-    out = [None] * len(iterable)
+    iterable = list(iterable)
+    out: list[_T | None] = [None] * len(iterable)
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = [executor.submit(wrapped_func, i, item) for i, item in enumerate(iterable)]
 
         if tqdm_kw is None:
-            tqdm_kw = dict()
-        tqdm_kw = dict(total=len(futures)) | tqdm_kw
+            tqdm_kw = {}
+        tqdm_kw = {"total": len(futures)} | tqdm_kw
 
         for future in tqdm_(as_completed(futures), **tqdm_kw):
             index, result = future.result()

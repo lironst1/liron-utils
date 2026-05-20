@@ -1,8 +1,12 @@
+# pylint: disable=too-many-lines
+import typing
 from collections.abc import Iterable
 
 import matplotlib
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
+from cycler import Cycler, cycler
 
 from ..base import hex2rgb
 from . import COLORS
@@ -53,7 +57,7 @@ RC_PARAMS = {
     "axes.grid.which": "both",  # grid lines at {major, minor, both} ticks
     "grid.color": COLORS.LIGHT_GREY,  # grid color
     "axes.labelsize": "large",  # font size of the x and y labels
-    "axes.prop_cycle": matplotlib.cycler(
+    "axes.prop_cycle": cycler(
         color=[
             COLORS.DARK_BLUE,
             COLORS.ORANGE_B,
@@ -554,7 +558,7 @@ RC_PARAMS_DEFAULT = {
     "axes.spines.right": True,
     "axes.unicode_minus": True,  # use Unicode for the minus symbol rather than hyphen.  See
     # https://en.wikipedia.org/wiki/Plus_and_minus_signs#Character_codes
-    "axes.prop_cycle": matplotlib.cycler(
+    "axes.prop_cycle": cycler(
         "color",
         [
             "1f77b4",
@@ -894,11 +898,20 @@ RC_PARAMS_DEFAULT = {
 }
 
 
-def get_style_rcparams(style: str):
-    return plt.style.core._base_library[style]  # pylint: disable=protected-access
+def get_style_rcparams(style: str) -> dict[str, typing.Any]:
+    """Return the rcParams dict for a built-in matplotlib style.
+
+    Args:
+        style: Name of a style available in ``plt.style.available``.
+
+    Returns:
+        The mapping of rcParam keys to values for that style.
+    """
+    return typing.cast(dict[str, typing.Any], plt.style.core._base_library[style])  # type: ignore[attr-defined]  # pylint: disable=protected-access
 
 
-STYLES = plt.style.core._base_library | {  # pylint: disable=protected-access
+_StylesType = dict[str, str | dict[str, typing.Any] | typing.Callable[..., dict[str, typing.Any]]]
+STYLES: _StylesType = plt.style.core._base_library | {  # type: ignore[attr-defined]  # pylint: disable=protected-access
     "default": matplotlib.rcParamsDefault,
     "liron-utils-default": RC_PARAMS,
     "liron-utils-article": {  # get_style_rcparams("seaborn-v0_8-talk")
@@ -1023,119 +1036,165 @@ STYLES = plt.style.core._base_library | {  # pylint: disable=protected-access
 }
 
 
-def get_color_cycler(colors: (str, Iterable) = "cycler", rgb: bool = False, plot: (bool, str) = False):
+def _resolve_color_list(colors: str | Iterable[str]) -> list[str]:
+    """Resolve a colors specifier into a flat list of hex color strings.
+
+    Args:
+        colors: ``"cycler"`` for the active prop_cycle, ``"all"`` for every entry in
+            ``COLORS.__all__``, any other string for a substring match against
+            ``COLORS.__all__``, or an explicit iterable of hex strings.
+
+    Returns:
+        Resolved list of hex color strings.
+
+    Raises:
+        ValueError: If ``colors`` is neither a string nor an iterable, or if a
+            substring match returns no colors.
     """
-    Show all of a cycler colors in a graph
-
-    Parameters
-    ----------
-    colors :        str or array_like, optional
-                    - "all" - return all colors given in COLORS.py
-                    - "cycler" - return only cycler colors given in RC_PARAMS["axes.prop_cycle"]
-                    - "<color>" - return all colors in COLORS.py that start with <color> (e.g. "blue")
-    rgb :           bool, optional
-                    If True, return RGB tuples instead of hex strings
-    plot :          bool, optional
-                    Plot the colors
-
-    Returns
-    -------
-    list of colors (hex or RGB)
-    """
-
-    if isinstance(colors, str):
-        if colors == "cycler":
-            cycler = RC_PARAMS["axes.prop_cycle"]
-            colors = [cycler._left[i]["color"] for i in range(len(cycler._left))]  # pylint: disable=protected-access
-        elif colors == "all":
-            all_str = COLORS.__all__
-            colors = [getattr(COLORS, all_str[i]) for i in range(len(all_str))]
-        else:
-            color_name = colors
-            colors = [getattr(COLORS, c) for c in COLORS.__all__ if color_name.lower() in c.lower()]
-            if len(colors) == 0:
-                raise ValueError(f"No colors found that match '{color_name}' in COLORS.py")
-
-    elif isinstance(colors, Iterable):
-        pass
-
-    else:
+    if isinstance(colors, Iterable) and not isinstance(colors, str):
+        return list(colors)
+    if not isinstance(colors, str):
         raise ValueError("Invalid type for 'colors'.")
+    if colors == "cycler":
+        color_cycler = typing.cast(Cycler[str, str], RC_PARAMS["axes.prop_cycle"])
+        return [entry["color"] for entry in color_cycler]
+    if colors == "all":
+        return [getattr(COLORS, name) for name in COLORS.__all__]
+    matches = [getattr(COLORS, c) for c in COLORS.__all__ if colors.lower() in c.lower()]
+    if not matches:
+        raise ValueError(f"No colors found that match '{colors}' in COLORS.py")
+    return matches
 
-    # plot colors
+
+def _plot_color_bars(ax: matplotlib.axes.Axes, color_list: list[str]) -> None:
+    """Plot each color in ``color_list`` as a labeled bar on ``ax``.
+
+    Args:
+        ax: Axes to draw on.
+        color_list: Hex color strings to display.
+    """
+    if ax.yaxis is not None:
+        ax.yaxis.set_visible(False)
+    for i, color in enumerate(color_list):
+        h = ax.bar(i + 1, 1, color=color)
+        ax.bar_label(h, labels=[color], label_type="center", rotation=-90)
+    ax.grid(None)
+
+
+def _plot_color_sines(ax: matplotlib.axes.Axes, color_list: list[str]) -> None:
+    """Plot one sine curve per color in ``color_list`` on ``ax``.
+
+    Args:
+        ax: Axes to draw on.
+        color_list: Hex color strings, each used for one sine of increasing frequency.
+    """
+    x = np.linspace(0, 1, 1001)
+    for i, color in enumerate(color_list):
+        ax.plot(x, np.sin(2 * np.pi * ((i + 1) / 4) * x), label=color)
+    ax.legend()
+
+
+def _plot_color_list(color_list: list[str], plot: bool | str) -> None:
+    """Display ``color_list`` on a new figure using the chosen plot style.
+
+    Args:
+        color_list: Hex color strings to display.
+        plot: ``True`` / ``"color"`` / ``"colors"`` draws labeled bars; ``"sine"``
+            draws one sine curve per color.
+    """
+    fig, ax = plt.subplots()
+    if plot is True or plot in ("color", "colors"):
+        _plot_color_bars(ax, color_list)
+    elif plot == "sine":
+        _plot_color_sines(ax, color_list)
+    fig.show()
+
+
+def get_color_cycler(
+    colors: str | Iterable[str] = "cycler",
+    *,
+    rgb: bool = False,
+    plot: bool | str = False,
+) -> list[str] | list[tuple[float, float, float]]:
+    """Resolve a color specifier into a list of hex strings (or RGB tuples).
+
+    Args:
+        colors: ``"all"`` for every entry in COLORS.py, ``"cycler"`` for the colors in
+            ``RC_PARAMS["axes.prop_cycle"]``, any other string for a substring match
+            against COLORS.py (e.g. ``"blue"``), or an explicit iterable of hex strings.
+        rgb: If True, convert the result to a list of ``(r, g, b)`` tuples instead of hex.
+        plot: If truthy, also display the resolved colors. ``True`` / ``"color"`` /
+            ``"colors"`` draws labeled bars; ``"sine"`` draws sine curves.
+
+    Returns:
+        List of hex strings, or of RGB tuples if ``rgb`` is True.
+    """
+    color_list = _resolve_color_list(colors)
     if plot is not False:
-        fig, ax = plt.subplots()
-        if plot is True or plot in ["color", "colors"]:
-            ax.axes.yaxis.set_visible(False)
-            for i, color in enumerate(colors):
-                h = ax.bar(i + 1, 1, color=color)
-                ax.bar_label(h, labels=[color], label_type="center", rotation=-90)
-            ax.grid(None)
-
-        elif plot == "sine":
-            x = np.linspace(0, 1, 1001)
-            y = lambda f: np.sin(2 * np.pi * f * x)
-            for i, color in enumerate(colors):
-                ax.plot(x, y((i + 1) / 4), label=color)
-                ax.legend()
-
-        fig.show()
-
+        _plot_color_list(color_list, plot)
     if rgb:
-        colors = hex2rgb(colors)
+        return hex2rgb(color_list)
+    return color_list
 
-    return colors
 
+def set_color_cycler(
+    colors: str | Iterable[str] = "cycler",
+    plot: bool | str = False,
+) -> list[str] | list[tuple[float, float, float]]:
+    """Resolve and apply a color list to matplotlib's ``axes.prop_cycle``.
 
-def set_color_cycler(colors: (str, Iterable) = "cycler", plot: (bool, str) = False):
+    Args:
+        colors: Same semantics as :func:`get_color_cycler` (``"all"``, ``"cycler"``,
+            substring match, or explicit iterable).
+        plot: If truthy, also display the resolved colors.
+
+    Returns:
+        The resolved color list (hex strings), as returned by :func:`get_color_cycler`.
     """
-    Set the color cycler for MatPlotLib.
-
-    Parameters
-    ----------
-    colors :        str or array_like, optional
-                    - "all" - set all colors given in COLORS.py
-                    - "cycler" - set only cycler colors given in RC_PARAMS["axes.prop_cycle"]
-    plot :          bool, optional
-                    Plot the colors
-
-    Returns
-    -------
-    list of colors
-    """
-
     cycler_colors = get_color_cycler(colors=colors, plot=plot)
-    matplotlib.rcParams["axes.prop_cycle"] = matplotlib.cycler(color=cycler_colors)
+    matplotlib.rcParams["axes.prop_cycle"] = cycler(color=cycler_colors)
 
     return cycler_colors
 
 
-def update_rcParams(new_params: (str, dict, callable) = "liron-utils-default", *args, **kwargs):
+def update_rc_params(
+    new_params: str | dict[str, typing.Any] | typing.Callable[..., dict[str, typing.Any]] = "liron-utils-default",
+    /,
+    *args: typing.Any,
+    **kwargs: typing.Any,
+) -> str | dict[str, typing.Any]:
+    """Update matplotlib's global rcParams from a style name, dict, or callable.
+
+    Args:
+        new_params: A style name in ``plt.style.available`` or in ``STYLES``, a dict
+            of rcParam overrides, or a callable returning such a dict.
+        *args: Forwarded to ``new_params`` if it (or its STYLES entry) is callable.
+        **kwargs: Forwarded to ``new_params`` if it (or its STYLES entry) is callable.
+
+    Returns:
+        The applied rcParams (as a dict), or the resolved style name for built-in styles.
     """
-    Update the default MatPlotLib rcParams.
-
-    Parameters
-    ----------
-    new_params :    str or dict
-                    - str: either one of plt.style.available or one of STYLES
-                    - dict: dictionary of rcParams
-
-    Returns
-    -------
-
-    """
-
+    result: str | dict[str, typing.Any]
     if isinstance(new_params, str):
         if new_params.replace("_", "-") in STYLES:
-            new_params = STYLES[new_params.replace("_", "-")]
-            if callable(new_params):
-                new_params = new_params(*args, **kwargs)
-            matplotlib.rcParams.update(new_params)
+            resolved: str | dict[str, typing.Any] | typing.Callable[..., dict[str, typing.Any]] = STYLES[
+                new_params.replace("_", "-")
+            ]
+            if callable(resolved):
+                resolved = resolved(*args, **kwargs)
+            matplotlib.rcParams.update(typing.cast(dict[str, typing.Any], resolved))
+            result = typing.cast(dict[str, typing.Any], resolved)
         else:  # new_rcParams in plt.style.available
             plt.style.use(new_params)
-            new_params = get_style_rcparams(new_params)
+            result = get_style_rcparams(new_params)
 
-    else:  # type(new_rcParams) is dict
+    elif isinstance(new_params, dict):
         matplotlib.rcParams.update(new_params)
+        result = new_params
 
-    return new_params
+    else:
+        resolved_dict = new_params(*args, **kwargs)
+        matplotlib.rcParams.update(resolved_dict)
+        result = resolved_dict
+
+    return result

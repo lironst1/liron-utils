@@ -1,12 +1,12 @@
-# pylint: disable=no-value-for-parameter
+# pylint: disable=no-value-for-parameter,too-many-lines
 
-from collections.abc import Iterable, Sequence
+import typing
+from collections.abc import Callable, Iterable
 
 import matplotlib.animation
 import matplotlib.cm
 import matplotlib.collections
 import matplotlib.colors
-import matplotlib.pyplot as plt
 import numpy as np
 import scipy.signal
 from matplotlib.axes import Axes as Axes_plt
@@ -15,6 +15,21 @@ from matplotlib.figure import Figure
 from ..signal_processing.base import interp1
 from ..uncertainties_math import to_numpy
 from .axes import _Axes
+
+_N = typing.TypeVar("_N", bound=int)
+_K = typing.TypeVar("_K", bound=int)
+
+# Shape-parameterized aliases — thread the same TypeVar across params to express "same length".
+_Vec = np.ndarray[tuple[_N], np.dtype[typing.Any]]
+_Mat = np.ndarray[tuple[_N, _K], np.dtype[typing.Any]]
+
+# Fixed-dimensionality aliases (use when same-length constraints aren't expressed).
+_Array1D = np.ndarray[tuple[int], np.dtype[typing.Any]]
+_Array2D = np.ndarray[tuple[int, int], np.dtype[typing.Any]]
+_Array3D = np.ndarray[tuple[int, int, int], np.dtype[typing.Any]]
+
+# Catch-all for opaque/arbitrary-dim arrays (used for object-dtype outputs from `_vectorize`).
+_Array = np.ndarray[typing.Any, np.dtype[typing.Any]]
 
 # TODO:
 #   - add option to call gr.Axes.plot(ax, x, y) with ax=plt.Axes (add decorator to outer plotting functions),
@@ -25,110 +40,86 @@ from .axes import _Axes
 
 class Axes(_Axes):
 
-    def __init__(
+    def plot(
         self,
-        shape: tuple[int, int] = (1, 1),
-        grid_layout: Sequence[Sequence[int | tuple[int, int]]] = None,
-        sharex: bool | str = False,
-        sharey: bool | str = False,
-        projection: str = None,
-        layout: str = None,
-        fig: Figure = None,
-        axs: Axes_plt | Sequence[Axes_plt] = None,
-        subplot_kw: dict = None,
-        gridspec_kw: dict = None,
-        **fig_kw,
-    ):
-        super().__init__(
-            shape=shape,
-            grid_layout=grid_layout,
-            sharex=sharex,
-            sharey=sharey,
-            projection=projection,
-            layout=layout,
-            fig=fig,
-            axs=axs,
-            subplot_kw=subplot_kw,
-            gridspec_kw=gridspec_kw,
-            **fig_kw,
-        )
+        x: _Vec[_N],
+        y: _Vec[_N] | None = None,
+        z: _Vec[_N] | None = None,
+        **plot_kw: typing.Any,
+    ) -> _Array:
+        """Plot 2D curve y=f(x) (or 3D when z is given) on each axis of the grid.
 
-    def plot(self, x, y=None, z=None, **plot_kw):
+        Args:
+            x: 1D x-axis data of length N. If y is None, x is treated as y and the
+                x-axis becomes range(len(x)).
+            y: 1D y-axis data of length N.
+            z: 1D z-axis data of length N for 3D plots.
+            **plot_kw: Forwarded to matplotlib.axes.Axes.plot.
+
+        Returns:
+            Object-dtype ndarray with one list[Line2D] per axis.
+        """
 
         @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, x=x, y=y, z=z)
-        def _plot(ax: Axes_plt, x, y=None, z=None, **plot_kw):
-            """
-            2D plot of y=f(x)
-
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            x : array_like
-                X-axis data values.
-            y : array_like, optional
-                Y-axis data values. If None, x is treated as y and x becomes range(len(y)).
-            z : array_like, optional
-                Z-axis data values for 3D plots.
-            **plot_kw : dict
-                Additional keyword arguments passed to matplotlib.pyplot.plot.
-
-            Returns
-            -------
-            list of Line2D
-                A list of Line2D objects representing the plotted data.
-            """
-
-            args = [x]
+        @self._vectorize(x=x, y=y, z=z)
+        def _plot(
+            ax: Axes_plt,
+            x: _Vec[_N],
+            y: _Vec[_N] | None = None,
+            z: _Vec[_N] | None = None,
+            **plot_kw: typing.Any,
+        ) -> list[typing.Any]:
+            args: list[_Vec[_N]] = [x]
             if y is not None:
                 args += [y]
             if z is not None:
                 args += [z]
-
             return ax.plot(*args, **plot_kw)
 
         return _plot()
 
-    def plot_vlines(self, x=0, ymin=0, ymax=1, **plot_kw):
+    def plot_vlines(
+        self,
+        x: _Array1D | float = 0,
+        ymin: float = 0,
+        ymax: float = 1,
+        **plot_kw: typing.Any,
+    ) -> _Array:
+        """Plot one or more vertical lines on each axis.
+
+        Args:
+            x: x positions of the lines — a scalar or a 1D array.
+            ymin: Lower y endpoint in data coordinates.
+            ymax: Upper y endpoint in data coordinates.
+            **plot_kw: Forwarded to matplotlib.axes.Axes.axvline. The optional
+                ``label`` kwarg is only attached to the last drawn line.
+
+        Returns:
+            Object-dtype ndarray with one list[Line2D] per axis.
+        """
 
         @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, x=x, ymin=ymin, ymax=ymax)
-        def _plot_vlines(ax: Axes_plt, x=0, ymin=0, ymax=1, **plot_kw):
-            """
-            Plot vertical lines.
+        @self._vectorize(x=x, ymin=ymin, ymax=ymax)
+        def _plot_vlines(
+            ax: Axes_plt,
+            x: _Array1D | float = 0,
+            ymin: float = 0,
+            ymax: float = 1,
+            **plot_kw: typing.Any,
+        ) -> list[typing.Any]:
+            x_arr = typing.cast(_Array1D, np.atleast_1d(x))
 
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            x : array_like or scalar, default 0
-                x positions of the vertical lines.
-            ymin : float, default 0
-                Minimum y position of the lines (in data coordinates).
-            ymax : float, default 1
-                Maximum y position of the lines (in data coordinates).
-            **plot_kw : dict
-                Additional keyword arguments passed to matplotlib.axes.Axes.axvline.
-
-            Returns
-            -------
-            list of Line2D
-                A list of Line2D objects representing the plotted vertical lines.
-            """
-            x = np.atleast_1d(x)
-
-            label = None
+            label: str | None = None
             if "label" in plot_kw:
                 label = plot_kw.pop("label")
 
-            lines = []
-            for i, xx in enumerate(x):
+            lines: list[typing.Any] = []
+            for i, xx in enumerate(x_arr):
                 line = ax.axvline(
                     x=xx,
                     ymin=ymin,
                     ymax=ymax,
-                    label=label if i == x.shape[0] - 1 else "_nolabel_",
+                    label=label if i == x_arr.shape[0] - 1 else "_nolabel_",
                     **plot_kw,
                 )
                 lines.append(line)
@@ -137,45 +128,48 @@ class Axes(_Axes):
 
         return _plot_vlines()
 
-    def plot_hlines(self, y=0, xmin=0, xmax=1, **plot_kw):
+    def plot_hlines(
+        self,
+        y: _Array1D | float = 0,
+        xmin: float = 0,
+        xmax: float = 1,
+        **plot_kw: typing.Any,
+    ) -> _Array:
+        """Plot one or more horizontal lines on each axis.
+
+        Args:
+            y: y positions of the lines — a scalar or a 1D array.
+            xmin: Left x endpoint in data coordinates.
+            xmax: Right x endpoint in data coordinates.
+            **plot_kw: Forwarded to matplotlib.axes.Axes.axhline. The optional
+                ``label`` kwarg is only attached to the last drawn line.
+
+        Returns:
+            Object-dtype ndarray with one list[Line2D] per axis.
+        """
 
         @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, y=y, xmin=xmin, xmax=xmax)
-        def _plot_hlines(ax: Axes_plt, y=0, xmin=0, xmax=1, **plot_kw):
-            """
-            Plot horizontal lines.
+        @self._vectorize(y=y, xmin=xmin, xmax=xmax)
+        def _plot_hlines(
+            ax: Axes_plt,
+            y: _Array1D | float = 0,
+            xmin: float = 0,
+            xmax: float = 1,
+            **plot_kw: typing.Any,
+        ) -> list[typing.Any]:
+            y_arr = typing.cast(_Array1D, np.atleast_1d(y))
 
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            y : array_like or scalar, default 0
-                y positions of the horizontal lines.
-            xmin : float, default 0
-                Minimum x position of the lines (in data coordinates).
-            xmax : float, default 1
-                Maximum x position of the lines (in data coordinates).
-            **plot_kw : dict
-                Additional keyword arguments passed to matplotlib.axes.Axes.axhline.
-
-            Returns
-            -------
-            list of Line2D
-                A list of Line2D objects representing the plotted horizontal lines.
-            """
-            y = np.atleast_1d(y)
-
-            label = None
+            label: str | None = None
             if "label" in plot_kw:
                 label = plot_kw.pop("label")
 
-            lines = []
-            for i, yy in enumerate(y):
+            lines: list[typing.Any] = []
+            for i, yy in enumerate(y_arr):
                 line = ax.axhline(
                     y=yy,
                     xmin=xmin,
                     xmax=xmax,
-                    label=label if i == y.shape[0] - 1 else "_nolabel_",
+                    label=label if i == y_arr.shape[0] - 1 else "_nolabel_",
                     **plot_kw,
                 )
                 lines.append(line)
@@ -184,40 +178,48 @@ class Axes(_Axes):
 
         return _plot_hlines()
 
-    def plot_errorbar(self, x, y=None, xerr=None, yerr=None, **errorbar_kw):
+    def plot_errorbar(
+        self,
+        x: _Vec[_N],
+        y: _Vec[_N] | None = None,
+        xerr: _Vec[_N] | None = None,
+        yerr: _Vec[_N] | None = None,
+        **errorbar_kw: typing.Any,
+    ) -> _Array:
+        """Plot y=f(x) with error bars on each axis.
+
+        If ``y`` is None, ``x`` is treated as the y-axis data and the x-axis
+        becomes ``range(len(x))``. All four arrays share length N.
+
+        Args:
+            x: 1D x-axis data of length N. May also be an uncertainties array; in
+                that case ``xerr`` is taken from the embedded uncertainties.
+            y: 1D y-axis data of length N. May also be an uncertainties array.
+            xerr: 1D errors in x, length N.
+            yerr: 1D errors in y, length N.
+            **errorbar_kw: Forwarded to matplotlib.axes.Axes.errorbar.
+
+        Returns:
+            Object-dtype ndarray with one ErrorbarContainer per axis.
+        """
 
         @self._merge_kwargs("errorbar_kw", **errorbar_kw)
-        @self._vectorize(cls=self, x=x, y=y, xerr=xerr, yerr=yerr)
-        def _plot_errorbar(ax: Axes_plt, x, y=None, xerr=None, yerr=None, **errorbar_kw):
-            """
-            2D plot of y=f(x) with errorbars
-
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            x : array_like
-                x-axis data values.
-            y : array_like, optional
-                y-axis data values. If None, x is treated as y and x becomes range(len(x)).
-            xerr, yerr : array_like, optional
-                Error bars in the x, y direction.
-            **errorbar_kw : dict
-                Additional keyword arguments passed to matplotlib.axes.Axes.errorbar.
-
-            Returns
-            -------
-            ErrorbarContainer
-                Container with the errorbar plot elements.
-            """
-
+        @self._vectorize(x=x, y=y, xerr=xerr, yerr=yerr)
+        def _plot_errorbar(
+            ax: Axes_plt,
+            x: _Vec[_N],
+            y: _Vec[_N] | None = None,
+            xerr: _Vec[_N] | None = None,
+            yerr: _Vec[_N] | None = None,
+            **errorbar_kw: typing.Any,
+        ) -> typing.Any:
             if y is None:
                 assert xerr is None and yerr is None, "If y is not given, xerr and yerr should not be given."
                 y = x
-                x = np.arange(len(y))
+                x = typing.cast(_Vec[_N], np.arange(len(y)))
 
-            x, xerr = to_numpy(x, xerr)
-            y, yerr = to_numpy(y, yerr)
+            x, xerr = typing.cast(tuple[_Vec[_N], _Vec[_N] | None], to_numpy(x, xerr))
+            y, yerr = typing.cast(tuple[_Vec[_N], _Vec[_N] | None], to_numpy(y, yerr))
 
             return ax.errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
 
@@ -226,18 +228,38 @@ class Axes(_Axes):
     def plot_filled_error(
         self,
         ax: Axes_plt,
-        x,
-        y=None,
-        yerr=None,
-        n_std=2,
-        y_low=None,
-        y_high=None,
-        **fill_between_kw,
-    ):
+        x: _Vec[_N],
+        y: _Vec[_N] | None = None,
+        *,
+        yerr: _Vec[_N] | None = None,
+        n_std: float = 2,
+        y_low: _Vec[_N] | None = None,
+        y_high: _Vec[_N] | None = None,
+        **fill_between_kw: typing.Any,
+    ) -> _Array:
+        """Plot a y±n_std·yerr confidence band as a filled area.
+
+        Either ``(y, yerr)`` or ``(y_low, y_high)`` must be given. All arrays share length N.
+
+        Args:
+            ax: Axes to draw on.
+            x: 1D x-axis data of length N.
+            y: 1D y-axis center values, length N; required when ``y_low``/``y_high`` are None.
+            yerr: 1D errors in y, length N; the band is drawn at ``y ± n_std·yerr``.
+            n_std: Number of standard deviations spanned by the band.
+            y_low: 1D lower bound of the band, length N; required when ``y`` is None.
+            y_high: 1D upper bound of the band, length N; required when ``y`` is None.
+            **fill_between_kw: Forwarded to matplotlib.axes.Axes.fill_between.
+
+        Returns:
+            Object-dtype ndarray with one PolyCollection per axis.
+
+        Raises:
+            AssertionError: If neither ``(y, yerr)`` nor ``(y_low, y_high)`` is provided.
+        """
 
         @self._merge_kwargs("fill_between_kw", **fill_between_kw)
         @self._vectorize(
-            cls=self,
             ax=ax,
             x=x,
             y=y,
@@ -248,76 +270,155 @@ class Axes(_Axes):
         )
         def _plot_filled_error(
             ax: Axes_plt,
-            x,
-            y=None,
-            yerr=None,
-            n_std=2,
-            y_low=None,
-            y_high=None,
-            **fill_between_kw,
-        ):
-            """
-            Plot error using filled area
-
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            x : array_like
-                x-axis data values.
-            y : array_like, optional
-                y-axis data values.
-            yerr : array_like, optional
-                Error values in the y direction.
-            n_std : int, default 2
-                Number of standard deviations to fill.
-            y_low : array_like, optional
-                Lower bounds of the filled area. If not given, will be calculated as y-n_std*yerr.
-            y_high : array_like, optional
-                Upper bounds of the filled area. If not given, will be calculated as y+n_std*yerr.
-            **fill_between_kw : dict
-                Additional keyword arguments passed to matplotlib.axes.Axes.fill_between.
-
-            Returns
-            -------
-            PolyCollection
-                The filled area between the curves.
-            """
-
-            # Data
-            x, _ = to_numpy(x)
+            x: _Vec[_N],
+            y: _Vec[_N] | None = None,
+            *,
+            yerr: _Vec[_N] | None = None,
+            n_std: float = 2,
+            y_low: _Vec[_N] | None = None,
+            y_high: _Vec[_N] | None = None,
+            **fill_between_kw: typing.Any,
+        ) -> typing.Any:
+            x = typing.cast(_Vec[_N], to_numpy(x)[0])
             if y is None:
                 assert y_low is not None and y_high is not None, "(y, yerr) or (y_low, y_high) should be given."
             else:
                 assert y_low is None and y_high is None, "(y, yerr) or (y_low, y_high) should be given."
-                y, yerr = to_numpy(y, yerr)
+                y, yerr = typing.cast(tuple[_Vec[_N], _Vec[_N] | None], to_numpy(y, yerr))
                 assert yerr is not None, "yerr should be given."
-
-                y_low = y - n_std * yerr
-                y_high = y + n_std * yerr
+                y_low = typing.cast(_Vec[_N], y - n_std * yerr)
+                y_high = typing.cast(_Vec[_N], y + n_std * yerr)
 
             return ax.fill_between(x, y_low, y_high, **fill_between_kw)
 
         return _plot_filled_error()
 
-    def plot_data_and_curve_fit(
+    @staticmethod
+    def _curve_fit_prep_data(
+        x: _Vec[_N],
+        y: _Vec[_N],
+        xerr: _Vec[_N] | None,
+        yerr: _Vec[_N] | None,
+        p_opt: _Vec[_K] | None,
+    ) -> tuple[_Vec[_N], _Vec[_N], _Vec[_N] | None, _Vec[_N] | None, _Vec[_K] | None]:
+        """Convert ``(x, y, xerr, yerr, p_opt)`` to numpy (via to_numpy) and sort by x.
+
+        Args:
+            x: 1D x-axis data of length N; uncertainties arrays are unpacked into ``(x, xerr)``.
+            y: 1D y-axis data of length N; uncertainties arrays are unpacked into ``(y, yerr)``.
+            xerr: 1D errors in x, length N. Ignored if x is an uncertainties array.
+            yerr: 1D errors in y, length N. Ignored if y is an uncertainties array.
+            p_opt: 1D fit parameters of length K; uncertainties unpacked to nominal values.
+
+        Returns:
+            ``(x, y, xerr, yerr, p_opt)`` as plain numpy arrays, sorted by x.
+        """
+        x, xerr = typing.cast(tuple[_Vec[_N], _Vec[_N] | None], to_numpy(x, xerr))
+        y, yerr = typing.cast(tuple[_Vec[_N], _Vec[_N] | None], to_numpy(y, yerr))
+        p_opt = typing.cast(_Vec[_K] | None, to_numpy(p_opt)[0])
+        idx = np.argsort(x)
+        x, y = typing.cast(_Vec[_N], x[idx]), typing.cast(_Vec[_N], y[idx])
+        if xerr is not None:
+            xerr = typing.cast(_Vec[_N], xerr[idx])
+        if yerr is not None:
+            yerr = typing.cast(_Vec[_N], yerr[idx])
+        return x, y, xerr, yerr, p_opt
+
+    @staticmethod
+    def _curve_fit_confidence_band(
+        fit_fcn: Callable[..., _Vec[_N]],
+        x_interp: _Vec[_N],
+        p_opt: _Vec[_K],
+        p_cov: _Mat[_K, _K],
+        n_std: float,
+    ) -> tuple[_Vec[_N], _Vec[_N]]:
+        """Compute the lower/upper fit envelope by perturbing each parameter ±n_std·σ.
+
+        For each parameter ``p_opt[i]``, evaluate ``fit_fcn`` at ``p_opt[i] ± n_std·σ_i``
+        (with σ_i from the diagonal of ``p_cov``) and take the element-wise min/max
+        across all parameter perturbations to produce the band edges.
+
+        Args:
+            fit_fcn: Model function ``f(x, *params)`` that returns a 1D vector matching x.
+            x_interp: 1D x-axis values of length N at which to evaluate the band.
+            p_opt: 1D best-fit parameter values of length K.
+            p_cov: K×K covariance matrix; its diagonal gives the per-parameter variances.
+            n_std: Number of standard deviations spanning the band.
+
+        Returns:
+            ``(fit_low, fit_high)`` as 1D arrays of length N.
+        """
+        p_err = np.sqrt(np.diag(p_cov))
+        fit_low = np.full(x_interp.size, np.inf)
+        fit_high = np.full(x_interp.size, -np.inf)
+        for i, (mid, err) in enumerate(zip(p_opt, p_err)):
+            p_opt_i = p_opt.copy()
+            p_opt_i[i] = mid - n_std * err
+            low = fit_fcn(x_interp, *p_opt_i)
+            p_opt_i[i] = mid + n_std * err
+            high = fit_fcn(x_interp, *p_opt_i)
+            fit_low = np.minimum(fit_low, np.minimum(low, high))
+            fit_high = np.maximum(fit_high, np.maximum(low, high))
+        return typing.cast(_Vec[_N], fit_low), typing.cast(_Vec[_N], fit_high)
+
+    def plot_data_and_curve_fit(  # pylint: disable=too-many-arguments
         self,
-        x,
-        y,
-        fit_fcn,
-        xerr=None,
-        yerr=None,
-        p_opt=None,
-        p_cov=None,
-        n_std=2,
-        interp_factor=20,
-        curve_fit_plot_kw=None,
-        **errorbar_kw,
-    ):
+        x: _Vec[_N],
+        y: _Vec[_N],
+        fit_fcn: Callable[..., _Array1D],
+        *,
+        xerr: _Vec[_N] | None = None,
+        yerr: _Vec[_N] | None = None,
+        p_opt: _Vec[_K] | None = None,
+        p_cov: _Mat[_K, _K] | None = None,
+        n_std: float = 2,
+        interp_factor: int = 20,
+        curve_fit_plot_kw: dict[str, typing.Any] | None = None,
+        **errorbar_kw: typing.Any,
+    ) -> _Array:
+        """Scatter the data with errorbars and overlay a smooth curve fit with a confidence band.
+
+        The data is shown via ``plot_errorbar``. The mid curve uses ``fit_fcn(x, *p_opt)``
+        evaluated on a denser x-axis (``interp_factor`` × original sample count). When both
+        ``p_opt`` and ``p_cov`` are provided, a filled ±n_std·σ confidence band is added.
+
+        Args:
+            x: 1D x-axis data of length N.
+            y: 1D y-axis data of length N.
+            fit_fcn: Model function ``f(x, *params)``; the first argument is the independent variable.
+            xerr: 1D errors in x, length N. May be omitted if x is an uncertainties array.
+            yerr: 1D errors in y, length N. May be omitted if y is an uncertainties array.
+            p_opt: 1D best-fit parameters of length K (typically scipy.optimize.curve_fit output).
+            p_cov: K×K covariance of the fit parameters (typically scipy.optimize.curve_fit output).
+            n_std: Number of standard deviations spanned by the confidence band.
+            interp_factor: x-axis upsampling factor used to draw the smooth fit curve.
+            curve_fit_plot_kw: Forwarded to the inner ``ax.plot`` call for the fit line.
+            **errorbar_kw: Forwarded to ``plot_errorbar`` for the data scatter.
+
+        Returns:
+            Object-dtype ndarray (one entry per axis) — the result of the inner vectorize.
+
+        Example:
+            >>> import numpy as np
+            >>> import scipy.optimize
+            >>> from liron_utils import graphics as gr
+            >>>
+            >>> N = 101
+            >>> x = np.linspace(0, 10, N)
+            >>> yerr = 5 * np.random.randn(N)
+            >>> y = 2 * x ** 2 + 4 * x + 5 + yerr
+            >>>
+            >>> def fit_fcn(x, a, b, c):
+            ...     return a * x ** 2 + b * x + c
+            >>>
+            >>> p_opt, p_cov = scipy.optimize.curve_fit(fit_fcn, x, y)
+            >>> axes = gr.Axes()
+            >>> axes.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
+            >>> axes.show_fig()
+        """
 
         @self._merge_kwargs("errorbar_kw", **errorbar_kw)
         @self._vectorize(
-            cls=self,
             x=x,
             y=y,
             fit_fcn=fit_fcn,
@@ -329,162 +430,97 @@ class Axes(_Axes):
             interp_factor=interp_factor,
             curve_fit_plot_kw=curve_fit_plot_kw,
         )
-        def _plot_data_and_curve_fit(
+        def _plot_data_and_curve_fit(  # pylint: disable=too-many-arguments
             ax: Axes_plt,
-            x,
-            y,
-            fit_fcn,
-            xerr=None,
-            yerr=None,
-            p_opt=None,
-            p_cov=None,
-            n_std=2,
-            interp_factor=20,
-            curve_fit_plot_kw=None,
-            **errorbar_kw,
-        ):
-            """
-            2D scatter plot y=f(x) and curve fit.
-
-            Parameters
-            ----------
-            ax :
-            x, y : array_like
-                Data points to be plotted.
-            fit_fcn : callable
-                Function to be fitted. The first argument of fit_fcn should be the independent variable (x).
-            xerr, yerr : array_like, optional
-                Deviations in 'x','y'. 'x','y' may also be sent as 'uncertainties' arrays, then 'xerr','yerr' are
-                disregarded
-            p_opt : Output parameter of scipy.optimize.curve_fit
-            p_cov : Output parameter of scipy.optimize.curve_fit
-            n_std : int, optional, default 2
-                Number of standard deviations of confidence to be plotted with the fitted curve
-            interp_factor : int, optional, default 20
-                Interpolation factor for the fitted curve.
-            curve_fit_plot_kw : dict, optional
-            **errorbar_kw : dict, optional
-
-            Returns
-            -------
-
-            Examples
-            --------
-                >>> import numpy as np
-                >>> from liron_utils import graphics as gr
-                >>> import scipy.optimize
-
-                >>> N = 101
-                >>> x = np.linspace(0, 10, N)
-                >>> yerr = 5 * np.random.randn(N)
-                >>> y = 2 * x ** 2 + 4 * x + 5 + yerr
-
-                >>> def fit_fcn(x, a, b, c):
-                >>>     return a * x ** 2 + b * x + c
-
-                >>> (p_opt, p_cov) = scipy.optimize.curve_fit(fit_fcn, x, y)
-
-                >>> Ax = gr.Axes()
-                >>> Ax.plot_data_and_curve_fit(x, y, fit_fcn, yerr=yerr, p_opt=p_opt, p_cov=p_cov)
-                >>> Ax.show_fig()
-            """
-
-            errorbar_kw = dict(label="Data", zorder=-1) | errorbar_kw
+            x: _Vec[_N],
+            y: _Vec[_N],
+            fit_fcn: Callable[..., _Array1D],
+            *,
+            xerr: _Vec[_N] | None = None,
+            yerr: _Vec[_N] | None = None,
+            p_opt: _Vec[_K] | None = None,
+            p_cov: _Mat[_K, _K] | None = None,
+            n_std: float = 2,
+            interp_factor: int = 20,
+            curve_fit_plot_kw: dict[str, typing.Any] | None = None,
+            **errorbar_kw: typing.Any,
+        ) -> None:
+            errorbar_kw = {"label": "Data", "zorder": -1} | errorbar_kw
 
             if curve_fit_plot_kw is None:
-                curve_fit_plot_kw = dict()
-            curve_fit_plot_kw = dict(label="Curve fit") | curve_fit_plot_kw
+                curve_fit_plot_kw = {}
+            curve_fit_plot_kw = {"label": "Curve fit"} | curve_fit_plot_kw
 
-            # Data
-            x, xerr = to_numpy(x, xerr)
-            y, yerr = to_numpy(y, yerr)
-            p_opt, _ = to_numpy(p_opt)
-            idx = np.argsort(x)
-            x, y = x[idx], y[idx]
-            if xerr is not None:
-                xerr = xerr[idx]
-            if yerr is not None:
-                yerr = yerr[idx]
+            x, y, xerr, yerr, p_opt = self._curve_fit_prep_data(x, y, xerr, yerr, p_opt)
 
             self.plot_errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
 
-            # Curve fit
             x_interp = interp1(x, interp_factor * len(x))
-            fit_mid = fit_fcn(x_interp, *p_opt)
-
-            ax.plot(x_interp, fit_mid, **curve_fit_plot_kw)
-
-            # Confidence fill
-            if p_opt is not None and p_cov is not None:
-                p_err = np.sqrt(np.diag(p_cov))
-                fit_low = np.ones(interp_factor * len(x)) * np.inf
-                fit_high = np.ones(interp_factor * len(x)) * (-np.inf)
-
-                for i in range(len(p_opt)):  # pylint: disable=consider-using-enumerate
-                    p_opt_i = p_opt.copy()
-                    p_opt_i[i] = p_opt[i] - n_std * p_err[i]
-                    low = fit_fcn(x_interp, *p_opt_i)
-                    p_opt_i[i] = p_opt[i] + n_std * p_err[i]
-                    high = fit_fcn(x_interp, *p_opt_i)
-
-                    fit_low = np.minimum(fit_low, np.minimum(low, high))
-                    fit_high = np.maximum(fit_high, np.maximum(low, high))
-
-                self.plot_filled_error(ax=ax, x=x_interp, y_low=fit_low, y_high=fit_high)
+            if p_opt is not None:
+                ax.plot(x_interp, fit_fcn(x_interp, *p_opt), **curve_fit_plot_kw)
+                if p_cov is not None:
+                    fit_low, fit_high = self._curve_fit_confidence_band(fit_fcn, x_interp, p_opt, p_cov, n_std)
+                    self.plot_filled_error(ax=ax, x=x_interp, y_low=fit_low, y_high=fit_high)
 
         return _plot_data_and_curve_fit()
 
-    def plot_data_and_lin_reg(self, x, y, reg=None, xerr=None, yerr=None, reg_plot_kw=None, **errorbar_kw):
+    def plot_data_and_lin_reg(
+        self,
+        x: _Vec[_N],
+        y: _Vec[_N],
+        reg: typing.Any = None,
+        *,
+        xerr: _Vec[_N] | None = None,
+        yerr: _Vec[_N] | None = None,
+        reg_plot_kw: dict[str, typing.Any] | None = None,
+        **errorbar_kw: typing.Any,
+    ) -> _Array:
+        """Scatter the data with errorbars and overlay a linear regression line.
+
+        Args:
+            x: 1D x-axis data of length N.
+            y: 1D y-axis data of length N.
+            reg: Output of ``scipy.stats.linregress`` (used to draw the regression line and
+                label it with slope/stderr/R²).
+            xerr: 1D errors in x, length N. May be omitted if x is an uncertainties array.
+            yerr: 1D errors in y, length N. May be omitted if y is an uncertainties array.
+            reg_plot_kw: Forwarded to the inner ``plot`` call for the regression line.
+            **errorbar_kw: Forwarded to ``plot_errorbar`` for the data scatter.
+
+        Returns:
+            Object-dtype ndarray (one entry per axis) — the result of the inner vectorize.
+
+        Example:
+            >>> import numpy as np
+            >>> from scipy.stats import linregress
+            >>> from liron_utils import graphics as gr
+            >>>
+            >>> N = 100
+            >>> x = np.arange(N)
+            >>> y = 2 * x + np.random.randn(N)
+            >>> reg = linregress(x, y)
+            >>> axes = gr.Axes()
+            >>> axes.plot_data_and_lin_reg(x, y, reg)
+            >>> axes.show_fig()
+        """
 
         @self._merge_kwargs("errorbar_kw", **errorbar_kw)
-        @self._vectorize(cls=self, x=x, y=y, reg=reg, xerr=xerr, yerr=yerr, reg_plot_kw=reg_plot_kw)
+        @self._vectorize(x=x, y=y, reg=reg, xerr=xerr, yerr=yerr, reg_plot_kw=reg_plot_kw)
         def _plot_data_and_lin_reg(
-            ax: Axes_plt,
-            x,
-            y,
-            reg=None,
-            xerr=None,
-            yerr=None,
-            reg_plot_kw=None,
-            **errorbar_kw,
-        ):
-            """
-            2D scatter plot y=f(x) + linear regression.
-
-            Examples:
-                >>> import numpy as np
-                >>> from scipy.stats import linregress
-                >>> from liron_utils import graphics as gr
-
-                >>> N = 100
-                >>> x = np.arange(N)
-                >>> y = 2*x + np.random.randn(N)
-                >>> reg = linregress(x, y)
-
-                >>> ax = gr.Axes()
-                >>> ax.plot_data_and_lin_reg(x, y, reg)
-                >>> ax.show_fig()
-
-            Parameters
-            ----------
-            ax :
-            x :
-            y :                      f(x)
-            reg :                    Output of scipy.stats.linregress
-            xerr :                   Error in x
-            yerr :                   Error in y
-            reg_plot_kw :
-            **errorbar_kw :
-
-            Returns
-            -------
-
-            """
-
-            errorbar_kw = dict(label="Data") | errorbar_kw
+            ax: Axes_plt,  # pylint: disable=unused-argument
+            x: _Vec[_N],
+            y: _Vec[_N],
+            reg: typing.Any = None,
+            *,
+            xerr: _Vec[_N] | None = None,
+            yerr: _Vec[_N] | None = None,
+            reg_plot_kw: dict[str, typing.Any] | None = None,
+            **errorbar_kw: typing.Any,
+        ) -> None:
+            errorbar_kw = {"label": "Data"} | errorbar_kw
 
             if reg_plot_kw is None:
-                reg_plot_kw = dict()
+                reg_plot_kw = {}
             reg_plot_kw = {
                 "label": rf"{errorbar_kw['label']} linreg: slope={reg.slope:.3f}$\pm${reg.stderr:.3f}, "
                 rf"$R^2$={reg.rvalue ** 2:.3f}",
@@ -493,67 +529,60 @@ class Axes(_Axes):
             x, xerr = to_numpy(x, xerr)
             y, yerr = to_numpy(y, yerr)
 
-            self.plot_errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)  # TODO: need to change to _plot_errorbar
+            self.plot_errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)  # TODO: change to _plot_errorbar
 
             if reg is not None:
-                tmp = [reg.slope * i + reg.intercept for i in x]
-                self.plot(x, tmp, **reg_plot_kw)
+                y_reg = typing.cast(_Array, np.asarray([reg.slope * xi + reg.intercept for xi in x]))
+                self.plot(x, y_reg, **reg_plot_kw)
 
         return _plot_data_and_lin_reg()
 
     def plot_line_collection(
         self,
-        x: np.ndarray,
-        y: np.ndarray,
-        arr: np.ndarray,
-        colorbar_kw=None,
-        **LineCollection_kw,
-    ):
+        x: _Vec[_N],
+        y: _Vec[_N],
+        arr: _Vec[_N],
+        colorbar_kw: dict[str, typing.Any] | None = None,
+        **LineCollection_kw: typing.Any,
+    ) -> _Array:
+        """Plot a line whose segments are colored according to a third array.
 
-        @self._vectorize(cls=self, x=x, y=y, arr=arr)
+        Args:
+            x: 1D x-coordinates of the line vertices (length N).
+            y: 1D y-coordinates of the line vertices (length N).
+            arr: 1D per-vertex values of length N, mapped to colors via the LineCollection's norm/cmap.
+            colorbar_kw: Forwarded to ``Figure.colorbar``.
+            **LineCollection_kw: Forwarded to ``matplotlib.collections.LineCollection``.
+
+        Returns:
+            Object-dtype ndarray with one ``(LineCollection, Colorbar)`` tuple per axis.
+        """
+
+        @self._vectorize(x=x, y=y, arr=arr)
         def _plot_line_collection(
             ax: Axes_plt,
-            x: np.ndarray,
-            y: np.ndarray,
-            arr: np.ndarray,
-            colorbar_kw=None,
-            **LineCollection_kw,
-        ):
-            """
-            Create a line collection with colors mapped to array values.
-
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            x, y : np.ndarray
-                x- and y-coordinates of the line segments.
-            arr : np.ndarray
-                Array of values to map to colors for each segment.
-            colorbar_kw : dict, optional
-                Additional keyword arguments passed to colorbar.
-            **LineCollection_kw : dict
-                Additional keyword arguments passed to matplotlib.collections.LineCollection.
-
-            Returns
-            -------
-            tuple
-                A tuple containing (LineCollection, colorbar) objects.
-            """
+            x: _Vec[_N],
+            y: _Vec[_N],
+            arr: _Vec[_N],
+            colorbar_kw: dict[str, typing.Any] | None = None,
+            **LineCollection_kw: typing.Any,
+        ) -> tuple[typing.Any, typing.Any]:
             if colorbar_kw is None:
-                colorbar_kw = dict()
+                colorbar_kw = {}
 
-            points = np.array([x, y]).T.reshape(-1, 1, 2)
+            points = np.array([x, y]).T.reshape((-1, 1, 2))
             segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
-            norm = plt.Normalize(vmin=np.min(arr), vmax=np.max(arr))
+            norm = matplotlib.colors.Normalize(vmin=np.min(arr), vmax=np.max(arr))
 
-            # cmap = matplotlib.colors.ListedColormap(['r', 'g', 'b'])
-            lc = matplotlib.collections.LineCollection(segments, norm=norm, **LineCollection_kw)
+            lc = matplotlib.collections.LineCollection(
+                typing.cast(typing.Any, segments),
+                norm=norm,
+                **LineCollection_kw,
+            )
             lc.set_array(arr)
 
             line = ax.add_collection(lc)
-
             cbar = ax.figure.colorbar(line, ax=ax, **colorbar_kw)
 
             return line, cbar
@@ -563,45 +592,58 @@ class Axes(_Axes):
     def _plot_spectrum(
         self,
         ax: Axes_plt,
-        X,
-        freqs,
-        fs=1.0,
-        dB=False,
-        eps=1e-20,
-        which="power",
-        **plot_kw,
-    ):
-        X = X.copy()
+        spectrum: _Vec[_N],
+        freqs: _Vec[_N],
+        fs: float = 1.0,
+        *,
+        db: bool = False,
+        eps: float = 1e-20,
+        which: str = "power",
+        **plot_kw: typing.Any,
+    ) -> list[typing.Any]:
+        """Plot a complex spectrum as amplitude, power, or phase (linear or dB).
+
+        Args:
+            ax: Axes to draw on.
+            spectrum: 1D complex spectrum of length N.
+            freqs: 1D frequency axis of length N matching ``spectrum``.
+            fs: Sampling frequency in Hz. ``fs == 1.0`` is treated as "normalized" for the x-label.
+            db: If True (and ``which`` is amp/power), convert the y-axis to dB.
+            eps: Floor added before ``log10`` to avoid log(0).
+            which: One of ``"amp"``, ``"power"``, ``"phase"``.
+            **plot_kw: Forwarded to ``ax.plot``.
+
+        Returns:
+            The list of ``Line2D`` returned by matplotlib.
+
+        Raises:
+            ValueError: If ``which`` is not one of ``"amp"``, ``"power"``, ``"phase"``.
+        """
+        spectrum = spectrum.copy()
 
         which = which.lower()
+        ydata: _Array1D
+        ylabel: str
         if which == "amp":
-            ydata = np.abs(X)
+            ydata = typing.cast(_Array1D, np.abs(spectrum))
             ylabel = "Amplitude"
         elif which == "power":
-            ydata = np.abs(X) ** 2
+            ydata = typing.cast(_Array1D, np.abs(spectrum) ** 2)
             ylabel = "Power"
         elif which == "phase":
-            ydata = np.degrees(np.unwrap(np.angle(X)))
+            ydata = typing.cast(_Array1D, np.degrees(np.unwrap(np.angle(spectrum))))
             ylabel = "Phase [deg]"
-        # ticks = np.arange(-180, 181, 45)
-        # ax.set_yticks(ticks)
-        # tick_labels = [rf"${t}^\circ$" for t in ticks]
-        # ax.set_yticklabels(tick_labels)
-
         else:
             raise ValueError(f"which must be one of 'amp', 'power', or 'phase'. Got: {which}")
 
-        if dB and which in ("amp", "power"):
-            ydata = 10 * np.log10(ydata + eps)
+        if db and which in ("amp", "power"):
+            ydata = typing.cast(_Array1D, 10 * np.log10(ydata + eps))
             ylabel += " [dB]"
 
-        line = ax.plot(freqs, ydata, **plot_kw)
+        line: list[typing.Any] = ax.plot(freqs, ydata, **plot_kw)
 
         if ax.get_xlabel() == "":
-            if fs == 1.0:
-                ax.set_xlabel("Frequency [normalized]")
-            else:
-                ax.set_xlabel("Frequency [Hz]")
+            ax.set_xlabel("Frequency [normalized]" if fs == 1.0 else "Frequency [Hz]")
         if ax.get_ylabel() == "":
             ax.set_ylabel(ylabel)
 
@@ -609,20 +651,38 @@ class Axes(_Axes):
 
     def plot_fft(
         self,
-        x,
-        fs=1.0,
-        n=None,
+        x: _Array1D,
+        fs: float | None = 1.0,
+        n: int | None = None,
         *,
-        one_sided=True,
-        normalize=False,
-        input_time=True,
-        plot_spectrum_kw=None,
-        **plot_kw,
-    ):
+        one_sided: bool = True,
+        normalize: bool = False,
+        input_time: bool = True,
+        plot_spectrum_kw: dict[str, typing.Any] | None = None,
+        **plot_kw: typing.Any,
+    ) -> _Array:
+        """Plot the magnitude/power/phase spectrum of an FFT.
+
+        If ``input_time`` is True, ``x`` is FFT-transformed first; otherwise ``x`` is
+        treated as already-transformed frequency-domain data.
+
+        Args:
+            x: 1D input signal. Complex inputs always yield two-sided plots.
+            fs: Sampling frequency in Hz. ``fs == 1.0`` produces a normalized frequency axis.
+            n: FFT length. If None, uses ``len(x)``.
+            one_sided: If True, plot only the positive frequencies (auto-disabled for complex x).
+            normalize: If True, scale the spectrum so its peak magnitude is 1.
+            input_time: If True, treat ``x`` as time-domain and apply FFT.
+                If False, treat ``x`` as already in the frequency domain.
+            plot_spectrum_kw: Forwarded to ``_plot_spectrum`` (controls ``db``, ``which``, ``eps``).
+            **plot_kw: Forwarded to ``ax.plot``.
+
+        Returns:
+            Object-dtype ndarray with one ``((spectrum, freqs), list[Line2D])`` tuple per axis.
+        """
 
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(
-            cls=self,
             x=x,
             fs=fs,
             n=n,
@@ -633,96 +693,86 @@ class Axes(_Axes):
         )
         def _plot_fft(
             ax: Axes_plt,
-            x,
-            fs=1.0,
-            n=None,
+            x: _Array1D,
+            fs: float = 1.0,
+            n: int | None = None,
             *,
-            one_sided=True,
-            normalize=False,
-            input_time=True,
-            plot_spectrum_kw=None,
-            **plot_kw,
-        ):
-            """
-            Plot the magnitude spectrum of the FFT of a signal.
-
-            Parameters
-            ----------
-            x : np.ndarray
-                Input signal (1D array).
-            fs : float, optional, default 1.0
-                Sampling frequency (Hz).
-            n : int, optional
-                Number of points for FFT. If None, uses len(y).
-            one_sided : bool, optional, default True
-                If True, plots only the positive frequencies.
-            dB : bool, optional, default False
-                If True, plot in decibels.
-            eps : float, optional
-                Renormalization constant added to logarithmic plot
-            which : str, optional, default "power"
-                Choose what to plot: "amp", "power", or "phase".
-            normalize : bool, optional, default False
-                If True, normalize the transformed signal to have a maximal value of 1.
-            input_time : bool, optional, default True
-                If True, assumes the input signal is in the time domain (otherwise assumes frequency domain).
-            **plot_kw : dict
-                Additional keyword arguments for the plot.
-
-            Returns
-            -------
-            Line2D
-                The line object for the FFT plot.
-            """
-
-            x = np.asarray(x)
+            one_sided: bool = True,
+            normalize: bool = False,
+            input_time: bool = True,
+            plot_spectrum_kw: dict[str, typing.Any] | None = None,
+            **plot_kw: typing.Any,
+        ) -> tuple[tuple[_Array1D, _Array1D], list[typing.Any]]:
+            x_arr = typing.cast(_Array1D, np.asarray(x))
             if n is None:
-                n = x.shape[0]
+                n = x_arr.shape[0]
 
+            spectrum: _Array1D
             if input_time:
-                if np.iscomplexobj(x):
+                if np.iscomplexobj(x_arr):
                     one_sided = False
-                X = np.fft.fft(x, n=n, axis=0)
+                spectrum = typing.cast(_Array1D, np.fft.fft(x_arr, n=n, axis=0))
             else:
-                X = x.copy()
+                spectrum = x_arr.copy()
 
             if normalize:
-                X /= X.max(axis=0)
+                spectrum /= spectrum.max(axis=0)
 
-            freqs = np.fft.fftfreq(n=n, d=1 / fs)
+            freqs = typing.cast(_Array1D, np.fft.fftfreq(n=n, d=1 / fs))
 
             if one_sided:
-                X = X[: n // 2]
-                freqs = freqs[: n // 2]
+                spectrum = typing.cast(_Array1D, spectrum[: n // 2])
+                freqs = typing.cast(_Array1D, freqs[: n // 2])
             else:
-                X = np.fft.fftshift(X, axes=0)
-                freqs = np.fft.fftshift(freqs)
+                spectrum = typing.cast(_Array1D, np.fft.fftshift(spectrum, axes=0))
+                freqs = typing.cast(_Array1D, np.fft.fftshift(freqs))
 
             if plot_spectrum_kw is None:
-                plot_spectrum_kw = dict()
+                plot_spectrum_kw = {}
 
-            line = self._plot_spectrum(ax=ax, X=X, freqs=freqs, fs=fs, **plot_spectrum_kw, **plot_kw)
+            line = self._plot_spectrum(
+                ax=ax,
+                spectrum=spectrum,
+                freqs=freqs,
+                fs=fs,
+                **plot_spectrum_kw,
+                **plot_kw,
+            )
 
-            return (X, freqs), line
+            return (spectrum, freqs), line
 
         return _plot_fft()
 
     def plot_periodogram(
         self,
-        x,
-        fs=1.0,
-        n=None,
+        x: _Array1D,
+        fs: float = 1.0,
+        n: int | None = None,
         *,
-        window="boxcar",
-        one_sided=True,
-        normalize=False,
-        plot_spectrum_kw=None,
-        **plot_kw,
-    ):
+        window: str = "boxcar",
+        one_sided: bool = True,
+        normalize: bool = False,
+        plot_spectrum_kw: dict[str, typing.Any] | None = None,
+        **plot_kw: typing.Any,
+    ) -> _Array:
+        """Plot the PSD estimate of a signal via ``scipy.signal.periodogram``.
+
+        Args:
+            x: 1D input signal. Complex inputs always yield two-sided plots.
+            fs: Sampling frequency in Hz.
+            n: FFT length; ``None`` uses ``len(x)``.
+            window: Window function name accepted by ``scipy.signal.periodogram``.
+            one_sided: If True, return only the positive frequencies (auto-disabled for complex x).
+            normalize: If True, scale the PSD so its peak is 1.
+            plot_spectrum_kw: Forwarded to ``_plot_spectrum`` (controls ``db``, ``which``, ``eps``).
+            **plot_kw: Forwarded to ``ax.plot``.
+
+        Returns:
+            Object-dtype ndarray with one ``((psd, freqs), list[Line2D])`` tuple per axis.
+        """
 
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(
-            cls=self,
             x=x,
             fs=fs,
             n=n,
@@ -733,27 +783,26 @@ class Axes(_Axes):
         )
         def _plot_periodogram(
             ax: Axes_plt,
-            x,
-            fs=1.0,
-            n=None,
+            x: _Array1D,
+            fs: float = 1.0,
+            n: int | None = None,
             *,
-            window="boxcar",
-            one_sided=True,
-            normalize=False,
-            plot_spectrum_kw=None,
-            **plot_kw,
-        ):
-
-            x = np.asarray(x)
+            window: str = "boxcar",
+            one_sided: bool = True,
+            normalize: bool = False,
+            plot_spectrum_kw: dict[str, typing.Any] | None = None,
+            **plot_kw: typing.Any,
+        ) -> tuple[tuple[_Array1D, _Array1D], list[typing.Any]]:
+            x_arr = typing.cast(_Array1D, np.asarray(x))
             if n is None:
-                n = x.shape[0]
-            if np.iscomplexobj(x):
+                n = x_arr.shape[0]
+            if np.iscomplexobj(x_arr):
                 one_sided = False
 
-            freqs, Pxx = scipy.signal.periodogram(
-                x,
+            freqs, psd = scipy.signal.periodogram(
+                x_arr,
                 fs=fs,
-                window=window,
+                window=typing.cast(typing.Any, window),
                 nfft=n,
                 detrend=False,
                 return_onesided=one_sided,
@@ -762,167 +811,189 @@ class Axes(_Axes):
             )
 
             if normalize:
-                Pxx = Pxx / Pxx.max(axis=0)
+                psd = psd / psd.max(axis=0)
 
             if not one_sided:
-                Pxx = np.fft.fftshift(Pxx, axes=0)
-                freqs = np.fft.fftshift(freqs)
+                psd = typing.cast(_Array1D, np.fft.fftshift(psd, axes=0))
+                freqs = typing.cast(_Array1D, np.fft.fftshift(freqs))
 
             if plot_spectrum_kw is None:
-                plot_spectrum_kw = dict()
+                plot_spectrum_kw = {}
 
-            line = self._plot_spectrum(ax=ax, X=np.sqrt(Pxx), freqs=freqs, fs=fs, **plot_spectrum_kw, **plot_kw)
+            line = self._plot_spectrum(
+                ax=ax,
+                spectrum=typing.cast(_Array1D, np.sqrt(psd)),
+                freqs=typing.cast(_Array1D, freqs),
+                fs=fs,
+                **plot_spectrum_kw,
+                **plot_kw,
+            )
 
-            return (Pxx, freqs), line
+            return (typing.cast(_Array1D, psd), typing.cast(_Array1D, freqs)), line
 
         return _plot_periodogram()
 
-    def plot_impulse_response(self, b, a=1, dt=1, t=None, n=None, **plot_kw):
+    def plot_impulse_response(
+        self,
+        b: _Array1D | float,
+        a: _Array1D | float = 1,
+        dt: float | None = 1,
+        t: _Array1D | None = None,
+        *,
+        n: int | None = None,
+        **plot_kw: typing.Any,
+    ) -> _Array:
+        """Plot the impulse response of an LTI system given its ``(b, a)`` coefficients.
+
+        Args:
+            b: 1D numerator coefficients (or a scalar).
+            a: 1D denominator coefficients (set ``a == 1`` for FIR systems).
+            dt: Sample period. If None, treats the system as continuous-time and requires ``t``.
+            t: 1D time grid for the response. If None for discrete-time, ``n`` is used to build one.
+            n: Sample count for the discrete-time response; required when ``t`` is None.
+            **plot_kw: Forwarded to ``ax.plot`` (continuous) or ``ax.stem`` (discrete).
+
+        Returns:
+            Object-dtype ndarray with one ``((h, t_out), line/stem)`` per axis.
+
+        Raises:
+            ValueError: For continuous-time when ``t`` is not given; for discrete-time when neither
+                ``t`` nor ``n`` is given.
+        """
+
         @self._merge_kwargs("plot_kw", **plot_kw)
-        @self._vectorize(cls=self, b=b, a=a, dt=dt, t=t, n=n)
-        def _plot_impulse_response(ax: Axes_plt, b, a=1, dt=1, t=None, n=None, **plot_kw):
-            """
-            Plot the impulse response of a linear time-invariant (LTI) system defined by its numerator (b) and
-            denominator (a) coefficients.
+        @self._vectorize(b=b, a=a, dt=dt, t=t, n=n)
+        def _plot_impulse_response(
+            ax: Axes_plt,
+            b: _Array1D | float,
+            a: _Array1D | float = 1,
+            dt: float | None = 1,
+            t: _Array1D | None = None,
+            *,
+            n: int | None = None,
+            **plot_kw: typing.Any,
+        ) -> tuple[tuple[_Array1D, _Array1D], typing.Any]:
+            b_arr = typing.cast(_Array1D, np.atleast_1d(b))
+            a_arr = typing.cast(_Array1D, np.atleast_1d(a))
+            if len(b_arr) > len(a_arr):
+                a_arr = typing.cast(
+                    _Array1D,
+                    np.pad(a_arr, (0, len(b_arr) - len(a_arr)), "constant", constant_values=0),
+                )
+            elif len(a_arr) > len(b_arr):
+                b_arr = typing.cast(
+                    _Array1D,
+                    np.pad(b_arr, (0, len(a_arr) - len(b_arr)), "constant", constant_values=0),
+                )
 
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            b : array_like
-                Numerator coefficients of the LTI system.
-            a : array_like, optional, default 1
-                Denominator coefficients of the LTI system.
-            dt : float, optional, default 1
-                Sampling time interval. If None, the system is treated as continuous-time.
-            t : array_like, optional
-                Time values at which to compute the impulse response. If None, uses n and dt to generate time values.
-            n : int, optional
-                Number of samples for discrete-time systems. Required if t is None and dt is not None.
-            **plot_kw : dict
-                Additional keyword arguments for the plot.
-
-            Returns
-            -------
-
-            """
-
-            b, a = np.atleast_1d(b), np.atleast_1d(a)
-            if len(b) > len(a):
-                a = np.pad(a, (0, len(b) - len(a)), "constant", constant_values=0)
-            elif len(a) > len(b):
-                b = np.pad(b, (0, len(a) - len(b)), "constant", constant_values=0)
-
+            line: typing.Any
             if dt is None:  # Continuous-time system
-                system = scipy.signal.lti(b, a)
+                system: typing.Any = scipy.signal.lti(
+                    typing.cast(typing.Any, b_arr),
+                    typing.cast(typing.Any, a_arr),
+                )
                 if t is None:
                     raise ValueError("t should be given for continuous-time system.")
-                t, h = scipy.signal.impulse(system, T=t)
-                line = ax.plot(t, h, **plot_kw)
-
+                t_out, h = scipy.signal.impulse(system, T=t)
+                line = ax.plot(t_out, h, **plot_kw)
             else:  # Discrete-time system
-                system = scipy.signal.dlti(b, a, dt=dt)
+                system = scipy.signal.dlti(
+                    typing.cast(typing.Any, b_arr),
+                    typing.cast(typing.Any, a_arr),
+                    dt=dt,
+                )
                 if t is None:
                     if n is None:
                         raise ValueError("Either t or n should be given.")
                     t = np.arange(0, n * dt, dt)
-                t, h = scipy.signal.dimpulse(system, n=len(t))
-                h = np.squeeze(h)
-                line = ax.stem(t, h, **plot_kw)
+                t_out, h_seq = scipy.signal.dimpulse(system, n=len(t))
+                h = typing.cast(_Array1D, np.squeeze(h_seq))
+                line = ax.stem(t_out, h, **plot_kw)
 
-            return (h, t), line
+            return (h, t_out), line
 
         return _plot_impulse_response()
 
-    def plot_frequency_response(
+    def plot_frequency_response(  # pylint: disable=too-many-arguments
         self,
-        b,
-        a=1,
-        fs=1.0,
-        worN=512,
+        b: _Array1D | float,
+        a: _Array1D | float = 1,
+        fs: float | None = 1.0,
+        num_freq_points: int = 512,
         *,
-        one_sided=True,
-        dB=False,
-        eps=1e-20,
-        which="amp",
-        normalize=False,
-        **plot_kw,
-    ):
+        one_sided: bool = True,
+        db: bool = False,
+        eps: float = 1e-20,
+        which: str = "amp",
+        normalize: bool = False,
+        **plot_kw: typing.Any,
+    ) -> _Array:
+        """Plot the frequency response of an LTI system given its ``(b, a)`` coefficients.
+
+        For ``fs is None`` the system is treated as continuous-time and ``scipy.signal.freqs``
+        is used; otherwise ``scipy.signal.freqz`` is used.
+
+        Args:
+            b: 1D numerator coefficients (or a scalar).
+            a: 1D denominator coefficients (set ``a == 1`` for FIR systems).
+            fs: Sampling frequency in Hz. ``None`` selects continuous-time.
+            num_freq_points: Number of frequency points to evaluate.
+            one_sided: If True, plot only positive frequencies.
+            db: If True (and ``which`` is amp/power), use a dB y-axis.
+            eps: Floor added before ``log10`` to avoid log(0).
+            which: One of ``"amp"``, ``"power"``, ``"phase"``.
+            normalize: If True, scale the response so its peak magnitude is 1.
+            **plot_kw: Forwarded to the inner ``plot_fft`` call.
+
+        Returns:
+            Object-dtype ndarray with one ``((h, freqs), list[Line2D])`` per axis.
+        """
+
         @self._merge_kwargs("plot_kw", **plot_kw)
         @self._vectorize(
-            cls=self,
             b=b,
             a=a,
             fs=fs,
-            worN=worN,
+            num_freq_points=num_freq_points,
             one_sided=one_sided,
-            dB=dB,
+            db=db,
             eps=eps,
             which=which,
             normalize=normalize,
         )
-        def _plot_frequency_response(
+        def _plot_frequency_response(  # pylint: disable=too-many-arguments
             ax: Axes_plt,
-            b,
-            a=1,
-            fs=1.0,
-            worN=512,
+            b: _Array1D | float,
+            a: _Array1D | float = 1,
+            fs: float | None = 1.0,
+            num_freq_points: int = 512,
             *,
-            one_sided=True,
-            dB=False,
-            eps=1e-20,
-            which="amp",
-            normalize=False,
-            **plot_kw,
-        ):
-            """
-            Plot the frequency response of a linear time-invariant (LTI) system defined by its numerator (b) and
-            denominator (a) coefficients.
-
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            b :             array_like
-                Numerator coefficients of the LTI system.
-            a :             array_like, optional, default 1
-                Denominator coefficients of the LTI system.
-            fs :            float, optional, default 1.0
-                Sampling frequency (Hz). If None, the system is treated as continuous-time.
-            worN :          int, optional, default 512
-                Number of frequency points to compute.
-            one_sided :     bool, optional, default True
-                If True, plots only the positive frequencies.
-            dB :            bool, optional, default False
-                If True, plot in decibels.
-            eps :           float, optional, default 1e-20
-                Renormalization constant added to logarithmic plot
-            which :         str, optional, default "amp"
-                Choose what to plot: "amp", "power", or "phase".
-            normalize :     bool, optional, default False
-                If True, normalize the transformed signal to have a maximal value of 1.
-            **plot_kw : dict
-                Additional keyword arguments for the plot.
-
-            Returns
-            -------
-
-            """
-
+            one_sided: bool = True,
+            db: bool = False,
+            eps: float = 1e-20,
+            which: str = "amp",
+            normalize: bool = False,
+            **plot_kw: typing.Any,
+        ) -> tuple[tuple[_Array1D, _Array1D], typing.Any]:
+            wh: tuple[typing.Any, typing.Any]
             if fs is None:  # Continuous-time system
-                w, h = scipy.signal.freqs(b=b, a=a, worN=worN)
-
+                wh = scipy.signal.freqs(
+                    b=typing.cast(typing.Any, b),
+                    a=typing.cast(typing.Any, a),
+                    worN=num_freq_points,
+                )
             else:  # Discrete-time system
-                w, h = scipy.signal.freqz(b=b, a=a, fs=2 * np.pi * fs, worN=worN, whole=not one_sided)
+                wh = scipy.signal.freqz(b=b, a=a, fs=2 * np.pi * fs, worN=num_freq_points, whole=not one_sided)
 
-            freqs = w / (2 * np.pi) - 0.5
+            h_arr = typing.cast(_Array1D, wh[1])
+            freqs = typing.cast(_Array1D, np.asarray(wh[0]) / (2 * np.pi) - 0.5)
 
             _, line = Axes(axs=ax).plot_fft(  # pylint: disable=invalid-sequence-index
-                x=h,
+                x=h_arr,
                 fs=fs,
-                n=2 * worN if one_sided else worN,
+                n=2 * num_freq_points if one_sided else num_freq_points,
                 one_sided=one_sided,
-                dB=dB,
+                db=db,
                 eps=eps,
                 which=which,
                 normalize=normalize,
@@ -930,35 +1001,35 @@ class Axes(_Axes):
                 **plot_kw,
             )[0, 0]
 
-            return (h, freqs), line
+            return (h_arr, freqs), line
 
         return _plot_frequency_response()
 
-    def plot_specgram(self, y: np.ndarray, fs: float, **specgram_kw):
+    def plot_specgram(
+        self,
+        y: _Array1D,
+        fs: float,
+        **specgram_kw: typing.Any,
+    ) -> _Array:
+        """Plot a spectrogram of a 1D time-domain signal on each axis.
+
+        Args:
+            y: 1D time-domain signal.
+            fs: Sample rate in Hz; ``fs != 1`` triggers automatic SI-prefix scaling on the frequency axis.
+            **specgram_kw: Forwarded to ``matplotlib.axes.Axes.specgram``.
+
+        Returns:
+            Object-dtype ndarray; each entry is ``(spectrum, freqs, times, AxesImage)`` from matplotlib.
+        """
 
         @self._merge_kwargs("specgram_kw", **specgram_kw)
-        @self._vectorize(cls=self, y=y, fs=fs)
-        def _plot_specgram(ax: Axes_plt, y: np.ndarray, fs: float, **specgram_kw):
-            """
-            Plot spectrogram
-
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on.
-            y : np.ndarray
-                Data, given as 1D array with respect to time.
-            fs : int
-                Sample rate.
-            **specgram_kw : dict
-                Additional keyword arguments passed to matplotlib.axes.Axes.specgram.
-
-            Returns
-            -------
-            tuple
-                A tuple containing (spectrum, freqs, t, im) from ax.specgram.
-            """
-
+        @self._vectorize(y=y, fs=fs)
+        def _plot_specgram(
+            ax: Axes_plt,
+            y: _Array1D,
+            fs: float,
+            **specgram_kw: typing.Any,
+        ) -> tuple[typing.Any, ...]:
             specgram_out = ax.specgram(
                 y,
                 Fs=fs,
@@ -966,7 +1037,7 @@ class Axes(_Axes):
             )  # todo: add option for log frequency mapping using librosa.feature.melspectrogram()
             _, freqs, _, im = specgram_out
 
-            scaling = {
+            scaling: dict[int, str] = {
                 0: "",
                 3: "K",
                 6: "M",
@@ -1000,182 +1071,228 @@ class Axes(_Axes):
 
         return _plot_specgram()
 
-    def plot_surf(self, x, y, z, **plot_surface_kw):
+    @typing.overload
+    def plot_surf(
+        self,
+        x: _Array1D,
+        y: _Array1D,
+        z: _Array2D | Callable[[_Array2D, _Array2D], _Array2D],
+        **plot_surface_kw: typing.Any,
+    ) -> _Array: ...
+
+    @typing.overload
+    def plot_surf(
+        self,
+        x: _Array2D,
+        y: _Array2D,
+        z: _Array2D | Callable[[_Array2D, _Array2D], _Array2D],
+        **plot_surface_kw: typing.Any,
+    ) -> _Array: ...
+
+    def plot_surf(
+        self,
+        x: _Array1D | _Array2D,
+        y: _Array1D | _Array2D,
+        z: _Array2D | Callable[[_Array2D, _Array2D], _Array2D],
+        **plot_surface_kw: typing.Any,
+    ) -> _Array:
+        """Plot a 3D surface ``z = f(x, y)`` on each axis (requires ``projection='3d'``).
+
+        Args:
+            x: x-coordinates — 1D of length M (``meshgrid`` is applied) or 2D meshgrid (M×N).
+            y: y-coordinates — 1D of length N (``meshgrid`` is applied) or 2D meshgrid (M×N).
+            z: 2D array of z-values (M×N), or a callable ``f(x_grid, y_grid) -> z_grid``.
+            **plot_surface_kw: Forwarded to ``mpl_toolkits.mplot3d.Axes3D.plot_surface``.
+
+        Returns:
+            Object-dtype ndarray (one ``Poly3DCollection`` per axis).
+
+        Raises:
+            AssertionError: If the underlying axes were not created with ``projection='3d'``.
+        """
 
         @self._merge_kwargs("plot_surface_kw", **plot_surface_kw)
-        @self._vectorize(cls=self, x=x, y=y, z=z)
-        def _plot_surf(ax: Axes_plt, x, y, z, **plot_surface_kw):
-            """
-            3D surface plot of z=f(x,y)
-
-            Parameters
-            ----------
-            ax : matplotlib.axes.Axes
-                The axes to plot on (must have 3D projection).
-            x : array_like
-                X-coordinates. Can be 1D or 2D. If 1D, will automatically apply meshgrid.
-            y : array_like
-                Y-coordinates. Can be 1D or 2D. If 1D, will automatically apply meshgrid.
-            z : array_like or callable
-                Z-coordinates as 2D array or function z=f(x,y).
-            **plot_surface_kw : dict
-                Additional keyword arguments passed to matplotlib.axes.Axes.plot_surface.
-
-            Returns
-            -------
-            Poly3DCollection
-                The 3D surface plot object.
-            """
-
+        @self._vectorize(x=x, y=y, z=z)
+        def _plot_surf(
+            ax: Axes_plt,
+            x: _Array1D | _Array2D,
+            y: _Array1D | _Array2D,
+            z: _Array2D | Callable[[_Array2D, _Array2D], _Array2D],
+            **plot_surface_kw: typing.Any,
+        ) -> None:
             assert hasattr(ax, "plot_surface"), (
                 "Axes does not have a plot_surface attribute. "
                 "make sure that you created an axes with projection='3d'"
             )
 
-            X, Y, Z = x, y, z
+            x_grid: _Array2D
+            y_grid: _Array2D
             if x.ndim == 1:
-                X, Y = np.meshgrid(x, y)
-            if callable(z):
-                Z = z(X, Y)
-            if np.all(Z.shape == np.flip(X.shape)):
-                Z = Z.T
+                grids = typing.cast(list[_Array2D], np.meshgrid(x, y))
+                x_grid, y_grid = grids[0], grids[1]
+            else:
+                x_grid, y_grid = typing.cast(_Array2D, x), typing.cast(_Array2D, y)
+            z_grid: _Array2D = z(x_grid, y_grid) if callable(z) else z
+            if np.all(z_grid.shape == np.flip(x_grid.shape)):
+                z_grid = z_grid.T
 
-            ax.plot_surface(X, Y, Z, **plot_surface_kw)
+            ax.plot_surface(x_grid, y_grid, z_grid, **plot_surface_kw)
 
         # ax.figure.colorbar(matplotlib.cm.ScalarMappable(), ax=ax)
 
         return _plot_surf()
 
-    def plot_contour(self, x, y, z, contours, *args, **kwargs):
+    @typing.overload
+    def plot_contour(
+        self,
+        x: _Array1D,
+        y: _Array1D,
+        z: _Array2D,
+        contours: int | _Array1D,
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> _Array: ...
 
-        @self._vectorize(cls=self, x=x, y=y, z=z, contours=contours)
-        def _plot_contour(ax: Axes_plt, x, y, z, contours, *args, **kwargs):
-            """
-            Contour plot of scalar field z=f(x,y)
+    @typing.overload
+    def plot_contour(
+        self,
+        x: _Array2D,
+        y: _Array2D,
+        z: _Array2D,
+        contours: int | _Array1D,
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> _Array: ...
 
-            Parameters
-            ----------
-            ax :
-            x :
-            y :
-            z :
-            contours :
-            args, kwargs :
-             :
+    def plot_contour(
+        self,
+        x: _Array1D | _Array2D,
+        y: _Array1D | _Array2D,
+        z: _Array2D,
+        contours: int | _Array1D,
+        *args: typing.Any,
+        **kwargs: typing.Any,
+    ) -> _Array:
+        """Plot labeled contour lines for the scalar field ``z = f(x, y)``.
 
-            Returns
-            -------
+        Args:
+            x: x-coordinates — 1D of length M, or 2D meshgrid (M×N).
+            y: y-coordinates — 1D of length N, or 2D meshgrid (M×N).
+            z: 2D array of z-values (M×N).
+            contours: Number of contour levels (``int``) or an explicit 1D array of levels.
+            *args: Forwarded to ``matplotlib.axes.Axes.contour``.
+            **kwargs: Forwarded to ``matplotlib.axes.Axes.contour``.
 
-            """
+        Returns:
+            Object-dtype ndarray (one ``QuadContourSet`` per axis).
+        """
 
+        @self._vectorize(x=x, y=y, z=z, contours=contours)
+        def _plot_contour(
+            ax: Axes_plt,
+            x: _Array1D | _Array2D,
+            y: _Array1D | _Array2D,
+            z: _Array2D,
+            contours: int | _Array1D,
+            *args: typing.Any,
+            **kwargs: typing.Any,
+        ) -> typing.Any:
             cs = ax.contour(x, y, z, contours, *args, **kwargs)
             ax.clabel(cs, inline=True, fontsize=10)
             return cs
 
         return _plot_contour(*args, **kwargs)
 
-    def plot_animation(
+    def plot_animation(  # pylint: disable=keyword-arg-before-vararg
         self,
-        axs: (Axes_plt, np.ndarray[Axes_plt]),
-        func: callable = None,
-        n_frames: int = None,
-        data: list[np.ndarray] = None,
-        data_instance: list = None,
-        titles: list = None,
-        *args,
-        **kwargs,
-    ):
-        """
-        Plot animation
+        axs: Axes_plt | _Array,
+        func: Callable[[int], typing.Any] | None = None,
+        n_frames: int | None = None,
+        *args: typing.Any,
+        data: list[_Array3D] | None = None,
+        data_instance: list[typing.Any] | None = None,
+        titles: list[typing.Any] | Callable[[int], str] | None = None,
+        **kwargs: typing.Any,
+    ) -> None:
+        """Build a ``matplotlib.animation.FuncAnimation`` over one or more axes.
 
-        Examples
-        --------
+        Either ``(func, n_frames)`` must be given, or ``(data, data_instance)`` — in the
+        latter case a default per-frame updater is used that calls ``set_data`` on each
+        artist handle.
+
+        Args:
+            axs: A single axes, or an array of axes (all must share the same figure).
+            func: Per-frame callable returning the list of redrawn artists. If None, a default
+                updater built from ``data`` and ``data_instance`` is used.
+            n_frames: Number of frames. If None, ``len(data[0])`` is used.
+            *args: Forwarded to ``matplotlib.animation.FuncAnimation``.
+            data: Per-axis 3D data sources of shape ``[n_frames, ...]``:
+                ``[n_frames, h, w]`` for images, ``[n_frames, 2, n_pts]`` for line plots.
+            data_instance: Per-axis artist handles (image / line / etc.) updated each frame.
+            titles: Per-frame axis titles — list indexed by frame, or callable ``(i) -> str``.
+            **kwargs: Forwarded to ``matplotlib.animation.FuncAnimation``.
+
+        Raises:
+            AssertionError: If neither ``(func, n_frames)`` nor ``(data, data_instance)``
+                is given, or if axes are from different figures.
+
+        Example:
             >>> import numpy as np
             >>> from liron_utils import graphics as gr
-
-            >>> nimages = 10
-            >>> images = np.random.random((nimages))
-            >>> Ax = gr.Axes()
-            >>> Ax.plot_animation(images)
-            >>> Ax.save_fig("test.gif")
-
-        Parameters
-        ----------
-        axs :               Axes or list[Axes]
-                            All axes should be of the same figure
-        func :              callable, optional
-                            Function to be called for each frame. If not given, will use the default `update_data`.
-                            `func` should return a list of artists to draw in the new frame (same as `data_instance`).
-        n_frames :          int, optional
-                            Number of frames to be plotted. If not given, will use len(data[0])
-        data :              array_like, optional
-                            The data to be plotted, given as list of size len(axs) of:
-                                - (image) a 4D array of size [#n_frames, x, y]
-                                - (plot)  a 4D array of size [#n_frames, 2, xy]
-        data_instance :     array_like of matplotlib objects, optional
-                            Image/line/etc. handle to use in case user wants some pre-defined properties.
-                            First axis should be of size 'len(axs)'
-        titles :            list or function handle, optional
-                            Axis titles. Can be given as:
-                                - List of changing titles
-                                - function handle whose input argument is iterable and outputs the title
-        args, kwargs :      sent to matplotlib.animation.FuncAnimation
-
-        Returns
-        -------
-
+            >>>
+            >>> images = np.random.random((10, 32, 32))
+            >>> axes = gr.Axes()
+            >>> axes.plot_animation(axes.axs[0, 0], data=[images], data_instance=[...])
+            >>> axes.save_fig("test.gif")
         """
         assert (func is not None and n_frames is not None) or (
             data is not None and data_instance is not None
         ), "Either (func, n_frames) or (data, data_instance) should be given."
 
-        if isinstance(axs, Axes_plt):  # convert to array
-            axs = [axs]
-            data = [data]
+        axs_list: list[Axes_plt]
+        if isinstance(axs, Axes_plt):
+            axs_list = [axs]
+            data = typing.cast(list[_Array3D], [data])
             data_instance = [data_instance]
+        else:
+            axs_list = list(np.asarray(axs).flat)
 
         assert (
-            axs[i].figure == axs[i + 1].figure for i in range(len(axs) - 1)
+            axs_list[i].figure == axs_list[i + 1].figure for i in range(len(axs_list) - 1)
         ), "All axes should be of the same figure."
 
         if func is None:
-            assert len(axs) == len(data) == len(data_instance), "Number of axes should be equal to number of data sets."
+            assert data is not None and data_instance is not None
+            assert len(axs_list) == len(data) == len(data_instance), "Number of axes should equal number of data sets."
             n_frames = len(data[0])
 
         if titles is not None:
-            kwargs = dict(blit=False) | kwargs
+            kwargs = {"blit": False} | kwargs
 
-        # if callable(titles):
-        #     titles = [titles(i) for i in range(n_frames)]  # convert to list
-
-        def update_data(i):
-            """
-            Update data for animation
-
-            Parameters
-            ----------
-            i : Frame index
-            """
-            for idx_ax, ax in enumerate(axs):
+        def update_data(i: int) -> list[typing.Any]:
+            assert data is not None and data_instance is not None
+            for idx_ax, ax in enumerate(axs_list):
                 h = data_instance[idx_ax]
-                if isinstance(h, Iterable):  # multiple objects
+                if isinstance(h, Iterable):
                     for j, hh in enumerate(h):
-                        hh.set_data(data[idx_ax][i][j])  # update images
+                        hh.set_data(data[idx_ax][i][j])
                 else:
-                    h.set_data(data[idx_ax][i])  # update image
+                    h.set_data(data[idx_ax][i])
 
                 if titles is not None:
-                    ax.set_title(titles[i])  # update title
+                    ax.set_title(titles[i])  # type: ignore[index]
 
             return data_instance
 
         if func is None:
             func = update_data
 
+        fig_for_anim = axs_list[0].figure
+        assert isinstance(fig_for_anim, Figure), "Animation requires a Figure (not SubFigure)."
         self.func_animation = matplotlib.animation.FuncAnimation(
-            fig=axs[0].figure,
-            func=func,
-            frames=n_frames,
+            fig_for_anim,
+            func,
+            n_frames,
             *args,
             **kwargs,
         )

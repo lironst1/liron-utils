@@ -1,116 +1,172 @@
-"""
-Prints:
-        f"{a:.2fP}" -> "a±0.01"  (P = pretty-print ±)
+"""Helpers for converting between ``numpy`` arrays and ``uncertainties`` arrays.
 
-Math functions
-        umath and unumpy has all the math functions that math has, but for arrays of ufloats
-
+Notes:
+    * Printing — ``f"{a:.2fP}" -> "a±0.01"`` (``P`` selects pretty-print ±).
+    * Math — ``uncertainties.umath`` and ``uncertainties.unumpy`` mirror the
+      ``math``/``numpy`` APIs for scalar and array ``ufloat`` inputs.
 """
+
+import typing
 
 import numpy as np
 import uncertainties
 from uncertainties import ufloat, unumpy
 
+_Array = np.ndarray[typing.Any, np.dtype[typing.Any]]
 
-def __repr__(self):
-    # Not putting spaces around "+/-" helps with arrays of
-    # Variable, as each value with an uncertainty is a
-    # block of signs (otherwise, the standard deviation can be
-    # mistaken for another element of the array).
 
-    std_dev = self.std_dev  # Optimization, since std_dev is calculated
+def __repr__(self: uncertainties.AffineScalarFunc) -> str:
+    """Render a ufloat compactly as ``"nominal±std_dev"``.
 
-    # A zero standard deviation is printed because otherwise,
-    # ufloat_fromstr() does not correctly parse back the value
-    # ("1.23" is interpreted as "1.23(1)"):
+    Args:
+        self: An ``AffineScalarFunc`` (ufloat) instance.
 
-    if std_dev:
-        std_dev_str = repr(std_dev)
-    else:
-        std_dev_str = "0"
-
+    Returns:
+        Compact, space-free representation suitable for arrays of ufloats.
+    """
+    # Not putting spaces around "+/-" helps with arrays of Variable,
+    # as each value with an uncertainty is a block of signs.
+    std_dev = self.std_dev
+    std_dev_str = repr(std_dev) if std_dev else "0"
     return f"{self.nominal_value!r}±{std_dev_str}"
 
 
 try:
-    uncertainties.core.AffineScalarFunc.__repr__ = __repr__
+    uncertainties.core.AffineScalarFunc.__repr__ = __repr__  # type: ignore[method-assign]
 except ImportError:
     pass
 
 
-def is_unumpy(arr):
+def is_unumpy(arr: typing.Any) -> bool:
+    """Return True iff ``arr`` is iterable and contains at least one ``AffineScalarFunc``."""
     try:
-        return any(isinstance(a, uncertainties.core.AffineScalarFunc) for a in arr)
+        return any(isinstance(a, uncertainties.AffineScalarFunc) for a in arr)
     except TypeError:
         return False
 
 
-def is_ufloat(x):
+def is_ufloat(x: typing.Any) -> bool:
+    """Return True iff ``x`` quacks like a ufloat (has a ``std_dev`` attribute)."""
     return hasattr(x, "std_dev")
 
 
-def to_numpy(x, xerr=None):
-    """
-    Convert unumpy->numpy and ufloat->float. If already numpy, return as is.
+def _unumpy_to_numpy(arr: typing.Any) -> tuple[_Array, _Array]:
+    """Split an ``unumpy`` array into ``(nominal_values, std_devs)``."""
+    nominal = unumpy.nominal_values(arr)
+    std = unumpy.std_devs(arr)
+    return nominal, std
+
+
+def _ufloat_to_float(x: uncertainties.AffineScalarFunc) -> tuple[float, float]:
+    """Split a scalar ufloat into ``(nominal, std_dev)``."""
+    return uncertainties.nominal_value(x), uncertainties.std_dev(x)
+
+
+@typing.overload
+def to_numpy(
+    x: typing.Any,
+    xerr: None = None,
+) -> tuple[typing.Any, typing.Any]: ...
+
+
+@typing.overload
+def to_numpy(
+    x: typing.Any,
+    xerr: typing.Any,
+) -> tuple[typing.Any, typing.Any]: ...
+
+
+def to_numpy(
+    x: typing.Any,
+    xerr: typing.Any = None,
+) -> tuple[typing.Any, typing.Any]:
+    """Convert unumpy/ufloat inputs to ``(values, errors)`` numpy arrays.
+
     Args:
-        x ():           unumpy or ufloat. In this case, don't need to provide xerr as it is already contained in x
-        xerr ():        Needed only in case x is numpy instead of unumpy
+        x: ``unumpy`` array, ``ufloat`` scalar, or already-numpy data. Uncertainty
+            is already embedded when ``x`` is a ufloat/unumpy input, so ``xerr``
+            is unused in that case.
+        xerr: Pre-existing standard deviations; meaningful only when ``x`` is a
+            plain numpy array.
 
     Returns:
-
+        ``(x_values, x_errors)``; ``x_errors`` may be ``None``.
     """
-
-    def unumpy_to_numpy(arr):
-        nominal_value = unumpy.nominal_values(arr)
-        std_dev = unumpy.std_devs(arr)
-        # if not np.any(std_dev):
-        #     std_dev = None
-        return nominal_value, std_dev
-
-    def ufloat_to_float(x):
-        nominal_value = uncertainties.nominal_value(x)
-        std_dev = uncertainties.std_dev(x)
-        # if std_dev == 0:
-        #     std_dev = None
-        return nominal_value, std_dev
-
     if is_unumpy(x):
-        x, xerr = unumpy_to_numpy(x)
-
+        x, xerr = _unumpy_to_numpy(x)
     elif is_ufloat(x):
-        x, xerr = ufloat_to_float(x)
-
+        x, xerr = _ufloat_to_float(typing.cast(uncertainties.AffineScalarFunc, x))
     return x, xerr
 
 
-def from_numpy(x, xerr=0):
+def from_numpy(
+    x: typing.Any,
+    xerr: float | _Array = 0,
+) -> typing.Any:
+    """Combine ``(values, errors)`` into a ufloat / unumpy array.
+
+    Args:
+        x: Scalar value or numpy array of nominal values.
+        xerr: Matching standard deviation(s).
+
+    Returns:
+        A ``ufloat`` when ``x`` is scalar; otherwise a ``unumpy.uarray``.
+    """
     if np.isscalar(x):
-        return ufloat(x, xerr)
-    return unumpy.uarray(x, xerr)
+        x_float = float(typing.cast(typing.Any, x))
+        xerr_float = float(typing.cast(typing.Any, xerr)) if np.isscalar(xerr) else 0.0
+        return ufloat(x_float, xerr_float)
+    return typing.cast(typing.Any, unumpy.uarray(x, xerr))
 
 
-def val(x, xerr=None):
+def val(x: typing.Any, xerr: typing.Any = None) -> typing.Any:
+    """Return the nominal value(s) of ``x`` (see ``to_numpy``)."""
     return to_numpy(x, xerr)[0]
 
 
-def dev(x, xerr=None):
+def dev(x: typing.Any, xerr: typing.Any = None) -> typing.Any:
+    """Return the standard deviation(s) of ``x`` (see ``to_numpy``)."""
     return to_numpy(x, xerr)[1]
 
 
-def uncertainty(x, xerr=None):
+def uncertainty(x: typing.Any, xerr: typing.Any = None) -> typing.Any:
+    """Return the relative uncertainty ``dev(x) / val(x)``."""
     return dev(x, xerr) / val(x, xerr)
 
 
-def make_independent(x, xerr=None):
+def make_independent(x: typing.Any, xerr: typing.Any = None) -> typing.Any:
+    """Re-wrap ``x`` so that its entries are statistically independent ufloats.
+
+    Args:
+        x: ufloat/unumpy input or numpy values.
+        xerr: Standard deviations when ``x`` is plain numpy.
+
+    Returns:
+        Fresh ``unumpy.uarray`` whose correlations have been dropped.
+    """
+    x, xerr = to_numpy(x, xerr)
+    return typing.cast(typing.Any, unumpy.uarray(x, xerr))
+
+
+def histogram(
+    x: typing.Any,
+    xerr: typing.Any = None,
+    **kwargs: typing.Any,
+) -> tuple[typing.Any, _Array]:
+    """Compute a histogram of ``x`` with per-bin uncertainty propagation.
+
+    Args:
+        x: Sample values, possibly as a ufloat/unumpy array (with embedded errors).
+        xerr: Standard deviations when ``x`` is plain numpy.
+        **kwargs: Forwarded to ``numpy.histogram``; ``density`` is honored locally
+            by normalizing the resulting uncertainties array.
+
+    Returns:
+        ``(hist_with_uncertainties, bins)``.
+    """
     x, xerr = to_numpy(x, xerr)
 
-    return unumpy.uarray(x, xerr)
-
-
-def histogram(x, xerr=None, **kwargs):
-    x, xerr = to_numpy(x, xerr)
-
-    density = kwargs.pop("density", False)
+    density: bool = kwargs.pop("density", False)
 
     hist, bins = np.histogram(x, **kwargs)
 
@@ -119,9 +175,9 @@ def histogram(x, xerr=None, **kwargs):
         in_bin = (bins[i] <= x) & (x < bins[i + 1])
         hist_err[i] = np.sqrt(np.sum(xerr[in_bin] ** 2))
 
-    hist = from_numpy(hist, hist_err)
+    result = from_numpy(hist, hist_err)
 
     if density:
-        hist /= np.sum(hist)
+        result /= np.sum(result)
 
-    return hist, bins
+    return result, typing.cast(_Array, bins)

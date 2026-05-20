@@ -1,12 +1,26 @@
-def get_pixel_color(modal=True):
-    from threading import Event
+import typing
 
-    import pyautogui  # pylint: disable=import-error
-    from pynput import keyboard, mouse  # pylint: disable=import-error
+
+def get_pixel_color(modal: bool = True) -> None:
+    """Print the RGB and hex color of a pixel selected via mouse click.
+
+    Starts mouse and keyboard listeners; the next click reports the pixel under
+    the cursor, while pressing Esc cancels the operation.
+
+    Args:
+        modal: If True, block the calling thread until a click or Esc is received.
+    """
+    from threading import Event  # pylint: disable=import-outside-toplevel
+
+    import pyautogui  # type: ignore[import-untyped]  # pylint: disable=import-outside-toplevel,import-error
+    from pynput import (  # type: ignore[import-untyped]  # pylint: disable=import-outside-toplevel,import-error
+        keyboard,
+        mouse,
+    )
 
     done = Event()  # Event to block until user clicks or presses Esc
 
-    def on_click(x, y, button, pressed):
+    def on_click(x: int, y: int, button: typing.Any, pressed: bool) -> None:  # pylint: disable=unused-argument
         if pressed:
             rgb = pyautogui.screenshot().getpixel((x, y))
             rgb_norm = tuple(v / 255 for v in rgb)
@@ -16,7 +30,7 @@ def get_pixel_color(modal=True):
             listener_mouse.stop()
             listener_keyboard.stop()
 
-    def on_press(key):
+    def on_press(key: typing.Any) -> None:
         if key == keyboard.Key.esc:
             print("Operation cancelled by user.")
             done.set()

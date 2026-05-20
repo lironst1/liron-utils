@@ -3,7 +3,9 @@ import inspect
 import logging
 import sys
 import time
+import typing
 from logging.handlers import RotatingFileHandler
+from types import TracebackType
 
 from colorama import Back, Fore, Style
 
@@ -13,6 +15,20 @@ from .dicts import dict_
 
 
 class Logger:
+    """Context-managed logger with a colored console handler and a rotating file handler.
+
+    Examples:
+        >>> with Logger(min_level_console=Logger.NAME2LEVEL["WARNING"]) as logger:
+        ...     logger.log("Hello")  # Will not be printed
+        ...     logger.log("World", level=logging.ERROR)  # Will be printed
+
+        >>> logger = Logger()  # __enter__ is called automatically
+        >>> logger.log("Hello")  # __exit__ called automatically on completion
+
+        >>> logger = Logger()
+        >>> raise ValueError("This is an error.")  # Logged via sys.excepthook
+    """
+
     NAME2LEVEL = dict_(logging._nameToLevel)  # pylint: disable=protected-access
     LEVEL2NAME_OLD = dict_(logging._levelToName)  # pylint: disable=protected-access
     LEVEL2NAME = dict_(
@@ -33,8 +49,9 @@ class Logger:
     def __init__(
         self,
         file_name: str = "./logs.log",
+        *,
         min_level_file: int = logging.INFO,
-        min_level_console: int = None,
+        min_level_console: int | None = None,
         default_level: int = logging.INFO,
         log_message_format: str = "%(asctime)s"
         " | "
@@ -47,43 +64,33 @@ class Logger:
         "%(message)s",
         max_file_size: int = 10 * 1024 * 1024,
         backup_count: int = 5,
-    ):
-        """
-        Initialize logger.
+    ) -> None:
+        """Initialize the logger and install file and console handlers.
 
-        Examples
-        --------
-        >>> with Logger(min_level_console=Logger.NAME2LEVEL["WARNING"]) as logger:
-        >>>      logger.log("Hello")  # Will not be printed
-        >>>      logger.log("World", logging.ERROR)  # Will be printed
+        Args:
+            file_name: Logger file path; ``.log`` is appended if missing.
+            min_level_file: Lowest level written to file.
+            min_level_console: Lowest level written to console; ``None`` disables console output.
+            default_level: Level used by ``log`` when no explicit level is provided.
+            log_message_format: ``logging.Formatter`` format string applied to records.
+            max_file_size: Rotating-file size limit in bytes.
+            backup_count: Number of rotated backups to keep.
 
-        >>> logger = Logger()  # __enter__ is called automatically
-        >>> logger.log("Hello")  # __exit__ will be called automatically upon code completion
+        Examples:
+            >>> with Logger(min_level_console=Logger.NAME2LEVEL["WARNING"]) as logger:
+            >>>      logger.log("Hello")  # Will not be printed
+            >>>      logger.log("World", logging.ERROR)  # Will be printed
 
-        >>> logger = Logger()
-        >>> raise ValueError("This is an error.")  # Uncaught exception will be logged and the logger will be closed
+            >>> logger = Logger()  # __enter__ is called automatically
+            >>> logger.log("Hello")  # __exit__ will be called automatically upon code completion
 
-        Parameters
-        ----------
-        file_name :                 str, optional
-            Logger file path. Default is "./logs.log"
-        min_level_file              str, optional
-            Level of messages to print to file. Default is INFO
-        min_level_console :         int, optional
-            Level of messages to print to console. If None, will not print
-        default_level :             int, optional
-            Default logging level, if no level is provided. Default is INFO
-        log_message_format :        str, optional
-            Default string format of a message
-        max_file_size :             int, optional
-            Maximum size of log file in bytes before rotation. Default is 10MB
-        backup_count :              int, optional
-            Number of backup files to keep. Default is 5
+            >>> logger = Logger()
+            >>> raise ValueError("This is an error.")  # Uncaught exception will be logged and the logger will be closed
         """
         if not file_name.endswith(".log"):
             file_name += ".log"
 
-        with open(file_name, "a"):  # Create the file if it doesn't exist
+        with open(file_name, "a", encoding="utf-8"):  # Create the file if it doesn't exist
             pass
         self.logger = logging.getLogger(file_name)
         self.default_level = default_level
@@ -92,7 +99,7 @@ class Logger:
         # Create a file handler to write log messages to a file
         class _Formatter(logging.Formatter):
             # Formatter that changes the level name to a shorthand version (e.g., WARNING->Warn).
-            def format(self, record):
+            def format(self, record: logging.LogRecord) -> str:
                 record.levelname = record.levelname.replace(
                     Logger.LEVEL2NAME_OLD[record.levelno],
                     Logger.LEVEL2NAME[record.levelno],
@@ -103,7 +110,7 @@ class Logger:
                 return super().format(record)
 
             @staticmethod
-            def _get_class_func(record):
+            def _get_class_func(record: logging.LogRecord) -> str:
                 frame = inspect.currentframe()
                 while frame:
                     if frame.f_code.co_name == record.funcName:
@@ -134,7 +141,7 @@ class Logger:
                 logging.NOTSET: Fore.BLACK,
             }
 
-            def format(self, record):
+            def format(self, record: logging.LogRecord) -> str:
                 color = self.COLORS.get(record.levelno, "")
                 record.levelname = f"{color}{record.levelname}{Style.RESET_ALL}"
                 return super().format(record)
@@ -150,7 +157,11 @@ class Logger:
 
         excepthook_old = sys.excepthook  # Save the old exception hook
 
-        def excepthook_new(exc_type, exc_value, exc_traceback):
+        def excepthook_new(
+            exc_type: type[BaseException],
+            exc_value: BaseException,
+            exc_traceback: TracebackType | None,
+        ) -> None:
             self.__exit__(exc_type, exc_value, exc_traceback)
             excepthook_old(exc_type, exc_value, exc_traceback)
 
@@ -158,15 +169,20 @@ class Logger:
 
         self.__enter__()
 
-    def __enter__(self):
+    def __enter__(self) -> "Logger":
         if self.ENTER_CALLED:
             return self
 
         self.info(self.ENTER_MSG)
-        self.ENTER_CALLED = True
+        self.ENTER_CALLED = True  # pylint: disable=invalid-name
         return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        exc_traceback: TracebackType | None,
+    ) -> None:
         if exc_type is not None:
             if not issubclass(exc_type, KeyboardInterrupt):  # Ignore keyboard interrupts
                 self.error("Uncaught exception:", exc_info=(exc_type, exc_value, exc_traceback))
@@ -180,75 +196,69 @@ class Logger:
     def log(
         self,
         msg: str,
-        level: int = None,
+        *args: typing.Any,
+        level: int | None = None,
         exc_info: bool = False,
-        time_log: float = None,
+        time_log: float | None = None,
         f: str = ":.3f",
         stacklevel: int = 2,
-        *args,
-        **kwargs,
-    ):
+        **kwargs: typing.Any,
+    ) -> float:
+        """Emit a log message and return the timestamp at which it was emitted.
+
+        Args:
+            msg: Message string. If ``time_log`` is given, any ``{}`` placeholder
+                is replaced with the elapsed time using format spec ``f``.
+            *args: Forwarded to ``logging.Logger.log``.
+            level: Logging level; defaults to ``self.default_level``.
+            exc_info: If True, attach current exception info.
+            time_log: Reference timestamp; if given, message includes elapsed time.
+            f: Format spec used inside the elapsed-time placeholder.
+            stacklevel: Forwarded to ``logging.Logger.log``.
+            **kwargs: Forwarded to ``logging.Logger.log``.
+
+        Returns:
+            ``time.time()`` taken at the moment of logging.
         """
-        Send a log message to the log file.
-
-        Parameters
-        ----------
-        msg :               str
-            Message string
-        level :             int
-            Logging level (one of self.LEVELS)
-        exc_info :          bool
-            Error info
-        time_log :          float
-            Time log
-        f :                 str
-            Format string for time log
-        stacklevel :        int
-            Stack level for the log message
-        *args, **kwargs :   Passed to Logger.log
-
-        **kwargs :      dict
-            Passed to Logger.log
-
-        Returns
-        -------
-
-        """
-
         if level is None:
             level = self.default_level
 
-        kwargs = dict(stacklevel=stacklevel) | kwargs
+        kwargs = {"stacklevel": stacklevel} | kwargs
 
         tm = time.time()
         if time_log is not None:
             msg = msg.replace("{}", "{" + f + "}")
             msg = msg.format(tm - time_log)
 
-        self.logger.log(level=level, msg=msg, exc_info=exc_info, *args, **kwargs)
+        self.logger.log(level, msg, *args, exc_info=exc_info, **kwargs)
 
         return tm
 
-    def debug(self, msg: str, *args, **kwargs):
-        kwargs = dict(stacklevel=3) | kwargs
-        return self.log(msg, level=logging.DEBUG, *args, **kwargs)
+    def debug(self, msg: str, *args: typing.Any, **kwargs: typing.Any) -> float:
+        """Log ``msg`` at ``DEBUG`` level."""
+        kwargs = {"stacklevel": 3} | kwargs
+        return self.log(msg, *args, level=logging.DEBUG, **kwargs)
 
-    def info(self, msg: str, *args, **kwargs):
-        kwargs = dict(stacklevel=3) | kwargs
-        return self.log(msg, level=logging.INFO, *args, **kwargs)
+    def info(self, msg: str, *args: typing.Any, **kwargs: typing.Any) -> float:
+        """Log ``msg`` at ``INFO`` level."""
+        kwargs = {"stacklevel": 3} | kwargs
+        return self.log(msg, *args, level=logging.INFO, **kwargs)
 
-    def warning(self, msg: str, *args, **kwargs):
-        kwargs = dict(stacklevel=3) | kwargs
-        return self.log(msg, level=logging.WARNING, *args, **kwargs)
+    def warning(self, msg: str, *args: typing.Any, **kwargs: typing.Any) -> float:
+        """Log ``msg`` at ``WARNING`` level."""
+        kwargs = {"stacklevel": 3} | kwargs
+        return self.log(msg, *args, level=logging.WARNING, **kwargs)
 
     warn = warning
 
-    def error(self, msg: str, *args, **kwargs):
-        kwargs = dict(stacklevel=3) | kwargs
-        return self.log(msg, level=logging.ERROR, *args, **kwargs)
+    def error(self, msg: str, *args: typing.Any, **kwargs: typing.Any) -> float:
+        """Log ``msg`` at ``ERROR`` level."""
+        kwargs = {"stacklevel": 3} | kwargs
+        return self.log(msg, *args, level=logging.ERROR, **kwargs)
 
-    def critical(self, msg: str, *args, **kwargs):
-        kwargs = dict(stacklevel=3) | kwargs
-        return self.log(msg, level=logging.CRITICAL, *args, **kwargs)
+    def critical(self, msg: str, *args: typing.Any, **kwargs: typing.Any) -> float:
+        """Log ``msg`` at ``CRITICAL`` level."""
+        kwargs = {"stacklevel": 3} | kwargs
+        return self.log(msg, *args, level=logging.CRITICAL, **kwargs)
 
     fatal = critical

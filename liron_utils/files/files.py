@@ -2,59 +2,39 @@ import os
 import platform
 import shutil
 import subprocess
+import typing
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 
 move_file = os.rename
 remove_file = os.remove
 
+_T = typing.TypeVar("_T")
 
-def natural_sort(seq, key=None, reverse=False, alg=None):
-    """
-    Sorts an iterable naturally.
 
-    Parameters
-    ----------
-    seq : iterable
-        The input to sort.
+def natural_sort(
+    seq: Sequence[_T] | Iterable[_T],
+    key: Callable[[_T], typing.Any] | None = None,
+    *,
+    reverse: bool = False,
+    alg: typing.Any = None,
+) -> list[_T]:
+    """Sort an iterable naturally (e.g. ``["num2", "num3", "num5"]``).
 
-    key : callable, optional
-        A key used to determine how to sort each element of the iterable.
-        It is **not** applied recursively.
-        It should accept a single argument and return a single value.
+    Args:
+        seq: The input to sort.
+        key: Single-argument key applied to each element (not recursive).
+        reverse: Return the list in reversed sorted order.
+        alg: ``natsort`` algorithm flag; defaults to ``natsort.ns.DEFAULT``.
 
-    reverse : {{True, False}}, optional
-        Return the list in reversed sorted order. The default is
-        `False`.
+    Returns:
+        The sorted input as a list.
 
-    alg : ns enum, optional
-        This option is used to control which algorithm `natsort`
-        uses when sorting. For details into these options, please see
-        the :class:`ns` class documentation. The default is `ns.INT`.
-
-    Returns
-    -------
-    out: list
-        The sorted input.
-
-    See Also
-    --------
-    natsort_keygen : Generates the key that makes natural sorting possible.
-    realsorted : A wrapper for ``natsorted(seq, alg=ns.REAL)``.
-    humansorted : A wrapper for ``natsorted(seq, alg=ns.LOCALE)``.
-    index_natsorted : Returns the sorted indexes from `natsorted`.
-    os_sorted : Sort according to your operating system's rules.
-
-    Examples
-    --------
-    Use `natsorted` just like the builtin `sorted`::
-
-        >>> a = ['num3', 'num5', 'num2']
-        >>> natsorted(a)
+    Example:
+        >>> natural_sort(["num3", "num5", "num2"])
         ['num2', 'num3', 'num5']
-
     """
-
-    import natsort
+    import natsort  # pylint: disable=import-outside-toplevel
 
     if alg is None:
         alg = natsort.ns.DEFAULT
@@ -62,126 +42,180 @@ def natural_sort(seq, key=None, reverse=False, alg=None):
     return natsort.natsorted(seq=seq, key=key, reverse=reverse, alg=alg)
 
 
-def mkdirs(dirs, *args, **kwargs):
+def mkdirs(dirs: str | Path, *args: typing.Any, **kwargs: typing.Any) -> None:
+    """Create directories (recursive, idempotent).
+
+    Args:
+        dirs: Target directory path.
+        *args: Forwarded to ``os.makedirs``.
+        **kwargs: Forwarded to ``os.makedirs`` (``exist_ok=True`` by default).
     """
-    Create (possibly multiple) directories
-
-    Parameters
-    ----------
-    dirs :
-    args :
-    kwargs :
-
-    Returns
-    -------
-
-    """
-
-    kwargs = dict(exist_ok=True) | kwargs
-
+    kwargs = {"exist_ok": True} | kwargs
     os.makedirs(dirs, *args, **kwargs)
 
 
-def rmdir(dirname):
+def rmdir(dirname: str | Path) -> None:
+    """Remove a directory, silently ignoring missing paths.
+
+    Args:
+        dirname: Directory to remove.
+    """
     try:
         os.rmdir(dirname)
     except FileNotFoundError:
         pass
 
 
-def copy(src, dst, overwrite=True, symlink=None):
+def _normalize_copy_paths(
+    src: str | Path | Iterable[str | Path],
+    dst: str | Path | Iterable[str | Path],
+) -> tuple[list[str], list[str]]:
+    """Normalize src/dst into matching same-length string lists.
+
+    Args:
+        src: Single source path or iterable of source paths.
+        dst: Single destination path, or matching iterable.
+
+    Returns:
+        ``(src_list, dst_list)`` where both have equal length. If ``src`` is an
+        iterable but ``dst`` is a single directory, ``dst_list`` is expanded by
+        joining each ``src`` basename onto it.
+
+    Raises:
+        ValueError: If multiple sources are passed to a single non-directory dst,
+            or when both iterables are passed but have mismatched lengths.
     """
-    Copy file(s) or directories, or create symbolic links.
+    src_list: list[str] = [str(src)] if isinstance(src, (str, Path)) else [str(s) for s in src]
+    dst_list: list[str] = [str(dst)] if isinstance(dst, (str, Path)) else [str(s) for s in dst]
 
-    Parameters
-    ----------
-    src : str | list[str]
-        Source file(s) or directory(ies).
-    dst : str | list[str]
-        - If 'src' is a string, 'dst' can be a target path or directory.
-        - If 'src' is a list, 'dst' must be either a directory or a list of same length.
-    overwrite : bool, default=True
-        Overwrite destination if it exists.
-    symlink : bool or None, default=None
-        If True, create symbolic links instead of copying files/directories.
-        If None, follow src's type (if `src` is a symlink, create a symlink; otherwise, copy).
+    if len(src_list) == 1 and len(dst_list) > 1:
+        raise ValueError("Cannot copy file/directory to multiple destinations.")
+    if len(src_list) > 1 and len(dst_list) == 1:
+        dst_list = [os.path.join(dst_list[0], os.path.basename(s)) for s in src_list]
+    elif len(src_list) > 1 and len(src_list) != len(dst_list):
+        raise ValueError("When copying multiple files, `dst` must be an iterable of the same length as `src`.")
+
+    return src_list, dst_list
+
+
+def _create_symlink(src: str, dst: str, *, target_is_directory: bool = False) -> None:
+    """Create a symbolic link, replacing an existing non-directory dst.
+
+    Args:
+        src: Source file or directory.
+        dst: Destination path for the symlink.
+        target_is_directory: Forwarded to ``os.symlink``.
+
+    Raises:
+        ValueError: If ``src == dst`` or ``dst`` exists as a non-empty directory.
     """
+    if src == dst:
+        raise ValueError("Source and destination cannot be the same.")
+    if os.path.isdir(dst):
+        raise ValueError(f"Directory '{dst}' is not empty.")
+    if os.path.exists(dst):
+        os.remove(dst)
+    os.symlink(src, dst, target_is_directory=target_is_directory)
 
-    # convert to list
-    if isinstance(src, str):
-        src = [src]
-    if isinstance(dst, str):
-        dst = [dst]
 
-    if len(src) == 1:  # src is a single file or directory
-        if len(dst) > 1:
-            raise ValueError("Cannot copy file/directory to multiple destinations.")
-    else:  # len(src) > 1:
-        if len(dst) == 1:  # dst is a directory
-            dst = [os.path.join(dst[0], os.path.basename(s)) for s in src]
-        else:  # dst is a list of destinations
-            if len(src) != len(dst):
-                raise ValueError("When copying multiple files, `dst` must be a list of the same length as `src`.")
+def _resolve_symlinks(src: str, dst: str, symlink: bool | None) -> tuple[str, str, bool]:
+    """Follow symlinks in src/dst and decide whether to symlink the result.
 
-    symlink = [symlink] * len(src)
+    Args:
+        src: Source path, possibly a symlink (followed once).
+        dst: Destination path, possibly a symlink (followed once).
+        symlink: Tri-state preference: ``True`` to force, ``False`` to forbid,
+            ``None`` to inherit (symlink iff ``src`` is a symlink).
 
-    def create_symlink(src, dst, target_is_directory=False):
-        """Create a symbolic link to the source file or directory."""
-        # Remove existing destination if exists
-        if src == dst:
-            raise ValueError("Source and destination cannot be the same.")
-        if os.path.isdir(dst):
-            raise ValueError(f"Directory '{dst}' is not empty.")
-        if os.path.exists(dst):
-            os.remove(dst)
+    Returns:
+        ``(resolved_src, resolved_dst, do_symlink)``.
+    """
+    if os.path.islink(src):
+        src = os.readlink(src).replace("\\\\?\\", "")
+        if symlink is None:
+            symlink = True
+    if os.path.islink(dst):
+        dst = os.readlink(dst).replace("\\\\?\\", "")
+    return src, dst, bool(symlink)
 
-        os.symlink(src, dst, target_is_directory=target_is_directory)
 
-    for s, d, lnk in zip(src, dst, symlink):
-        if not overwrite and os.path.exists(d):  # Skip if not overwriting and destination exists
-            continue
+def _copy_one(src: str, dst: str, *, symlink: bool) -> None:
+    """Copy a single resolved src to dst, or symlink it.
 
-        if os.path.islink(s):  # If src is a symlink, resolve it
-            s = os.readlink(s).replace("\\\\?\\", "")
-            if lnk is True:
-                pass
-            elif lnk is None:
-                lnk = True
-            else:
-                lnk = False
-        if os.path.islink(d):  # If dst is a symlink, resolve it
-            d = os.readlink(d).replace("\\\\?\\", "")
+    Args:
+        src: Resolved source path (file or directory).
+        dst: Resolved destination path.
+        symlink: If True, create a symlink instead of copying.
 
-        if os.path.isdir(s):  # copy directory
-            mkdirs(os.path.dirname(d))  # Ensure the parent directory exists
-            if lnk:
-                create_symlink(s, d, target_is_directory=True)
-            else:
-                shutil.copytree(s, d, dirs_exist_ok=True)  # Copy directory recursively
-
-        elif os.path.isfile(s):  # copy file
-            if not os.path.splitext(d)[1]:  # If destination is a directory (i.e., has no extension), append filename
-                d = os.path.join(d, os.path.basename(s))
-            mkdirs(os.path.dirname(d))  # Ensure the parent directory exists
-            if lnk:
-                create_symlink(s, d, target_is_directory=False)
-            else:
-                shutil.copy2(s, d)  # Copy file with metadata
-
+    Raises:
+        ValueError: If ``src`` is neither a file nor a directory.
+    """
+    if os.path.isdir(src):
+        mkdirs(os.path.dirname(dst))
+        if symlink:
+            _create_symlink(src, dst, target_is_directory=True)
         else:
-            raise ValueError(f"Source {s} is neither a file nor a directory.")
-
-
-def open_file(file):
-    if platform.system() == "Windows":
-        os.startfile(file)  # pylint: disable=no-member
-    elif platform.system() == "Darwin":
-        subprocess.run(["open", file], check=True)
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+    elif os.path.isfile(src):
+        if not os.path.splitext(dst)[1]:
+            dst = os.path.join(dst, os.path.basename(src))
+        mkdirs(os.path.dirname(dst))
+        if symlink:
+            _create_symlink(src, dst, target_is_directory=False)
+        else:
+            shutil.copy2(src, dst)
     else:
-        subprocess.run(["xdg-open", file], check=True)
+        raise ValueError(f"Source {src} is neither a file nor a directory.")
+
+
+def copy(
+    src: str | Path | Iterable[str | Path],
+    dst: str | Path | Iterable[str | Path],
+    *,
+    overwrite: bool = True,
+    symlink: bool | None = None,
+) -> None:
+    """Copy file(s) or directories, or create symbolic links.
+
+    Args:
+        src: Source file(s) or directory(ies).
+        dst: Either a single target path/directory (when ``src`` is a single path)
+            or an iterable of the same length as ``src``.
+        overwrite: Overwrite destination if it exists.
+        symlink: If True, create symbolic links instead of copying.
+            If None, follow ``src``'s type — symlink iff ``src`` is itself a symlink.
+    """
+    src_list, dst_list = _normalize_copy_paths(src, dst)
+    for s, d in zip(src_list, dst_list):
+        if not overwrite and os.path.exists(d):
+            continue
+        s_resolved, d_resolved, do_link = _resolve_symlinks(s, d, symlink)
+        _copy_one(s_resolved, d_resolved, symlink=do_link)
+
+
+def open_file(file: str | Path) -> None:
+    """Open a file with the OS default application.
+
+    Args:
+        file: Path to the file to open.
+    """
+    if platform.system() == "Windows":
+        os.startfile(file)  # type: ignore[attr-defined]  # pylint: disable=no-member
+    elif platform.system() == "Darwin":
+        subprocess.run(["open", str(file)], check=True)
+    else:
+        subprocess.run(["xdg-open", str(file)], check=True)
 
 
 def wslpath(filename: str | Path) -> Path:
+    """Convert a Windows-style path to a WSL/Linux path when needed.
+
+    Args:
+        filename: Input path, possibly containing backslashes or quotes.
+
+    Returns:
+        Sanitized POSIX-style ``Path``; identical input is returned unchanged.
+    """
     filename = str(filename).strip().replace('"', "").replace("'", "")
     if "\\" in str(filename):
         filename = subprocess.run(

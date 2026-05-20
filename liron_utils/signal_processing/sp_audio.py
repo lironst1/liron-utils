@@ -1,167 +1,202 @@
 import os
+import typing
 
 import numpy as np
 import scipy.signal
 
 from .base import array
 
+_Array1D = np.ndarray[tuple[int], np.dtype[typing.Any]]
+_Array3D = np.ndarray[tuple[int, int, int], np.dtype[typing.Any]]
+_Array = np.ndarray[typing.Any, np.dtype[typing.Any]]
 
-def resample(y: np.ndarray, fs_old: int, fs_new: int, axis: int = -1, *args, **kwargs):
+
+def resample(
+    y: _Array,
+    fs_old: int,
+    fs_new: int,
+    axis: int = -1,
+    **kwargs: typing.Any,
+) -> _Array:
+    """Resample ``y`` along ``axis`` from ``fs_old`` to ``fs_new``.
+
+    Args:
+        y: Input signal (any dim).
+        fs_old: Original sample rate.
+        fs_new: Target sample rate.
+        axis: Axis along which to resample.
+        **kwargs: Forwarded to ``scipy.signal.resample``.
+
+    Returns:
+        Resampled array; identical to ``y`` if ``fs_old == fs_new``.
+    """
     if fs_old == fs_new:
         return y
     n = round(y.shape[axis] * fs_new / fs_old)
-    return scipy.signal.resample(y, n, axis=axis, *args, **kwargs)
+    return typing.cast(_Array, scipy.signal.resample(y, n, axis=axis, **kwargs))
 
 
-def audio_read(files: (str, list), fs_new: int = None, always_3d: bool = False, **kwargs):
+def _read_audio_metadata(
+    files_arr: _Array1D,
+    sf_module: typing.Any,
+) -> tuple[int, int, int]:
+    """Return ``(channels, sample_rate, frames)`` after asserting consistency across files.
+
+    Args:
+        files_arr: 1D array of audio file paths.
+        sf_module: The imported ``soundfile`` module.
+
+    Returns:
+        ``(channels, sample_rate, frames)`` shared by every file.
+
+    Raises:
+        AssertionError: If any field differs between files.
     """
-    Audio Reader
-
-    Parameters
-    ----------
-    files       :   File names, specified either as a list or a string (in case of 1 signal).
-    fs_new      :   Desired sample rate (if different from the original)
-    always_3d   :   Always return signals array as a 3D array with dimensions (m, n, ch), where:
-                        m - number of signals
-                        n - number of frames
-                        ch - number of channels (can be either 1 or 2)
-    kwargs      :   Passed to <soundfile.read>
-
-    Returns
-    -------
-
-    """
-    import soundfile as sf
-
-    files = np.atleast_1d(array(files))
-    assert files.ndim == 1
     channels, samplerate, frames = [], [], []
-    for file in enumerate(files):
-        info = sf.info(file)
+    for file in files_arr:
+        info = sf_module.info(file)
         channels.append(info.channels)
         samplerate.append(info.samplerate)
         frames.append(info.frames)
-    channels, samplerate, frames = (
-        np.unique(channels),
-        np.unique(samplerate),
-        np.unique(frames),
-    )
-    assert channels.size == 1, "Inconsistent number of channels."
-    assert samplerate.size == 1, "Inconsistent sample rates."
-    assert frames.size == 1, "Inconsistent signal lengths."
+    channels_arr = np.unique(channels)
+    samplerate_arr = np.unique(samplerate)
+    frames_arr = np.unique(frames)
+    assert channels_arr.size == 1, "Inconsistent number of channels."
+    assert samplerate_arr.size == 1, "Inconsistent sample rates."
+    assert frames_arr.size == 1, "Inconsistent signal lengths."
+    return int(channels_arr[0]), int(samplerate_arr[0]), int(frames_arr[0])
 
-    if "start" not in kwargs:
-        kwargs["start"] = 0
-    if "stop" not in kwargs:
-        kwargs["stop"] = frames[0]
-    frames = kwargs["stop"] - kwargs["start"]
 
-    info = sf.info(files[0])
-    M = np.zeros((len(files), frames, info.channels))
+def audio_read(
+    files: str | list[str],
+    fs_new: int | None = None,
+    always_3d: bool = False,
+    **kwargs: typing.Any,
+) -> tuple[_Array, int]:
+    """Read one or more audio files into a single ndarray.
 
-    # Read
-    for i, f in enumerate(files):
-        (M[i, :, :], _) = sf.read(f, always_2d=True, **kwargs)
+    Args:
+        files: File names, specified either as a list or a single string.
+        fs_new: Desired sample rate (resampled if different from the original).
+        always_3d: If True, always return a 3D ``(n_files, n_frames, n_channels)``
+            array; otherwise squeeze trailing/leading singleton dimensions.
+        **kwargs: Forwarded to ``soundfile.read``.
 
-    # Resample
+    Returns:
+        ``(audio, fs_orig)`` where ``audio`` is the (possibly squeezed) 3D array
+        and ``fs_orig`` is the original sample rate.
+    """
+    import soundfile as sf  # pylint: disable=import-outside-toplevel
+
+    files_arr = typing.cast(_Array1D, np.atleast_1d(array(files)))
+    assert files_arr.ndim == 1
+    channels, fs_orig, frames = _read_audio_metadata(files_arr, sf)
+
+    kwargs.setdefault("start", 0)
+    kwargs.setdefault("stop", frames)
+    n_frames = kwargs["stop"] - kwargs["start"]
+
+    audio = np.zeros((len(files_arr), n_frames, channels))
+    for i, file in enumerate(files_arr):
+        audio[i, :, :], _ = sf.read(file, always_2d=True, **kwargs)
+
     if fs_new is not None:
-        M = resample(M, info.samplerate, fs_new, axis=1)
+        audio = resample(audio, fs_orig, fs_new, axis=1)
 
     if not always_3d:
-        M = M.squeeze()
-    return M, samplerate[0]
+        audio = audio.squeeze()
+    return audio, fs_orig
 
 
-def audio_write(files, M, fs, fs_save=None, mode="w", **kwargs):
+def audio_write(
+    files: str | list[str],
+    audio: _Array,
+    fs: int,
+    fs_save: int | None = None,
+    mode: str = "w",
+    **kwargs: typing.Any,
+) -> None:
+    """Write one or more audio signals to disk.
+
+    Args:
+        files: File names, specified either as a list or a single string.
+        audio: Signals to write.
+            - 3D: ``(n_files, n_frames, n_channels)``.
+            - 2D ``(n_frames, 2)``: single stereo signal.
+            - 2D ``(n_files, n_frames)``: that many mono signals.
+            - 1D: single mono signal.
+        fs: Original sample rate in Hz.
+        fs_save: Desired sample rate to save at (resampled if different from ``fs``).
+        mode: Save mode, ``"w+"`` (write) or ``"a"`` (append).
+        **kwargs: Forwarded to ``soundfile.write``.
+
+    Raises:
+        ValueError: If ``mode`` is not one of ``"w+"`` or ``"a"``.
     """
-    Audio Writer
+    import soundfile as sf  # pylint: disable=import-outside-toplevel
 
-    Parameters
-    ----------
-    files       :   str or list
-        File names, specified either as a list or a string (in case of 1 file).
-    M           :   array_like
-        Signals 3D array, with dimensions (m, n, ch), where:
-            m - number of signals
-            n - number of frames
-            ch - number of channels (can be either 1 or 2)
-        If M is given as 1D, M is interpreted as a single channel.
-        If M is given as 2D, then:
-            If it has dimensions (n, 2), it is interpreted as single stereo signal.
-            If it has dimensions (m, n), it is interpreted as m different signals.
-    fs          :   int
-        Original sample rate [Hz]
-    fs_save     :   int, optional
-        Desired sample rate to save signals (if different from the original) [Hz]
-    mode        :   str {'w', 'a'}
-        Save mode (write / append)
-    kwargs      :   dict
-        Passed to <soundfile.write>
-
-    Returns
-    -------
-
-    """
-    import soundfile as sf
-
-    files = np.atleast_1d(array(files))
-    M = array(M)
-    if M.ndim == 1:
-        M = M[np.newaxis, :, np.newaxis]
-    elif M.ndim == 2:
-        if M.shape[1] == 2:
-            M = M[np.newaxis, :, :]
+    files_arr = typing.cast(_Array1D, np.atleast_1d(array(files)))
+    audio = array(audio)
+    if audio.ndim == 1:
+        audio = audio[np.newaxis, :, np.newaxis]
+    elif audio.ndim == 2:
+        if audio.shape[1] == 2:
+            audio = audio[np.newaxis, :, :]
         else:
-            M = M[:, :, np.newaxis]
-    assert files.ndim == 1 and M.ndim == 3
-    assert files.size == M.shape[0]
+            audio = audio[:, :, np.newaxis]
+    assert files_arr.ndim == 1 and audio.ndim == 3
+    assert files_arr.size == audio.shape[0]
 
-    # Resample
     if fs_save is None:
         fs_save = fs
     else:
-        M = resample(M, fs, fs_save, axis=1)
+        audio = resample(audio, fs, fs_save, axis=1)
 
-    # Write
-    for i, f in enumerate(files):
+    for i, file in enumerate(files_arr):
         if mode.lower() == "a":
-            if not os.path.isfile(f):
-                with sf.SoundFile(f, "w", samplerate=fs_save, **kwargs):
+            if not os.path.isfile(file):
+                with sf.SoundFile(file, "w", samplerate=fs_save, **kwargs):
                     pass
 
-            with sf.SoundFile(f, "r+") as h:
+            with sf.SoundFile(file, "r+") as h:
                 h._update_frames(h.seek(0, sf.SEEK_END))  # pylint: disable=protected-access
-                h.buffer_write(M, dtype="float64")
+                h.buffer_write(audio, dtype="float64")
 
         elif mode.lower() == "w+":
-            sf.write(f, M[i, :, :].squeeze(), fs_save, **kwargs)
+            sf.write(file, audio[i, :, :].squeeze(), fs_save, **kwargs)
 
         else:
             raise ValueError("Invalid declaration of variable `mode`.")
 
 
-def time_array(n: int, fs: int) -> np.ndarray:
-    """
-    Create time array range from 0 to (n-1)/fs with n samples.
+def time_array(n: int, fs: int) -> _Array1D:
+    """Create a 1D time array from ``0`` to ``(n-1)/fs`` with ``n`` samples.
 
-    Parameters
-    ----------
-    n :     Length
-    fs :    Sample rate
+    Args:
+        n: Number of samples.
+        fs: Sample rate in Hz.
 
-    Returns
-    -------
-
+    Returns:
+        1D array of length ``n``.
     """
     t = np.linspace(0, (n - 1) / fs, n)
-    return t
+    return typing.cast(_Array1D, t)
 
 
-def time2samples(fs: int, *args):
-    args = list(args)
-    for i, arg in enumerate(args):
+def time2samples(fs: int, *args: typing.Any) -> typing.Any:
+    """Convert one or more time values [s] into sample counts at sample rate ``fs``.
+
+    Args:
+        fs: Sample rate in Hz.
+        *args: Time values; ``None`` entries are passed through unchanged.
+
+    Returns:
+        Single sample count when one time value is given, otherwise a list.
+    """
+    args_list = list(args)
+    for i, arg in enumerate(args_list):
         if arg is not None:
-            args[i] = round(fs * arg)
-    if len(args) == 1:
-        return args[0]
-    return args
+            args_list[i] = round(fs * arg)
+    if len(args_list) == 1:
+        return args_list[0]
+    return args_list
