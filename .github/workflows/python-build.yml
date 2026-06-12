@@ -1,0 +1,63 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        default: "3.11"
+    outputs:
+      version:
+        description: Calculated package version
+        value: ${{ jobs.build.outputs.version }}
+      ci-phase:
+        description: "CI phase: review, branch, or tag"
+        value: ${{ jobs.build.outputs.ci-phase }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      ci-phase: ${{ steps.version.outputs.ci-phase }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Calculate version
+        id: version
+        run: |
+          base=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+          base=${base#v}
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            ci_phase=tag
+            version="${base}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            ci_phase=review
+            version="${base}.dev${GITHUB_RUN_NUMBER}"
+          else
+            ci_phase=branch
+            version="${base}a${GITHUB_RUN_NUMBER}"
+          fi
+
+          echo "ci-phase=${ci_phase}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Build sdist and wheel
+        env:
+          POETRY_DYNAMIC_VERSIONING_BYPASS: ${{ steps.version.outputs.version }}
+        run: |
+          pip install --upgrade pip build
+          python -m build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error

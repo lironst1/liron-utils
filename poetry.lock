@@ -3674,7 +3674,7 @@ description = "Thin-wrapper around the mock package for easier use with pytest"
 optional = true
 python-versions = ">=3.9"
 groups = ["main"]
-markers = "extra == \"tests\""
+markers = "extra == \"dev\" or extra == \"tests\""
 files = [
     {file = "pytest_mock-3.15.1-py3-none-any.whl", hash = "sha256:0a25e2eb88fe5168d535041d09a4529a188176ae608a6d249ee65abc0949630d"},
     {file = "pytest_mock-3.15.1.tar.gz", hash = "sha256:1849a238f6f396da19762269de72cb1814ab44416fa73a8686deac10b0d87a0f"},
@@ -4692,11 +4692,11 @@ files = [
 ]
 
 [extras]
-dev = ["black", "isort", "mypy", "pandas-stubs", "pylint", "pytest-mypy", "types-colorama", "types-protobuf", "types-pytz", "types-setuptools", "types-tabulate", "types-tqdm"]
+dev = ["black", "isort", "mypy", "pandas-stubs", "pylint", "pytest-mock", "pytest-mypy", "types-colorama", "types-protobuf", "types-pytz", "types-setuptools", "types-tabulate", "types-tqdm"]
 extra = ["PyPDF2", "docx", "manim", "pytube"]
 tests = ["pytest", "pytest-cov", "pytest-html", "pytest-mock", "pytest-xdist"]
 
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10"
-content-hash = "e551d217096306c290ffaf1ce4dd60020ea3ba7816ab5219be0138c63d26b32a"
+content-hash = "eaf182d836420e8d0034e8a4ae73464b0a98fd98dbb49e5ae5ed6908e16a00f0"

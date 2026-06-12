@@ -36,6 +36,7 @@ dependencies = [
     "uncertainties",
 ]
 license = "MIT"
+version = "0.0.0"
 
 [project.optional-dependencies]
 extra = [
@@ -50,6 +51,7 @@ dev = [
     "mypy",
     "pandas-stubs",
     "pylint",
+    "pytest-mock",
     "pytest-mypy",
     "types-colorama",
     "types-protobuf",
@@ -74,7 +76,15 @@ Homepage = "https://github.com/lironst1/liron-utils"
 packages = [
     { include = "liron_utils" },
 ]
-version = "0.0.0"  # placeholder
+include = [
+    { path = ".flake8", format = "sdist" },
+    { path = ".gitignore", format = "sdist" },
+    { path = ".pre-commit-config.yaml", format = "sdist" },
+    { path = "poetry.lock", format = "sdist" },
+    { path = ".github/**/*.yml", format = "sdist" },
+    { path = ".github/**/*.sh", format = "sdist" },
+    { path = "tests/**/*.py", format = "sdist" },
+]
 
 [tool.poetry.requires-plugins]
 #poetry-plugin-export = ">=1.8"
@@ -85,6 +95,7 @@ poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
 enable = true
 vcs = "git"
 style = "pep440"
+format-jinja = "{{ base }}b0"
 
 # Tox
 [tool.tox]

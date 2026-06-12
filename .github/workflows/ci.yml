@@ -1,23 +1,18 @@
 name: CI
 
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
 
 jobs:
-  run:
+  tox:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [ "3.11" ]
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -25,5 +20,24 @@ jobs:
           pip install tox
 
       - name: Run tox
-        run: |
-          tox
+        run: tox
+
+  build:
+    uses: ./.github/workflows/python-build.yml
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [tox, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/liron-utils
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
