@@ -10,7 +10,7 @@ from scipy import odr
 from sklearn.metrics import r2_score
 from uncertainties import ufloat
 
-from .. import graphics as gr
+from ..graphics import mpl as gr
 from ..uncertainties_math import from_numpy, to_numpy, val
 from .stats import chi_squared_test
 

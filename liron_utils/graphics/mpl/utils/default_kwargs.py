@@ -2,8 +2,8 @@ import typing
 
 from scipy.signal import windows
 
-from ...pure_python import MetaDict
-from . import COLORS
+from ....pure_python import MetaDict
+from ...common import COLORS
 
 
 class _FuncDefaultKwargs(dict[str, typing.Any]):

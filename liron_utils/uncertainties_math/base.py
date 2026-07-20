@@ -15,7 +15,7 @@ from uncertainties import ufloat, unumpy
 _Array = np.ndarray[typing.Any, np.dtype[typing.Any]]
 
 
-def __repr__(self: uncertainties.AffineScalarFunc) -> str:
+def __repr__(self: uncertainties.core.AffineScalarFunc) -> str:
     """Render a ufloat compactly as ``"nominal±std_dev"``.
 
     Args:
@@ -40,7 +40,7 @@ except ImportError:
 def is_unumpy(arr: typing.Any) -> bool:
     """Return True iff ``arr`` is iterable and contains at least one ``AffineScalarFunc``."""
     try:
-        return any(isinstance(a, uncertainties.AffineScalarFunc) for a in arr)
+        return any(isinstance(a, uncertainties.core.AffineScalarFunc) for a in arr)
     except TypeError:
         return False
 
@@ -57,7 +57,7 @@ def _unumpy_to_numpy(arr: typing.Any) -> tuple[_Array, _Array]:
     return nominal, std
 
 
-def _ufloat_to_float(x: uncertainties.AffineScalarFunc) -> tuple[float, float]:
+def _ufloat_to_float(x: uncertainties.core.AffineScalarFunc) -> tuple[float, float]:
     """Split a scalar ufloat into ``(nominal, std_dev)``."""
     return uncertainties.nominal_value(x), uncertainties.std_dev(x)
 
@@ -95,7 +95,7 @@ def to_numpy(
     if is_unumpy(x):
         x, xerr = _unumpy_to_numpy(x)
     elif is_ufloat(x):
-        x, xerr = _ufloat_to_float(typing.cast(uncertainties.AffineScalarFunc, x))
+        x, xerr = _ufloat_to_float(typing.cast(uncertainties.core.AffineScalarFunc, x))
     return x, xerr
 
 

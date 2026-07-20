@@ -89,3 +89,16 @@ __all__ = [item for item in dir() if not item.startswith("_")]
 
 # %% Custom Variables
 RGB = (RED_A, GREEN_A, BLUE_A)
+
+DEFAULT_COLOR_CYCLE: tuple[str, ...] = (
+    DARK_BLUE,
+    ORANGE_B,
+    PURPLE_D,
+    GREEN,
+    GREY_BROWN,
+    GOLD,
+    MAROON_D,
+    BLUE_C,
+    BLACK,
+    PINK,
+)

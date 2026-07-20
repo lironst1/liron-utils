@@ -1,6 +1,7 @@
 import typing
 
 import numpy as np
+from uncertainties import core as core
 
 class AffineScalarFunc:
     nominal_value: float
@@ -29,9 +30,6 @@ def nominal_value(x: AffineScalarFunc | float) -> float: ...
 def std_dev(x: AffineScalarFunc | float) -> float: ...
 
 # Module-level submodule references
-class core:
-    AffineScalarFunc = AffineScalarFunc
-
 class unumpy:
     @staticmethod
     def uarray(

@@ -12,8 +12,15 @@ import scipy.signal
 from matplotlib.axes import Axes as Axes_plt
 from matplotlib.figure import Figure
 
-from ..signal_processing.base import interp1
-from ..uncertainties_math import to_numpy
+from ...signal_processing.base import interp1
+from ...uncertainties_math import to_numpy
+from ..common.fitting import curve_fit_confidence_band, curve_fit_prep_data
+from ..common.spectra import (
+    fft_data,
+    impulse_response_data,
+    periodogram_data,
+    spectrum_display_data,
+)
 from .axes import _Axes
 
 _N = typing.TypeVar("_N", bound=int)
@@ -293,74 +300,6 @@ class Axes(_Axes):
 
         return _plot_filled_error()
 
-    @staticmethod
-    def _curve_fit_prep_data(
-        x: _Vec[_N],
-        y: _Vec[_N],
-        xerr: _Vec[_N] | None,
-        yerr: _Vec[_N] | None,
-        p_opt: _Vec[_K] | None,
-    ) -> tuple[_Vec[_N], _Vec[_N], _Vec[_N] | None, _Vec[_N] | None, _Vec[_K] | None]:
-        """Convert ``(x, y, xerr, yerr, p_opt)`` to numpy (via to_numpy) and sort by x.
-
-        Args:
-            x: 1D x-axis data of length N; uncertainties arrays are unpacked into ``(x, xerr)``.
-            y: 1D y-axis data of length N; uncertainties arrays are unpacked into ``(y, yerr)``.
-            xerr: 1D errors in x, length N. Ignored if x is an uncertainties array.
-            yerr: 1D errors in y, length N. Ignored if y is an uncertainties array.
-            p_opt: 1D fit parameters of length K; uncertainties unpacked to nominal values.
-
-        Returns:
-            ``(x, y, xerr, yerr, p_opt)`` as plain numpy arrays, sorted by x.
-        """
-        x, xerr = typing.cast(tuple[_Vec[_N], _Vec[_N] | None], to_numpy(x, xerr))
-        y, yerr = typing.cast(tuple[_Vec[_N], _Vec[_N] | None], to_numpy(y, yerr))
-        p_opt = typing.cast(_Vec[_K] | None, to_numpy(p_opt)[0])
-        idx = np.argsort(x)
-        x, y = typing.cast(_Vec[_N], x[idx]), typing.cast(_Vec[_N], y[idx])
-        if xerr is not None:
-            xerr = typing.cast(_Vec[_N], xerr[idx])
-        if yerr is not None:
-            yerr = typing.cast(_Vec[_N], yerr[idx])
-        return x, y, xerr, yerr, p_opt
-
-    @staticmethod
-    def _curve_fit_confidence_band(
-        fit_fcn: Callable[..., _Vec[_N]],
-        x_interp: _Vec[_N],
-        p_opt: _Vec[_K],
-        p_cov: _Mat[_K, _K],
-        n_std: float,
-    ) -> tuple[_Vec[_N], _Vec[_N]]:
-        """Compute the lower/upper fit envelope by perturbing each parameter ±n_std·σ.
-
-        For each parameter ``p_opt[i]``, evaluate ``fit_fcn`` at ``p_opt[i] ± n_std·σ_i``
-        (with σ_i from the diagonal of ``p_cov``) and take the element-wise min/max
-        across all parameter perturbations to produce the band edges.
-
-        Args:
-            fit_fcn: Model function ``f(x, *params)`` that returns a 1D vector matching x.
-            x_interp: 1D x-axis values of length N at which to evaluate the band.
-            p_opt: 1D best-fit parameter values of length K.
-            p_cov: K×K covariance matrix; its diagonal gives the per-parameter variances.
-            n_std: Number of standard deviations spanning the band.
-
-        Returns:
-            ``(fit_low, fit_high)`` as 1D arrays of length N.
-        """
-        p_err = np.sqrt(np.diag(p_cov))
-        fit_low = np.full(x_interp.size, np.inf)
-        fit_high = np.full(x_interp.size, -np.inf)
-        for i, (mid, err) in enumerate(zip(p_opt, p_err)):
-            p_opt_i = p_opt.copy()
-            p_opt_i[i] = mid - n_std * err
-            low = fit_fcn(x_interp, *p_opt_i)
-            p_opt_i[i] = mid + n_std * err
-            high = fit_fcn(x_interp, *p_opt_i)
-            fit_low = np.minimum(fit_low, np.minimum(low, high))
-            fit_high = np.maximum(fit_high, np.maximum(low, high))
-        return typing.cast(_Vec[_N], fit_low), typing.cast(_Vec[_N], fit_high)
-
     def plot_data_and_curve_fit(  # pylint: disable=too-many-arguments
         self,
         x: _Vec[_N],
@@ -401,7 +340,7 @@ class Axes(_Axes):
         Example:
             >>> import numpy as np
             >>> import scipy.optimize
-            >>> from liron_utils import graphics as gr
+            >>> from liron_utils.graphics import mpl as gr
             >>>
             >>> N = 101
             >>> x = np.linspace(0, 10, N)
@@ -451,7 +390,7 @@ class Axes(_Axes):
                 curve_fit_plot_kw = {}
             curve_fit_plot_kw = {"label": "Curve fit"} | curve_fit_plot_kw
 
-            x, y, xerr, yerr, p_opt = self._curve_fit_prep_data(x, y, xerr, yerr, p_opt)
+            x, y, xerr, yerr, p_opt = curve_fit_prep_data(x, y, xerr, yerr, p_opt)
 
             self.plot_errorbar(x, y, xerr=xerr, yerr=yerr, **errorbar_kw)
 
@@ -459,7 +398,7 @@ class Axes(_Axes):
             if p_opt is not None:
                 ax.plot(x_interp, fit_fcn(x_interp, *p_opt), **curve_fit_plot_kw)
                 if p_cov is not None:
-                    fit_low, fit_high = self._curve_fit_confidence_band(fit_fcn, x_interp, p_opt, p_cov, n_std)
+                    fit_low, fit_high = curve_fit_confidence_band(fit_fcn, x_interp, p_opt, p_cov, n_std)
                     self.plot_filled_error(ax=ax, x=x_interp, y_low=fit_low, y_high=fit_high)
 
         return _plot_data_and_curve_fit()
@@ -493,7 +432,7 @@ class Axes(_Axes):
         Example:
             >>> import numpy as np
             >>> from scipy.stats import linregress
-            >>> from liron_utils import graphics as gr
+            >>> from liron_utils.graphics import mpl as gr
             >>>
             >>> N = 100
             >>> x = np.arange(N)
@@ -619,26 +558,7 @@ class Axes(_Axes):
         Raises:
             ValueError: If ``which`` is not one of ``"amp"``, ``"power"``, ``"phase"``.
         """
-        spectrum = spectrum.copy()
-
-        which = which.lower()
-        ydata: _Array1D
-        ylabel: str
-        if which == "amp":
-            ydata = typing.cast(_Array1D, np.abs(spectrum))
-            ylabel = "Amplitude"
-        elif which == "power":
-            ydata = typing.cast(_Array1D, np.abs(spectrum) ** 2)
-            ylabel = "Power"
-        elif which == "phase":
-            ydata = typing.cast(_Array1D, np.degrees(np.unwrap(np.angle(spectrum))))
-            ylabel = "Phase [deg]"
-        else:
-            raise ValueError(f"which must be one of 'amp', 'power', or 'phase'. Got: {which}")
-
-        if db and which in ("amp", "power"):
-            ydata = typing.cast(_Array1D, 10 * np.log10(ydata + eps))
-            ylabel += " [dB]"
+        ydata, ylabel = spectrum_display_data(spectrum, which=which, db=db, eps=eps)
 
         line: list[typing.Any] = ax.plot(freqs, ydata, **plot_kw)
 
@@ -703,29 +623,14 @@ class Axes(_Axes):
             plot_spectrum_kw: dict[str, typing.Any] | None = None,
             **plot_kw: typing.Any,
         ) -> tuple[tuple[_Array1D, _Array1D], list[typing.Any]]:
-            x_arr = typing.cast(_Array1D, np.asarray(x))
-            if n is None:
-                n = x_arr.shape[0]
-
-            spectrum: _Array1D
-            if input_time:
-                if np.iscomplexobj(x_arr):
-                    one_sided = False
-                spectrum = typing.cast(_Array1D, np.fft.fft(x_arr, n=n, axis=0))
-            else:
-                spectrum = x_arr.copy()
-
-            if normalize:
-                spectrum /= spectrum.max(axis=0)
-
-            freqs = typing.cast(_Array1D, np.fft.fftfreq(n=n, d=1 / fs))
-
-            if one_sided:
-                spectrum = typing.cast(_Array1D, spectrum[: n // 2])
-                freqs = typing.cast(_Array1D, freqs[: n // 2])
-            else:
-                spectrum = typing.cast(_Array1D, np.fft.fftshift(spectrum, axes=0))
-                freqs = typing.cast(_Array1D, np.fft.fftshift(freqs))
+            spectrum, freqs = fft_data(
+                x,
+                fs=fs,
+                n=n,
+                one_sided=one_sided,
+                normalize=normalize,
+                input_time=input_time,
+            )
 
             if plot_spectrum_kw is None:
                 plot_spectrum_kw = {}
@@ -793,29 +698,7 @@ class Axes(_Axes):
             plot_spectrum_kw: dict[str, typing.Any] | None = None,
             **plot_kw: typing.Any,
         ) -> tuple[tuple[_Array1D, _Array1D], list[typing.Any]]:
-            x_arr = typing.cast(_Array1D, np.asarray(x))
-            if n is None:
-                n = x_arr.shape[0]
-            if np.iscomplexobj(x_arr):
-                one_sided = False
-
-            freqs, psd = scipy.signal.periodogram(
-                x_arr,
-                fs=fs,
-                window=typing.cast(typing.Any, window),
-                nfft=n,
-                detrend=False,
-                return_onesided=one_sided,
-                scaling="density",
-                axis=0,
-            )
-
-            if normalize:
-                psd = psd / psd.max(axis=0)
-
-            if not one_sided:
-                psd = typing.cast(_Array1D, np.fft.fftshift(psd, axes=0))
-                freqs = typing.cast(_Array1D, np.fft.fftshift(freqs))
+            psd, freqs = periodogram_data(x, fs=fs, n=n, window=window, one_sided=one_sided, normalize=normalize)
 
             if plot_spectrum_kw is None:
                 plot_spectrum_kw = {}
@@ -823,13 +706,13 @@ class Axes(_Axes):
             line = self._plot_spectrum(
                 ax=ax,
                 spectrum=typing.cast(_Array1D, np.sqrt(psd)),
-                freqs=typing.cast(_Array1D, freqs),
+                freqs=freqs,
                 fs=fs,
                 **plot_spectrum_kw,
                 **plot_kw,
             )
 
-            return (typing.cast(_Array1D, psd), typing.cast(_Array1D, freqs)), line
+            return (psd, freqs), line
 
         return _plot_periodogram()
 
@@ -873,43 +756,8 @@ class Axes(_Axes):
             n: int | None = None,
             **plot_kw: typing.Any,
         ) -> tuple[tuple[_Array1D, _Array1D], typing.Any]:
-            b_arr = typing.cast(_Array1D, np.atleast_1d(b))
-            a_arr = typing.cast(_Array1D, np.atleast_1d(a))
-            if len(b_arr) > len(a_arr):
-                a_arr = typing.cast(
-                    _Array1D,
-                    np.pad(a_arr, (0, len(b_arr) - len(a_arr)), "constant", constant_values=0),
-                )
-            elif len(a_arr) > len(b_arr):
-                b_arr = typing.cast(
-                    _Array1D,
-                    np.pad(b_arr, (0, len(a_arr) - len(b_arr)), "constant", constant_values=0),
-                )
-
-            line: typing.Any
-            if dt is None:  # Continuous-time system
-                system: typing.Any = scipy.signal.lti(
-                    typing.cast(typing.Any, b_arr),
-                    typing.cast(typing.Any, a_arr),
-                )
-                if t is None:
-                    raise ValueError("t should be given for continuous-time system.")
-                t_out, h = scipy.signal.impulse(system, T=t)
-                line = ax.plot(t_out, h, **plot_kw)
-            else:  # Discrete-time system
-                system = scipy.signal.dlti(
-                    typing.cast(typing.Any, b_arr),
-                    typing.cast(typing.Any, a_arr),
-                    dt=dt,
-                )
-                if t is None:
-                    if n is None:
-                        raise ValueError("Either t or n should be given.")
-                    t = np.arange(0, n * dt, dt)
-                t_out, h_seq = scipy.signal.dimpulse(system, n=len(t))
-                h = typing.cast(_Array1D, np.squeeze(h_seq))
-                line = ax.stem(t_out, h, **plot_kw)
-
+            h, t_out, is_discrete = impulse_response_data(b, a, dt=dt, t=t, n=n)
+            line = ax.stem(t_out, h, **plot_kw) if is_discrete else ax.plot(t_out, h, **plot_kw)
             return (h, t_out), line
 
         return _plot_impulse_response()
@@ -1133,7 +981,7 @@ class Axes(_Axes):
             else:
                 x_grid, y_grid = typing.cast(_Array2D, x), typing.cast(_Array2D, y)
             z_grid: _Array2D = z(x_grid, y_grid) if callable(z) else z
-            if np.all(z_grid.shape == np.flip(x_grid.shape)):
+            if z_grid.shape != x_grid.shape and z_grid.shape == tuple(np.flip(x_grid.shape)):
                 z_grid = z_grid.T
 
             ax.plot_surface(x_grid, y_grid, z_grid, **plot_surface_kw)
@@ -1238,7 +1086,7 @@ class Axes(_Axes):
 
         Example:
             >>> import numpy as np
-            >>> from liron_utils import graphics as gr
+            >>> from liron_utils.graphics import mpl as gr
             >>>
             >>> images = np.random.random((10, 32, 32))
             >>> axes = gr.Axes()

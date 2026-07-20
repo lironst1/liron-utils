@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cycler import Cycler, cycler
 
-from ..base import hex2rgb
-from . import COLORS
+from ...common import COLORS
+from ...common.color_conversion import hex2rgb
 
 RC_PARAMS: dict[str, typing.Any] = {
     # ***************************************************************************
@@ -57,20 +57,7 @@ RC_PARAMS: dict[str, typing.Any] = {
     "axes.grid.which": "both",  # grid lines at {major, minor, both} ticks
     "grid.color": COLORS.LIGHT_GREY,  # grid color
     "axes.labelsize": "large",  # font size of the x and y labels
-    "axes.prop_cycle": cycler(
-        color=[
-            COLORS.DARK_BLUE,
-            COLORS.ORANGE_B,
-            COLORS.PURPLE_D,
-            COLORS.GREEN,
-            COLORS.GREY_BROWN,
-            COLORS.GOLD,
-            COLORS.MAROON_D,
-            COLORS.BLUE_C,
-            COLORS.BLACK,
-            COLORS.PINK,
-        ],
-    ),
+    "axes.prop_cycle": cycler(color=COLORS.DEFAULT_COLOR_CYCLE),
     "axes.formatter.limits": [-4, 4],  # use scientific notation if log10
     # of the axis range is smaller than the
     # first or larger than the second
