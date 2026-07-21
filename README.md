@@ -5,11 +5,13 @@ A comprehensive collection of utility modules for data analysis, visualization, 
 ## Installation
 
 ### From PyPI (recommended)
+
 ```bash
 pip install liron-utils
 ```
 
 ### With optional dependencies
+
 ```bash
 # Install with extra dependencies
 pip install liron-utils[extra]
@@ -19,9 +21,18 @@ pip install liron-utils[all]
 ```
 
 ### Development installation
+
 To install the package in editable mode for development:
+
 ```bash
 pip install -e git+https://github.com/lironst1/liron-utils.git#egg=liron-utils
+```
+
+To install from test PyPI:
+
+```bash
+pip index versions liron-utils --pre --index-url https://test.pypi.org/simple/
+pip install --index-url https://test.pypi.org/simple/ liron-utils
 ```
 
 ## Features
