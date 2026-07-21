@@ -37,7 +37,6 @@ dependencies = [
     "uncertainties",
 ]
 license = "MIT"
-version = "0.0.0"
 
 [project.optional-dependencies]
 extra = [
@@ -86,6 +85,7 @@ include = [
     { path = ".github/**/*.sh", format = "sdist" },
     { path = "tests/**/*.py", format = "sdist" },
 ]
+version = "0.0.0"  # placeholder, replaced by poetry-dynamic-versioning
 
 [tool.poetry.requires-plugins]
 #poetry-plugin-export = ">=1.8"
