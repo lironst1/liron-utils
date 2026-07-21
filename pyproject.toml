@@ -9,6 +9,7 @@ build-backend = "poetry_dynamic_versioning.backend"
 name = "liron-utils"
 readme = "README.md"
 dynamic = [
+    "version",
 ]
 description = "Utilities module"
 authors = [
@@ -38,7 +39,6 @@ dependencies = [
     "uncertainties",
 ]
 license = "MIT"
-version = "2026.7.21b0"
 
 [project.optional-dependencies]
 extra = [
@@ -87,6 +87,7 @@ include = [
     { path = ".github/**/*.sh", format = "sdist" },
     { path = "tests/**/*.py", format = "sdist" },
 ]
+version = "0.0.0"  # placeholder, replaced by poetry-dynamic-versioning
 
 [tool.poetry.requires-plugins]
 #poetry-plugin-export = ">=1.8"
@@ -94,7 +95,7 @@ poetry-dynamic-versioning = { version = ">=1.0.0,<2.0.0", extras = ["plugin"] }
 
 
 [tool.poetry-dynamic-versioning]
-enable = false
+enable = true
 vcs = "git"
 style = "pep440"
 format-jinja = "{{ base }}b0"
@@ -130,7 +131,6 @@ extras = [
 commands = [
     ["pytest", "tests/"]
 ]
-ignore_outcome = true
 
 [tool.tox.env.lint]
 description = "Run pylint"
