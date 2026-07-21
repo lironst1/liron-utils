@@ -88,6 +88,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+          skip-existing: true  # keep job re-runs green; the file content is identical anyway
 
   release:
     name: Tag and publish release to PyPI
@@ -127,3 +128,16 @@ jobs:
           path: dist/
 
       - uses: pypa/gh-action-pypi-publish@release/v1
+
+      # After a successful upload: a browsable GitHub release with auto-generated
+      # notes and the dist files attached. Idempotent for retried runs.
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ needs.build.outputs.version }}"
+          if gh release view "v${version}" >/dev/null 2>&1; then
+            echo "GitHub release v${version} already exists - skipping."
+          else
+            gh release create "v${version}" dist/* --generate-notes --verify-tag
+          fi

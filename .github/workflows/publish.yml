@@ -9,10 +9,17 @@ on:
         default: testpypi
         type: choice
         options: [testpypi, pypi]
+      version:
+        description: Explicit version (e.g. 2026.7.21.1); empty builds a branch-phase version
+        required: false
+        default: ""
+        type: string
 
 jobs:
   build:
     uses: ./.github/workflows/python-build.yml
+    with:
+      version: ${{ inputs.version }}
 
   publish-pypi:
     name: Publish to PyPI

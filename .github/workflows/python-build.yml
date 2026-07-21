@@ -6,12 +6,16 @@ on:
       python-version:
         type: string
         default: "3.11"
+      version:
+        description: Explicit version override; empty computes from git state
+        type: string
+        default: ""
     outputs:
       version:
         description: Calculated package version
         value: ${{ jobs.build.outputs.version }}
       ci-phase:
-        description: "CI phase: review, branch, or tag"
+        description: "CI phase: manual, tag, release, review, or branch"
         value: ${{ jobs.build.outputs.ci-phase }}
 
 jobs:
@@ -35,7 +39,10 @@ jobs:
           base=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
           base=${base#v}
 
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+          if [[ -n "${{ inputs.version }}" ]]; then
+            ci_phase=manual
+            version="${{ inputs.version }}"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             ci_phase=tag
             version="${base}"
           elif [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
@@ -67,6 +74,19 @@ jobs:
         run: |
           pip install --upgrade pip build
           python -m build
+
+      # Guard against version-injection regressions (e.g. dynamic versioning
+      # silently disabled): the artifacts must carry the computed version.
+      - name: Verify artifact versions
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          ls -1 dist/
+          for artifact in dist/*; do
+            if [[ "$(basename "${artifact}")" != *"${version}"* ]]; then
+              echo "Artifact ${artifact} does not carry computed version ${version}." >&2
+              exit 1
+            fi
+          done
 
       - uses: actions/upload-artifact@v4
         with:
