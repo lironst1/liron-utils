@@ -11,7 +11,7 @@ from cycler import Cycler, cycler
 from ..base import hex2rgb
 from . import COLORS
 
-RC_PARAMS = {
+RC_PARAMS: dict[str, typing.Any] = {
     # ***************************************************************************
     # * BACKENDS                                                                *
     # ***************************************************************************
@@ -899,20 +899,21 @@ RC_PARAMS_DEFAULT = {
 
 
 def get_style_rcparams(style: str) -> dict[str, typing.Any]:
-    """Return the rcParams dict for a built-in matplotlib style.
+    """Return the rcParams dict for a named matplotlib style.
 
     Args:
-        style: Name of a style available in ``plt.style.available``.
+        style: Name of a style available in ``plt.style.available``
+            (built-in or user-defined).
 
     Returns:
         The mapping of rcParam keys to values for that style.
     """
-    return typing.cast(dict[str, typing.Any], plt.style.core._base_library[style])  # type: ignore[attr-defined]  # pylint: disable=protected-access
+    return typing.cast(dict[str, typing.Any], plt.style.library[style])
 
 
 _StylesType = dict[str, str | dict[str, typing.Any] | typing.Callable[..., dict[str, typing.Any]]]
-STYLES: _StylesType = plt.style.core._base_library | {  # type: ignore[attr-defined]  # pylint: disable=protected-access
-    "default": matplotlib.rcParamsDefault,
+_CUSTOM_STYLES: _StylesType = {
+    "default": typing.cast(dict[str, typing.Any], matplotlib.rcParamsDefault),
     "liron-utils-default": RC_PARAMS,
     "liron-utils-article": {  # get_style_rcparams("seaborn-v0_8-talk")
         # BACKENDS
@@ -1034,6 +1035,8 @@ STYLES: _StylesType = plt.style.core._base_library | {  # type: ignore[attr-defi
         # ANIMATION
     },
 }
+
+STYLES: _StylesType = typing.cast(_StylesType, dict(plt.style.library)) | _CUSTOM_STYLES
 
 
 def _resolve_color_list(colors: str | Iterable[str]) -> list[str]:
@@ -1182,19 +1185,19 @@ def update_rc_params(
             ]
             if callable(resolved):
                 resolved = resolved(*args, **kwargs)
-            matplotlib.rcParams.update(typing.cast(dict[str, typing.Any], resolved))
+            matplotlib.rcParams.update(typing.cast(dict[str, typing.Any], resolved))  # type: ignore[arg-type]
             result = typing.cast(dict[str, typing.Any], resolved)
         else:  # new_rcParams in plt.style.available
             plt.style.use(new_params)
             result = get_style_rcparams(new_params)
 
     elif isinstance(new_params, dict):
-        matplotlib.rcParams.update(new_params)
+        matplotlib.rcParams.update(new_params)  # type: ignore[arg-type]
         result = new_params
 
     else:
         resolved_dict = new_params(*args, **kwargs)
-        matplotlib.rcParams.update(resolved_dict)
+        matplotlib.rcParams.update(resolved_dict)  # type: ignore[arg-type]
         result = resolved_dict
 
     return result

@@ -48,7 +48,7 @@ def nextpow2(a: typing.Any) -> typing.Any:
     return p
 
 
-@numba.njit(fastmath=True, cache=True, parallel=False)  # type: ignore[untyped-decorator]
+@numba.njit(fastmath=True, cache=True, parallel=False)
 def _dft_1d(x: _Array1D, freqs: _Array1D, fs: float) -> _Array1D:
     """Compute the DFT of a 1D real/complex signal ``x`` at arbitrary frequencies.
 

@@ -816,9 +816,9 @@ class _Axes:
             elif legend is True:
                 handles, labels = ax.get_legend_handles_labels()
                 if len(handles) > 0:
-                    ax.legend(handles, labels, loc=legend_loc)
+                    ax.legend(handles, labels, loc=legend_loc)  # type: ignore[arg-type]
             else:
-                ax.legend(legend, loc=legend_loc)
+                ax.legend(legend, loc=legend_loc)  # type: ignore[arg-type]
 
         _ax_legend()
 

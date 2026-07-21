@@ -13,7 +13,12 @@ concurrency:
 
 jobs:
   tox:
+    name: tox (${{ matrix.env }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # a lint failure shouldn't hide the typing/tests verdicts
+      matrix:
+        env: [style, tests, lint, typing]
     steps:
       - uses: actions/checkout@v4
 
@@ -21,13 +26,45 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install dependencies
+      - name: Install tox
         run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install tox
+          python -m pip install --upgrade pip
+          pip install tox tox-uv
+
+      # tox doesn't consume poetry.lock (deps resolve from pyproject metadata),
+      # so pyproject.toml is the honest cache key; the env is rebuilt when it changes.
+      - name: Cache tox environment
+        uses: actions/cache@v4
+        with:
+          path: .tox/${{ matrix.env }}
+          key: tox-${{ matrix.env }}-py3.11-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+
+      - name: Cache uv downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: uv-${{ runner.os }}-
+
+      - name: Cache pre-commit hooks
+        if: matrix.env == 'style'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      # mypy's incremental cache has no stable key — always restore the most
+      # recent one (restore-keys prefix match) and save a fresh copy per commit.
+      - name: Cache mypy incremental cache
+        if: matrix.env == 'typing'
+        uses: actions/cache@v4
+        with:
+          path: .mypy_cache
+          key: mypy-${{ runner.os }}-${{ github.sha }}
+          restore-keys: mypy-${{ runner.os }}-
 
       - name: Run tox
-        run: tox
+        run: tox -e ${{ matrix.env }}
 
   build:
     uses: ./.github/workflows/python-build.yml
