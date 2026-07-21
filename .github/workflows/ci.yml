@@ -2,7 +2,14 @@ name: CI
 
 on:
   push:
+    branches: ["**"]  # branch pushes only
   pull_request:
+
+# Serialize main runs so two quick merges can't compute the same release version;
+# every other ref gets a unique group (no contention).
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'ci-main-release' || format('ci-{0}', github.run_id) }}
+  cancel-in-progress: false
 
 jobs:
   tox:
@@ -25,16 +32,48 @@ jobs:
   build:
     uses: ./.github/workflows/python-build.yml
 
-  publish:
-    if: github.ref_type == 'tag'
+  publish-dev:
+    name: Publish dev version to TestPyPI
+    if: github.event_name == 'push'  # && github.ref != 'refs/heads/main'
+    needs: [tox, build]
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/liron-utils
+    permissions:
+      id-token: write  # mandatory for trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  release:
+    name: Tag and publish release to PyPI
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [tox, build]
     runs-on: ubuntu-latest
     environment:
       name: pypi
       url: https://pypi.org/project/liron-utils
     permissions:
-      id-token: write
+      id-token: write  # mandatory for trusted publishing
+      contents: write  # push the release tag
     steps:
+      - uses: actions/checkout@v4
+
+      # Tag first: the tag is the version reservation. If the upload below fails,
+      # the tag remains and the run can be retried without a same-day counter collision.
+      - name: Create release tag
+        run: |
+          version="${{ needs.build.outputs.version }}"
+          git tag "v${version}" "${GITHUB_SHA}"
+          git push origin "v${version}"
+
       - uses: actions/download-artifact@v4
         with:
           name: dist

@@ -38,6 +38,18 @@ jobs:
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             ci_phase=tag
             version="${base}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            # Release build: next CalVer version, unpadded so the tag matches the
+            # PEP 440-normalized version (leading zeros are stripped by packaging tools).
+            # Same-day repeats get a 4th release segment: yyyy.m.d, then yyyy.m.d.1, ...
+            ci_phase=release
+            today=$(date -u +%Y.%-m.%-d)
+            same_day_count=$(git tag --list "v${today}" "v${today}.*" | wc -l | tr -d ' ')
+            if [[ "${same_day_count}" -eq 0 ]]; then
+              version="${today}"
+            else
+              version="${today}.${same_day_count}"
+            fi
           elif [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
             ci_phase=review
             version="${base}.dev${GITHUB_RUN_NUMBER}"
